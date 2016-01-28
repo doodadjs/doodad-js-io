@@ -1,5 +1,5 @@
-//! REPLACE_BY("// Copyright 2015 Claude Petit, licensed under Apache License version 2.0\n")
-// dOOdad - Object-oriented programming framework with some extras
+//! REPLACE_BY("// Copyright 2016 Claude Petit, licensed under Apache License version 2.0\n")
+// dOOdad - Object-oriented programming framework
 // File: Client_IO.js - Client IO functions
 // Project home: https://sourceforge.net/projects/doodad-js/
 // Trunk: svn checkout svn://svn.code.sf.net/p/doodad-js/code/trunk doodad-js-code
@@ -8,7 +8,7 @@
 // Note: I'm still in alpha-beta stage, so expect to find some bugs or incomplete parts !
 // License: Apache V2
 //
-//	Copyright 2015 Claude Petit
+//	Copyright 2016 Claude Petit
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@
 	var global = this;
 
 	var exports = {};
-	if (global.process) {
+	if (typeof process === 'object') {
 		module.exports = exports;
 	};
 	
@@ -35,9 +35,21 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.Client.IO'] = {
 			type: null,
-			version: '0d',
+			version: '0.2d',
 			namespaces: null,
-			dependencies: ['Doodad.Types', 'Doodad.Tools', 'Doodad', 'Doodad.Client', 'Doodad.IO'],
+			dependencies: [
+				{
+					name: 'Doodad.Types', 
+					version: '1.1r',
+				},
+				'Doodad.Tools', 
+				'Doodad', 
+				'Doodad.Client', 
+				{
+					name: 'Doodad.IO',
+					version: '0.2',
+				}, 
+			],
 			
 			create: function create(root, /*optional*/_options) {
 				"use strict";
@@ -81,6 +93,7 @@
 					
 					element: doodad.READ_ONLY(null),
 					
+					__listening: doodad.PROTECTED(false),
 					__buffer: doodad.PROTECTED(null),
 					__pendingData: doodad.PROTECTED({
 						charCode: null,
@@ -90,6 +103,62 @@
 						functionKeys: null,
 					}),
 					
+					transform: doodad.OVERRIDE(function transform(data) {
+						// NOTE: data.raw is a "keydown" or "keypress" event object
+						var data = this._super(data) || data;
+						if (data.raw.type === 'keypress') {
+							var unifiedEv = data.raw.getUnified();
+							data.text = String.fromCharCode(unifiedEv.which);
+							
+						} else {
+							var	functionKeys = 0,
+								charCode = data.raw.charCode,
+								scanCode = data.raw.keyCode;
+							
+							if (data.raw.shiftKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Shift;
+							};
+							if (data.raw.ctrlKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Ctrl;
+							};
+							if (data.raw.altKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Alt;
+							};
+							if (data.raw.metaKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Meta;
+							};
+							
+							if (!functionKeys) {
+								if (charCode === 0) {
+									// TODO: Fix every other wrong char codes
+									if (scanCode === io.KeyboardScanCodes.Enter) {
+										charCode = 10; // "\n"
+									};
+								};
+							};
+
+							data.charCode = charCode;
+							data.scanCode = scanCode;
+							data.text = String.fromCharCode(charCode);
+							data.functionKeys = functionKeys;
+						};
+						data.valueOf = function() {
+							// TODO: ANSI sequence ?
+							if (data.functionKeys & io.KeyboardFunctionKeys.Alt) {
+								return '';
+							};
+							if (data.functionKeys & io.KeyboardFunctionKeys.Ctrl) {
+								var chr = data.text.toUpperCase();
+								if ((chr >= 'A') && (chr <= 'Z')) {
+									return '^' + chr;
+								} else {
+									return '';
+								};
+							};
+							return data.text;
+						};
+					}),
+
 					onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(ev) {
 						try {
 							// Shows virtual keyboard on mobile phones and tablets.
@@ -106,57 +175,26 @@
 							this.onError(new doodad.ErrorEvent(ex));
 						};
 					})),
+					
 					onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT(['keydown', 'keypress'], function onJsKeyDown(ev) {
 						var prevent = false;
 						try {
-							if (ev.type === 'keypress') {
-								var unifiedEv = ev.getUnified();
-								this.__pendingData.text = String.fromCharCode(unifiedEv.which);
-								
-							} else {
-								var	functionKeys = 0,
-									charCode = ev.charCode,
-									scanCode = ev.keyCode;
-								
-								if (ev.shiftKey) {
-									functionKeys |= io.KeyboardFunctionKeys.Shift;
-								};
-								if (ev.ctrlKey) {
-									functionKeys |= io.KeyboardFunctionKeys.Ctrl;
-								};
-								if (ev.altKey) {
-									functionKeys |= io.KeyboardFunctionKeys.Alt;
-								};
-								if (ev.metaKey) {
-									functionKeys |= io.KeyboardFunctionKeys.Meta;
-								};
-								
-								if (!functionKeys) {
-									if (charCode === 0) {
-										// TODO: Fix every other wrong char codes
-										if (scanCode === io.KeyboardScanCodes.Enter) {
-											charCode = 10; // "\n"
-										};
-									};
-								};
+							this.__pendingData.raw = ev;
+							var data = this.transform(this.__pendingData) || this.__pendingData;
 
-								this.__pendingData.charCode = charCode;
-								this.__pendingData.scanCode = scanCode;
-								this.__pendingData.text = String.fromCharCode(charCode);
-								this.__pendingData.raw = ev;
-								this.__pendingData.functionKeys = functionKeys;
+							data.options = this.options;
+
+							if (this.__listening) {
+								var readyEv = new doodad.Event(data);
+								this.onReady(readyEv);
+								prevent = readyEv.prevent;
 							};
 							
-							var data = types.clone(this.__pendingData);
-							data.options = this.options;
-							
-							var readyEv = new doodad.Event(data);
-							this.onReady(readyEv);
-							
-							prevent = readyEv.prevent;
 							if (!prevent) {
 								if (this.__buffer.length < this.options.bufferSize) {
 									this.__buffer.push(data);
+								} else {
+									throw new types.BufferOverflow();
 								};
 							};
 							
@@ -195,13 +233,22 @@
 						this._super();
 					}),
 					
+					isListening: doodad.OVERRIDE(function isListening() {
+						return this.__listening;
+					}),
 					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-						this.onJsClick.attach(this.element);
-						this.onJsKeyDown.attach(this.element);
+						if (!this.__listening) {
+							this.__listening = true;
+							this.onJsClick.attach(this.element);
+							this.onJsKeyDown.attach(this.element);
+						};
 					}),
 					stopListening: doodad.OVERRIDE(function stopListening(/*optional*/options) {
-						this.onJsClick.clear();
-						this.onJsKeyDown.clear();
+						if (this.__listening) {
+							this.__listening = false;
+							this.onJsClick.clear();
+							this.onJsKeyDown.clear();
+						};
 					}),
 					getCount: doodad.OVERRIDE(function getCount(/*optional*/options) {
 						return this.__buffer.length;
@@ -211,20 +258,16 @@
 							root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						};
 						
-						options = types.extend({}, this.options, options);
-
-						var offset = types.getDefault(options, 'offset', 0),
-							count = types.getDefault(options, 'count', 1);
+						var count = types.get(options, 'count');
 
 						if (root.DD_ASSERT) {
-							root.DD_ASSERT(types.isInteger(offset), "Invalid offset.");
-							root.DD_ASSERT(types.isInteger(count), "Invalid count.");
+							root.DD_ASSERT(types.isNothing(count) || types.isInteger(count), "Invalid count.");
 						};
 
-						if (types.get(options, 'preread', false)) {
-							return this.__buffer.slice(offset, count);
+						if (types.isNothing(count)) {
+							return this.__buffer.shift();
 						} else {
-							return this.__buffer.splice(offset, count);
+							return this.__buffer.splice(0, count);
 						};
 					}),
 					clear: doodad.OVERRIDE(function clear() {
@@ -278,7 +321,10 @@
 							buffer = this.__buffer;
 						
 						while (data = buffer.shift()) {
-							this.document.write(data.text);
+							var value = data.valueOf();
+							if (value !== io.EOF) {
+								this.document.write(value);
+							};
 						};
 
 						this._super(options);
@@ -432,180 +478,221 @@
 				}));
 		
 
-				if (__Internal__.streamsSupported) {
-					clientIO.REGISTER(io.InputStream.$extend(
-											mixIns.JsEvents,
-					{
-						$TYPE_NAME: 'FileInputStream',
-						
-						__file: doodad.PROTECTED(null),
-						__fileReader: doodad.PROTECTED(null),
-						__fileOffset: doodad.PROTECTED(0),
-						
-						__buffer: doodad.PROTECTED([]),
+				clientIO.REGISTER(io.InputStream.$extend(
+										mixIns.JsEvents,
+				{
+					$TYPE_NAME: 'FileInputStream',
+					
+					__listening: doodad.PROTECTED(false),
+					__file: doodad.PROTECTED(null),
+					__fileReader: doodad.PROTECTED(null),
+					__fileOffset: doodad.PROTECTED(null),
+					
+					__buffer: doodad.PROTECTED([]),
 
-						create: doodad.OVERRIDE(function create(file, /*optional*/options) {
-							root.DD_ASSERT && root.DD_ASSERT((file instanceof __Natives__.windowFile) || (file instanceof __Natives__.windowBlob), "Invalid file or blob object.");
-							this._super(options);
-							// TODO: Validate "chunkSize"
-							var chunkSize = types.getDefault(this.options, 'chunkSize', 4096)
-							this.__file = file;
-							this.__fileOffset = types.get(options, 'offset', 0);
-						}),
+					create: doodad.OVERRIDE(function create(file, /*optional*/options) {
+						if (!__Internal__.streamsSupported) {
+							throw new types.NotSupported("Streams are not supported.");
+						};
+
+						if (root.DD_ASSERT) {
+							root.DD_ASSERT((file instanceof __Natives__.windowFile) || (file instanceof __Natives__.windowBlob), "Invalid file or blob object.");
+						};
 						
-						destroy: doodad.OVERRIDE(function destroy() {
-							this.stopListening();
+						this._super(options);
+
+						var chunkSize = types.getDefault(this.options, 'chunkSize', 4096)
+						if (root.DD_ASSERT) {
+							root.DD_ASSERT(types.isInteger(chunkSize), "Invalid chunk size.");
+						};
+
+						this.__file = file;
+					}),
+					
+					destroy: doodad.OVERRIDE(function destroy() {
+						this.stopListening();
+						
+						if (this.__file) {
+							this.__file.close();
+							this.__file = null;
+						};
+						
+						this._super();
+					}),
+					
+					onJsLoadEnd: doodad.PROTECTED(doodad.JS_EVENT('loadend', function onJsLoadEnd(ev) {
+						if (this.__fileReader.error) {
+							this.onError(new doodad.ErrorEvent(this.__fileReader.error));
 							
-							if (this.__file) {
-								this.__file.close();
-								this.__file = null;
+						} else {
+							var data = {
+								raw: this.__fileReader.result,
+							};
+							data = this.transform(data) || data;
+							
+							var readyEvent = new doodad.Event(data),
+								prevent = false;
+							
+							if (this.__listening) {
+								var readyEv = new doodad.Event(data);
+								this.onReady(readyEv);
+								prevent = readyEv.prevent;
 							};
 							
-							this._super();
-						}),
-						
-						onJsLoadEnd: doodad.PROTECTED(doodad.JS_EVENT('loadend', function onJsLoadEnd(ev) {
-							// TODO: Handle errors
-							if (this.__fileReader.readyState === __Natives__.windowFileReader.DONE) {
-								var data = {
-									raw: this.__fileReader.result,
-									text: this.__fileReader.result,
-								};
-								
-								var readyEvent = new doodad.Event(data);
-								
-								this.onReady(readyEvent);
-								
-								if (!readyEvent.prevent) {
-									if (this.__buffer.length < this.options.bufferSize) {
-										this.__buffer.push(data);
-									};
-								};
-								
-								var start = this.__fileOffset,
-									remaining = this.__file.size - start,
-									end = start + Math.min(this.options.chunkSize, remaining);
-
-								if (remaining > 0) {
-									this.__fileOffset = end;
-									this.__fileReader.readAsText(this.__file.slice(start, end))
-									
+							if (!prevent) {
+								if (this.__buffer.length < this.options.bufferSize) {
+									this.__buffer.push(data.valueOf());
 								} else {
-									var data = {
-										raw: io.EOF,
-										text: null,
-									};
-									
-									var readyEvent = new doodad.Event(data);
-									
-									this.onReady(readyEvent);
-									
-									if (!readyEvent.prevent) {
-										if (this.__buffer.length < this.options.bufferSize) {
-											this.__buffer.push(data);
-										};
+									throw new types.BufferOverflow();
+								};
+							};
+							
+							var encoding = types.get(this.options, 'encoding', null);
+
+							this.__fileOffset += ev.loaded;
+							
+							var remaining = this.__file.size - this.__fileOffset,
+								end = this.__fileOffset + Math.min(this.options.chunkSize, remaining);
+
+							if (remaining > 0) {
+								if (encoding) {
+									this.__fileReader.readAsText(this.__file.slice(this.__fileOffset, end), encoding);
+								} else {
+									this.__fileReader.readAsArrayBuffer(this.__file.slice(this.__fileOffset, end));
+								};
+								
+							} else {
+								var data = {
+									raw: io.EOF,
+								};
+								data = this.transform(data) || data;
+								
+								if (this.__listening) {
+									var readyEv = new doodad.Event(data);
+									this.onReady(readyEv);
+									prevent = readyEv.prevent;
+								};
+								
+								if (!prevent) {
+									if (this.__buffer.length < this.options.bufferSize) {
+										this.__buffer.push(data.valueOf());
+									} else {
+										throw new types.BufferOverflow();
 									};
 								};
 							};
-						})),
-						
-						listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-							// TODO: Handle errors
-							// TODO: Binary files
-							// TODO: HTTP Headers
+						};
+					})),
+					
+					isListening: doodad.OVERRIDE(function isListening() {
+						return this.__listening;
+					}),
+
+					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
+						if (!this.__listening) {
+							this.__listening = true;
+							var encoding = types.get(this.options, 'encoding', null);
 							this.__fileReader = new __Natives__.windowFileReader();
+							this.__fileOffset = 0;
 							this.onJsLoadEnd.attach(this.__fileReader);
 							if (this.options.chunkSize >= this.__file.size) {
-								this.__fileOffset = this.__file.size;
-								this.__fileReader.readAsText(this.__file)
-							} else {
-								var start = this.__fileOffset,
-									end = start + this.options.chunkSize;
-								this.__fileOffset = end;
-								this.__fileReader.readAsText(this.__file.slice(start, end))
-							};
-						}),
-						
-						stopListening: doodad.OVERRIDE(function stopListening(/*optional*/options) {
-							if (this.__fileReader) {
-								this.onJsLoadEnd.clear();
-								if (this.__fileReader.readyState === __Natives__.windowFileReader.LOADING) {
-									this.__fileReader.abort();
-								};
-							};
-						}),
-						
-						getCount: doodad.OVERRIDE(function getCount(/*optional*/options) {
-							return this.__buffer.length;
-						}),
-						
-						read: doodad.OVERRIDE(function read(/*optional*/options) {
-							if (root.DD_ASSERT) {
-								root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
-							};
-							
-							options = types.extend({}, this.options, options);
-
-							var offset = types.getDefault(options, 'offset', 0),
-								count = types.getDefault(options, 'count', 1);
-
-							if (root.DD_ASSERT) {
-								root.DD_ASSERT(types.isInteger(offset), "Invalid offset.");
-								root.DD_ASSERT(types.isInteger(count), "Invalid count.");
-							};
-
-							if (types.get(options, 'preread', false)) {
-								return this.__buffer.slice(offset, count);
-							} else {
-								return this.__buffer.splice(offset, count);
-							};
-						}),
-						
-						clear: doodad.OVERRIDE(function clear() {
-							this._super();
-							this.__buffer = [];
-						}),
-						
-						reset: doodad.OVERRIDE(function reset() {
-							this._super();
-							this.__buffer = [];
-						}),
-					}));
-					
-					files.openFile = function openFile(url, /*optional*/options) {
-						url = tools.options.hooks.urlParser(url, types.get(options, 'parseOptions'));
-						root.DD_ASSERT && root.DD_ASSERT(url instanceof tools.Url, "Invalid url.");
-						url = url.toString();
-						var encoding = types.get(options, 'encoding', null);
-						var Promise = tools.getPromise();
-						return new Promise(function(resolve, reject) {
-							// TODO: Headers in options
-							// TODO: Local files ?
-							var headers = new __Natives__.windowHeaders();
-							if (encoding) {
-								headers.append('Accept', 'text/plain');
-								headers.append('Accept-Charset', encoding);
-							} else {
-								headers.append('Accept', '*/*');
-							};
-							var init = {
-								method: 'GET',
-								headers: headers,
-							};
-							if (!types.get(options, 'enableCache', false)) {
-								init.cache = 'no-cache';
-							};
-							__Natives__.windowFetch.call(global, url, init).then(function(response) {
-								if (response.ok || (response.status === 0)) {
-									return response.blob().then(function(blob) {
-										resolve(new clientIO.FileInputStream(blob, options));
-									});
+								if (encoding) {
+									this.__fileReader.readAsText(this.__file, encoding)
 								} else {
-									reject(new types.HttpError(response.status, response.statusText));
+									this.__fileReader.readAsArrayBuffer(this.__file)
 								};
-							});
-						});
+							} else {
+								if (encoding) {
+									this.__fileReader.readAsText(this.__file.slice(0, this.options.chunkSize), encoding)
+								} else {
+									this.__fileReader.readAsArrayBuffer(this.__file.slice(0, this.options.chunkSize))
+								};
+							};
+						};
+					}),
+					
+					stopListening: doodad.OVERRIDE(function stopListening(/*optional*/options) {
+						if (this.__listening) {
+							this.__listening = false;
+							this.onJsLoadEnd.clear();
+							if (this.__fileReader && (this.__fileReader.readyState === __Natives__.windowFileReader.LOADING)) {
+								this.__fileReader.abort();
+							};
+						};
+					}),
+					
+					getCount: doodad.OVERRIDE(function getCount(/*optional*/options) {
+						return this.__buffer.length;
+					}),
+					
+					read: doodad.OVERRIDE(function read(/*optional*/options) {
+						if (root.DD_ASSERT) {
+							root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
+						};
+						
+						var count = types.get(options, 'count');
+
+						if (root.DD_ASSERT) {
+							root.DD_ASSERT(types.isNothing(count) || types.isInteger(count), "Invalid count.");
+						};
+
+						if (types.isNothing(count)) {
+							return this.__buffer.shift();
+						} else {
+							return this.__buffer.splice(0, count);
+						};
+					}),
+					
+					clear: doodad.OVERRIDE(function clear() {
+						this._super();
+						this.__buffer = [];
+					}),
+					
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
+						this.__buffer = [];
+					}),
+				}));
+				
+				files.openFile = function openFile(url, /*optional*/options) {
+					if (!__Internal__.streamsSupported) {
+						throw new types.NotSupported("Streams are not supported.");
 					};
+					url = tools.getOptions().hooks.urlParser(url, types.get(options, 'parseOptions'));
+					root.DD_ASSERT && root.DD_ASSERT(url instanceof tools.Url, "Invalid url.");
+					url = url.toString();
+					var encoding = types.get(options, 'encoding', null);
+					var Promise = tools.getPromise();
+					return new Promise(function(resolve, reject) {
+						var headers = new __Natives__.windowHeaders(types.get(options, 'headers'));
+						if (!headers.has('Accept')) {
+							if (encoding) {
+								headers.set('Accept', 'text/plain');
+							} else {
+								headers.set('Accept', '*/*');
+							};
+						};
+						var init = {
+							method: 'GET',
+							headers: headers,
+						};
+						if (!types.get(options, 'enableCache', false)) {
+							init.cache = 'no-cache';
+						};
+						if (types.get(options, 'enableCookies', false)) {
+							// http://stackoverflow.com/questions/30013131/how-do-i-use-window-fetch-with-httponly-cookies
+							init.credentials = 'include';
+						};
+						__Natives__.windowFetch.call(global, url, init).then(function(response) {
+							if (response.ok || types.HttpStatus.isSuccessful(response.status)) {
+								return response.body.getReader().then(function(blob) {
+									resolve(new clientIO.FileInputStream(blob, options));
+								});
+							} else {
+								reject(new types.HttpError(response.status, response.statusText));
+							};
+						});
+					});
 				};
 		
 		
@@ -624,8 +711,8 @@
 		return DD_MODULES;
 	};
 	
-	if (!global.process) {
+	if (typeof process !== 'object') {
 		// <PRB> export/import are not yet supported in browsers
 		global.DD_MODULES = exports.add(global.DD_MODULES);
 	};
-})();
+}).call((typeof global !== 'undefined') ? global : ((typeof window !== 'undefined') ? window : this));

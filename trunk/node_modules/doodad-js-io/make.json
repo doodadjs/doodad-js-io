@@ -1,7 +1,7 @@
 {
 	"//": "Encoding: utf8",
 	"//": "",
-	"//": "    dOOdad - Object-oriented programming framework with some extras",
+	"//": "    dOOdad - Object-oriented programming framework",
 	"//": "    File: make.json - Make data file",
 	"//": "    Project home: https://sourceforge.net/projects/doodad-js/",
 	"//": "    Trunk: svn checkout svn://svn.code.sf.net/p/doodad-js/code/trunk doodad-js-code",
@@ -10,7 +10,7 @@
 	"//": "    Note: I'm still in alpha-beta stage, so expect to find some bugs or incomplete parts !",
 	"//": "    Licence: Apache V2",
 	"//": "",
-	"//": "    Copyright 2015 Claude Petit",
+	"//": "    Copyright 2016 Claude Petit",
 	"//": "",
 	"//": "    Licensed under the Apache License, Version 2.0 (the \"License\");",
 	"//": "    you may not use this file except in compliance with the License.",
@@ -31,12 +31,14 @@
 					{
 						"class": "Make.File.Javascript",
 						"source": "%SOURCEDIR%/common/IO.js",
-						"destination": "%PACKAGEDIR%/IO.min.js"
+						"destination": "%PACKAGEDIR%/IO.min.js",
+						"runDirectives": true
 					},
 					{
 						"class": "Make.File.Javascript",
 						"source": "%SOURCEDIR%/server/NodeJs_IO.js",
-						"destination": "%PACKAGEDIR%/NodeJs_IO.min.js"
+						"destination": "%PACKAGEDIR%/NodeJs_IO.min.js",
+						"runDirectives": true
 					},
 					
 					{
@@ -63,7 +65,8 @@
 					{
 						"class": "Make.File.Javascript",
 						"source": "%SOURCEDIR%/client/Client_IO.js",
-						"destination": "%INSTALLDIR%/%PACKAGENAME%/Client_IO.min.js"
+						"destination": "%INSTALLDIR%/%PACKAGENAME%/Client_IO.min.js",
+						"runDirectives": true
 					},
 					{
 						"class": "Make.File.Copy",
@@ -73,7 +76,8 @@
 					{
 						"class": "Make.File.Javascript",
 						"source": "%SOURCEDIR%/common/IO.js",
-						"destination": "%INSTALLDIR%/%PACKAGENAME%/IO.min.js"
+						"destination": "%INSTALLDIR%/%PACKAGENAME%/IO.min.js",
+						"runDirectives": true
 					},
 					{
 						"class": "Make.File.Copy",
@@ -87,7 +91,8 @@
 					{
 						"class": "Make.File.Javascript",
 						"source": "%PACKAGEDIR%/index.js",
-						"destination": "%INSTALLDIR%/%PACKAGENAME%/index.js"
+						"destination": "%INSTALLDIR%/%PACKAGENAME%/index.js",
+						"runDirectives": true
 					},
 					
 					{

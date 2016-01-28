@@ -1,5 +1,5 @@
-//! REPLACE_BY("// Copyright 2015 Claude Petit, licensed under Apache License version 2.0\n")
-// dOOdad - Object-oriented programming framework with some extras
+//! REPLACE_BY("// Copyright 2016 Claude Petit, licensed under Apache License version 2.0\n")
+// dOOdad - Object-oriented programming framework
 // File: IO.js - IO tools
 // Project home: https://sourceforge.net/projects/doodad-js/
 // Trunk: svn checkout svn://svn.code.sf.net/p/doodad-js/code/trunk doodad-js-code
@@ -8,7 +8,7 @@
 // Note: I'm still in alpha-beta stage, so expect to find some bugs or incomplete parts !
 // License: Apache V2
 //
-//	Copyright 2015 Claude Petit
+//	Copyright 2016 Claude Petit
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@
 	var global = this;
 
 	var exports = {};
-	if (global.process) {
+	if (typeof process === 'object') {
 		module.exports = exports;
 	};
 	
@@ -35,7 +35,7 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.IO'] = {
 			type: null,
-			version: '0b',
+			version: '0.2d',
 			namespaces: ['MixIns', 'Interfaces'],
 			dependencies: ['Doodad'],
 
@@ -66,15 +66,27 @@
 					$TYPE_NAME: 'EOF',
 
 					toString: function toString() {
-						return null;
+						return '';
 					},
 				})));
 				
 					
+				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(doodad.Class.$extend(
+				{
+					$TYPE_NAME: 'Transformable',
+					
+					transform: doodad.PUBLIC(function transform(data) {
+						data.valueOf = function valueOf() {
+							return this.raw;
+						};
+					}),
+				}))));
+				
 				
 				ioMixIns.REGISTER(doodad.MIX_IN(doodad.Class.$extend(
 									mixIns.Creatable,
 									mixIns.Events,
+									ioMixIns.Transformable,
 				{
 					$TYPE_NAME: 'Stream',
 
@@ -98,31 +110,39 @@
 					clear: doodad.PUBLIC(doodad.MUST_OVERRIDE()),
 					
 					__pipeOnReady: doodad.PROTECTED(function __pipeOnReady(ev) {
+						ev.preventDefault();
+						
 						var stream = ev.handlerData[0],
 							transform = ev.handlerData[1],
-							data = ev.data.raw;
+							data = ev.data;
+							
 						if (transform) {
-							var retval = transform(ev.data);
+							var retval = transform(data);
 							if (retval !== undefined) {
 								data = retval;
 							};
 						};
-						stream.write(data, ev.data.options);
-						ev.preventDefault();
+
+						stream.write(data.valueOf(), data.options);
 					}),
-						
+					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
-						var stream = ev.handlerData[0];
-						stream.flush(ev.data.options);
+						var stream = ev.handlerData[0],
+							options = ev.data.options;
+						stream.flush(options);
 					}),
 						
 					pipe: doodad.PUBLIC(function pipe(stream, /*optional*/transform) {
 						// TODO: Pipe to NodeJS streams directly
-						root.DD_ASSERT && root.DD_ASSERT(types._implements(stream, ioMixIns.OutputStream));
-						if (types._implements(this, ioMixIns.ReadStream)) {
+						if (!types._implements(stream, ioMixIns.OutputStream)) {
+							throw new types.TypeError("Stream must implement 'Doodad.IO.MixIns.OutputStream'.");
+						};
+						if (types._implements(this, ioMixIns.InputStream)) {
 							this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform]);
 						} else if (types._implements(this, ioMixIns.OutputStream)) {
 							this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform]);
+						};
+						if (types._implements(this, ioMixIns.OutputStream)) {
 							this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
 						};
 						if (types._implements(this, ioInterfaces.Listener)) {
@@ -135,17 +155,21 @@
 							this.stopListening();
 						};
 						if (stream) {
-							if (types._implements(this, ioMixIns.ReadStream)) {
+							if (types._implements(this, ioMixIns.InputStream)) {
 								this.onReady.detach(this, this.__pipeOnReady, [stream]);
 							} else if (types._implements(this, ioMixIns.OutputStream)) {
-								this.onWrite.attach(this, this.__pipeOnReady, [stream]);
+								this.onWrite.detach(this, this.__pipeOnReady, [stream]);
+							};
+							if (types._implements(this, ioMixIns.OutputStream)) {
 								this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
 							};
 						} else {
-							if (types._implements(this, ioMixIns.ReadStream)) {
+							if (types._implements(this, ioMixIns.InputStream)) {
 								this.onReady.detach(this, this.__pipeOnReady);
 							} else if (types._implements(this, ioMixIns.OutputStream)) {
-								this.onWrite.attach(this, this.__pipeOnReady);
+								this.onWrite.detach(this, this.__pipeOnReady);
+							};
+							if (types._implements(this, ioMixIns.OutputStream)) {
 								this.onFlush.detach(this, this.__pipeOnFlush);
 							};
 						};
@@ -162,9 +186,26 @@
 				ioInterfaces.REGISTER(doodad.INTERFACE(doodad.Class.$extend(
 				{
 					$TYPE_NAME: 'Listener',
-
+					
+					isListening: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
 					listen: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					stopListening: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
+				})));
+				
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Transformable.$extend(
+				{
+					$TYPE_NAME: 'TextTransformable',
+					
+					transform: doodad.REPLACE(function transform(data) {
+						data.text = String(data.raw);
+						data.valueOf = function valueOf() {
+							if (this.raw === io.EOF) {
+								return this.raw;
+							} else {
+								return this.text;
+							};
+						};
+					}),
 				})));
 				
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
@@ -181,7 +222,10 @@
 
 						root.DD_ASSERT && root.DD_ASSERT(types.isInteger(bufferSize), "Invalid buffer size.");
 					}),
-						
+					
+					// TODO: Implement
+					//push: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(raw, /*optional*/options)
+
 					// Raw
 					read: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					
@@ -196,10 +240,9 @@
 				
 				
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.InputStream.$extend(
+									ioMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextInput',
-					
-					__lineBuffer: doodad.PROTECTED(null),
 					
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super(options);
@@ -208,23 +251,28 @@
 						if (root.DD_ASSERT) {
 							root.DD_ASSERT(types.isNothing(newLine) || types.isString(newLine), "Invalid new line string.");
 						};
-						
-						this.__lineBuffer = "";
 					}),
 					
 					// Non-formatted text
+					//readText: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					readText: doodad.PUBLIC(function readText(/*optional*/options) {
+						throw new types.Error("This function is in need for a complete review.");
+						/*
 						return tools.reduce(this.read(options), function(result, data) {
-							return result + data.text;
+							var val = data.valueOf();
+							return result + (val === io.EOF ? '' : val);
 						}, "");
+						*/
 					}),
 
 					// Non-formatted text + newline
+					// TODO: Review
+					//readLine: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					readLine: doodad.PUBLIC(function readLine(/*optional*/options) {
+						throw new types.Error("This function is in need for a complete review.");
+						/*
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
-						options = types.extend({}, this.options, options);
-							
 						if (this.options.newLine) {
 							var str,
 								line = this.__lineBuffer,
@@ -247,16 +295,7 @@
 						};
 						
 						return null;
-					}),
-					
-					clear: doodad.OVERRIDE(function clear() {
-						this._super();
-						this.__lineBuffer = "";
-					}),
-					
-					reset: doodad.OVERRIDE(function reset() {
-						this._super();
-						this.__lineBuffer = "";
+						*/
 					}),
 				})));
 				
@@ -387,7 +426,7 @@
 				
 				
 				
-				ioMixIns.REGISTER(doodad.MIX_IN(doodad.Class.$extend(
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
 									mixIns.Events,
 									mixIns.Creatable,
 				{
@@ -429,6 +468,7 @@
 				
 				
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.OutputStream.$extend(
+									ioMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextOutput',
 					
@@ -440,14 +480,9 @@
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(newLine) || types.isString(newLine), "Invalid new line string.");
 					})),
 					
-					onWrite: doodad.OVERRIDE(function(ev) {
-						ev.data.text = types.toString(ev.data.raw);
-						return this._super(ev);
-					}),
-					
 					// Non-formatted text
 					writeText: doodad.PUBLIC(function writeText(text, /*optional*/options) {
-						this.write(text, options);
+						this.write(String(text), options);
 					}),
 					
 					// Non-formatted text + newline
@@ -455,12 +490,12 @@
 						if (types.isNothing(text)) {
 							text = '';
 						};
-						this.writeText(text + this.options.newLine, options);
+						this.writeText(String(text) + this.options.newLine, options);
 					}),
 					
 					// Formatted text + newline
 					print: doodad.PUBLIC(function print(text, /*optional*/options) {
-						this.writeLine(text, options);
+						this.writeLine(tools.format(String(text), types.get(options, 'params')), options);
 					}),
 				}))));
 				
@@ -505,44 +540,76 @@
 					write: doodad.OVERRIDE(function write(html, /*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isString(html), "Invalid html.");
 						
-						var buffer = this.__buffer;
+						var data = {
+							raw : html,
+						};
+						data = this.transform(data) || data;
+
+						this.onWrite(new doodad.Event(data));
+						
+						var buffer = this.__buffer,
+							htmlType = types.getType(this).$__bufferTypes.Html,
+							value = data.valueOf();
 
 						var write = function write() {
-							var bufferLen = buffer.length,
-								last = bufferLen - 1,
-								data = buffer[last],
-								htmlType = types.getType(this).$__bufferTypes.Html;
-								
-							if (!data || (data[0] !== htmlType)) {
-								buffer[bufferLen] = [htmlType, html, false];
-							} else {
-								data[1] += html;
+							if (value !== io.EOF) {
+								var bufferLen = buffer.length,
+									lastItem = buffer[bufferLen - 1];
+									
+								if (!lastItem || (lastItem[0] !== htmlType)) {
+									buffer[bufferLen] = [htmlType, value, false];
+								} else {
+									lastItem[1] += value;
+								};
 							};
-							
-							this.onWrite(new doodad.Event({
-								raw: html,
-								options: options,
-							}));
 						};
 
-						var bufferSize = this.options.bufferSize;
-						if (buffer.length < bufferSize) {
-							write.apply(this);
-							write = null;
-						};
-						if (buffer.length >= bufferSize) {
-							if (this.options.autoFlush) {
-								this.flush(types.extend({}, options, {flushElement: true}));
-								if (this.__buffer.length > bufferSize) {
-									throw new types.BufferOverflow();
+						// TODO: Review
+						var bufferSize = this.options.bufferSize,
+							callback = types.get(options, 'callback');
+							
+						if (this.options.autoFlush) {
+							write();
+							if ((value === io.EOF) || (buffer.length >= bufferSize)) {
+								if (value === io.EOF) {
+									this.flush({
+										callback: function() {
+											//if (this.__buffer.length > bufferSize) {
+											//	throw new types.BufferOverflow();
+											//};
+											if (callback) {
+												callback();
+											};
+										},
+									});
 								} else {
-									write && write.apply(this);
+									this.flush({
+										flushElement: true,
+										callback: function() {
+											//if (this.__buffer.length > bufferSize) {
+											//	throw new types.BufferOverflow();
+											//};
+											if (callback) {
+												callback();
+											};
+										},
+									});
 								};
 							} else {
-								throw new types.BufferOverflow();
+								if (callback) {
+									callback();
+								};
 							};
+						} else if (buffer.length < bufferSize) {
+							write();
+							if (callback) {
+								callback();
+							};
+						} else {
+							throw new types.BufferOverflow();
 						};
 					}),
+					
 					print: doodad.REPLACE(function print(text, /*optional*/options) {
 						if (root.DD_ASSERT) {
 							root.DD_ASSERT(types.isString(text), "Invalid text.");
@@ -555,18 +622,17 @@
 						
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(attrs) || types.isString(attrs), "Invalid attributes.");
 						
-						var html;
-						
+						var html = ('<' + this.options.printTag);
+
 						if (attrs) {
-							html = ('<' + this.options.printTag + ' ' + attrs.trim());
-						} else {
-							html = ('<' + this.options.printTag);
+							html += (' ' + attrs.trim());
 						};
 						
-						html += ('>' + tools.escapeHtml(text) + '</' + this.options.printTag + '>');
+						html += ('>' + tools.escapeHtml(tools.format(text, types.get(options, 'params'))) + '</' + this.options.printTag + '>');
 						
 						this.writeLine(html);
 					}),
+					
 					prepareFlushState: doodad.PROTECTED(function prepareFlushState(options) {
 						return {
 							html: '',
@@ -581,6 +647,7 @@
 							idented: false,
 						};
 					}),
+					
 					handleBufferData: doodad.PROTECTED(doodad.JS_METHOD(function handleBufferData(bufferIndex, state) {
 						var data = state.buffer[bufferIndex],
 							type = data[0];
@@ -622,6 +689,7 @@
 						
 						return data;
 					})),
+					
 					flush: doodad.OVERRIDE(function flush(/*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						
@@ -712,19 +780,28 @@
 						this.onFlush(new doodad.Event({
 							options: options,
 						}));
+						
+						var callback = types.get(options, 'callback');
+						if (callback) {
+							callback();
+						};
 					}),
+					
 					__streamOnFlushHandler: doodad.PROTECTED(function streamOnFlushHandler(ev) {
 						var data = ev.data;
 						
 						if (!data.options.flushElement) {
 							var buffer = ev.handlerData[0],
-								bufferIndex = ev.handlerData[1];
+								bufferIndex = ev.handlerData[1],
+								bufferTypes = types.getType(this).$__bufferTypes,
+								value = data.valueOf();
 								
-							buffer[bufferIndex] = [types.getType(this).$__bufferTypes.Html, data.text, ev.obj.options.identLines];
+							buffer[bufferIndex] = [bufferTypes.Html, (value === io.EOF ? '' : value), ev.obj.options.identLines];
 							
 							ev.obj.onFlush.detach(this, this.__streamOnFlushHandler, ev.handlerData);
 						};
 					}),
+					
 					openStream: doodad.OVERRIDE(function openStream(/*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						
@@ -753,6 +830,7 @@
 						
 						return stream;
 					}),
+					
 					openElement: doodad.PUBLIC(function openElement(/*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						
@@ -771,6 +849,7 @@
 						var buffer = this.__buffer;
 						buffer[buffer.length] = [types.getType(this).$__bufferTypes.Open, tag, attrs];
 					}),
+					
 					closeElement: doodad.PUBLIC(function closeElement() {
 						var tags = this.__tags;
 						
@@ -779,9 +858,11 @@
 						var buffer = this.__buffer;
 						buffer[buffer.length] = [types.getType(this).$__bufferTypes.Close, tags.pop()[0]];
 					}),
+					
 					reset: doodad.OVERRIDE(function reset() {
 						this.__tags = [];
 					}),
+					
 					clear: doodad.OVERRIDE(function clear() {
 						this.__buffer = [];
 					}),
@@ -809,6 +890,7 @@
 				
 				io.REGISTER(io.OutputStream.$extend(
 										ioInterfaces.IConsole,
+										ioMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'ConsoleOutputStream',
 					
@@ -835,51 +917,64 @@
 					}),
 					
 					write: doodad.OVERRIDE(function write(raw, /*optional*/options) {
-						var buffer = this.__buffer;
+						var data = {
+							raw : raw,
+						};
+						data = this.transform(data) || data;
+
+						this.onWrite(new doodad.Event(data));
 						
-						var write = function write() {
-							buffer.push({
-								raw : raw,
-								text: (raw + ''),
-							});
-							this.onWrite(new doodad.Event({
-								raw: raw,
-								options: options,
-							}));
+						var buffer = this.__buffer,
+							bufferSize = this.options.bufferSize,
+							callback = types.get(options, 'callback');
+							
+						if (this.options.autoFlush) {
+							buffer.push(data);
+							if ((data.valueOf() === io.EOF) || (buffer.length >= bufferSize)) {
+								this.flush({
+									callback: function() {
+										if (callback) {
+											callback();
+										};
+									},
+								});
+							} else {
+								if (callback) {
+									callback();
+								};
+							};
+						} else if (buffer.length < bufferSize) {
+							buffer.push(data);
+							if (callback) {
+								callback();
+							};
+						} else {
+							throw new types.BufferOverflow();
 						};
 
-						var bufferSize = this.options.bufferSize;
-						if (buffer.length < bufferSize) {
-							write.apply(this);
-							write = null;
-						};
-						if (buffer.length >= bufferSize) {
-							if (this.options.autoFlush) {
-								this.flush(options);
-								if (this.__buffer.length > bufferSize) {
-									throw new types.BufferOverflow();
-								} else {
-									write && write.apply(this);
-								};
-							} else {
-								throw new types.BufferOverflow();
-							};
-						};
 					}),
 					
 					flush: doodad.OVERRIDE(function(/*optional*/options) {
 						var data;
 						var buffer = this.__buffer;
 						while (data = buffer.shift()) {
-							// <PRB> Chrome requires the context of "console"
-							//this.__fn(raw);
-							//??? this.__fn.call(global.console, raw);
-							this.__fn.call(console, data.text);
+							var value = data.valueOf();
+							if (value !== io.EOF) {
+								// <PRB> Chrome requires the context of "console"
+								//this.__fn(raw);
+								//??? this.__fn.call(global.console, value);
+								this.__fn.call(console, value);
+							};
 						};
 						
 						this.onFlush(new doodad.Event({
 							options: options,
 						}));
+						
+						var callback = types.get(options, 'callback');
+						if (callback) {
+							callback();
+						};
 					}),
 					
 					// Console hook
@@ -963,18 +1058,22 @@
 						stderr: (new io.ConsoleOutputStream({name: 'error', autoFlush: true, bufferSize: 1})),
 					});
 					
-					tools.options.hooks.console = function consoleHook(fn, message) {
-						// NOTE: Every "std" must be a stream. For output to a widget (by example), replace this hook by another.
-						if (types._implements(io.stderr, ioInterfaces.IConsole)) {
-							var _interface = io.stderr.getInterface(ioInterfaces.IConsole);
-							fn = _interface[fn];
-							fn.call(_interface, message);
-						} else if (types._implements(io.stderr, ioMixIns.TextOutput)) {
-							io.stderr.writeLine(message);
-						} else if (types._implements(io.stderr, ioMixIns.OutputStream)) {
-							io.stderr.write(message);
-						};
-					};
+					tools.setOptions({
+						hooks: {
+							console: function consoleHook(fn, message) {
+								// NOTE: Every "std" must be a stream. For output to a widget (by example), replace this hook by another.
+								if (types._implements(io.stderr, ioInterfaces.IConsole)) {
+									var _interface = io.stderr.getInterface(ioInterfaces.IConsole);
+									fn = _interface[fn];
+									fn.call(_interface, message);
+								} else if (types._implements(io.stderr, ioMixIns.TextOutput)) {
+									io.stderr.writeLine(message);
+								} else if (types._implements(io.stderr, ioMixIns.OutputStream)) {
+									io.stderr.write(message);
+								};
+							},
+						},
+					});
 				};
 			},
 		};
@@ -982,8 +1081,8 @@
 		return DD_MODULES;
 	};
 	
-	if (!global.process) {
+	if (typeof process !== 'object') {
 		// <PRB> export/import are not yet supported in browsers
 		global.DD_MODULES = exports.add(global.DD_MODULES);
 	};
-})();
+}).call((typeof global !== 'undefined') ? global : ((typeof window !== 'undefined') ? window : this));
