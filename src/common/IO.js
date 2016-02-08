@@ -35,9 +35,14 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.IO'] = {
 			type: null,
-			version: '0.2d',
+			version: '0.3d',
 			namespaces: ['MixIns', 'Interfaces'],
-			dependencies: ['Doodad'],
+			dependencies: [
+				{
+					name: 'Doodad',
+					version: '1.2r',
+				},
+			],
 
 			create: function create(root, /*optional*/_options) {
 				"use strict";
@@ -215,8 +220,8 @@
 
 					onReady: doodad.EVENT(false), // function onReady(ev)
 
-					create: doodad.OVERRIDE(function create(/*paramarray*/) {
-						this._super.apply(this, arguments);
+					create: doodad.OVERRIDE(function create(/*optional*/options) {
+						this._super(options);
 						
 						var bufferSize = types.getDefault(this.options, 'bufferSize', 1024);
 
@@ -435,8 +440,8 @@
 					onWrite: doodad.EVENT(false),
 					onFlush: doodad.EVENT(false),
 					
-					create: doodad.OVERRIDE(function create(/*paramarray*/) {
-						this._super.apply(this, arguments);
+					create: doodad.OVERRIDE(function create(/*optional*/options) {
+						this._super(options);
 
 						types.getDefault(this.options, 'autoFlush', false);
 						types.getDefault(this.options, 'bufferSize', 1024);
@@ -472,7 +477,7 @@
 				{
 					$TYPE_NAME: 'TextOutput',
 					
-					create: doodad.BEFORE(io.Stream, doodad.OVERRIDE(function create(/*optional*/options) {
+					create: doodad.BEFORE(ioMixIns.OutputStream, doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super(options);
 						
 						var newLine = types.getDefault(this.options, 'newLine', tools.getOS().newLine);

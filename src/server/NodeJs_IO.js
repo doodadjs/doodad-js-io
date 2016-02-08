@@ -35,16 +35,19 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.NodeJs.IO'] = {
 			type: null,
-			version: '0.2d',
+			version: '0.3d',
 			namespaces: ['MixIns'],
 			dependencies: [
 				'Doodad.Types', 
 				'Doodad.Tools', 
-				'Doodad', 
+				{
+					name: 'Doodad',
+					version: '1.2r',
+				},
 				'Doodad.NodeJs', 
 				{
 					name: 'Doodad.IO',
-					version: '0.2',
+					version: '0.3d',
 				}, 
 			],
 			
@@ -303,11 +306,8 @@
 				}));
 				
 				
-				// FIXME: "isListening must be overriden"
-				//nodejsIO.REGISTER(nodejsIO.BinaryInputStream.$extend(
-				nodejsIO.REGISTER(io.InputStream.$extend(
+				nodejsIO.REGISTER(nodejsIO.BinaryInputStream.$extend(
 									ioMixIns.TextInput,
-									nodejsIO.BinaryInputStream,
 									nodejsIOMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextInputStream',
@@ -470,11 +470,8 @@
 				}));
 				
 				
-				// FIXME: "Can't implement base type 'TextOutput' in a non-base type."
-				//nodejsIO.REGISTER(nodejsIO.BinaryOutputStream.$extend(
-				nodejsIO.REGISTER(io.OutputStream.$extend(
+				nodejsIO.REGISTER(nodejsIO.BinaryOutputStream.$extend(
 									ioMixIns.TextOutput,
-									nodejsIO.BinaryOutputStream,
 									nodejsIOMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextOutputStream',
@@ -494,7 +491,11 @@
 									};
 								});
 								if (!ok) {
-									this.stream.once('drain', callback);
+									// <PRB> "possible EventEmitter memory leak detected"
+									//this.stream.once('drain', callback);
+									this.streamOnDrain.attachOnce(this.stream, {
+										callback: callback,
+									});
 								};
 							} else {
 								ok = this.stream.write(value, this.options.encoding);

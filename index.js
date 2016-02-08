@@ -34,7 +34,7 @@
 	exports.add = function add(DD_MODULES) {
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES[MODULE_NAME] = {
-			type: null,
+			type: 'Package',
 			version: '0b',
 			namespaces: null,
 			dependencies: ['Doodad.Modules'],
@@ -44,19 +44,24 @@
 				"use strict";
 				
 				var doodad = root.Doodad,
-					modules = doodad.Modules;
+					modules = doodad.Modules,
+					files = [];
 				
 				var fromSource = root.getOptions().settings.fromSource;
 				
-				return modules.load(MODULE_NAME, (fromSource ? (global.process ? 'src/common/IO.js' : 'IO.js') : 'IO.min.js'), _options)
-					.then(function() {
-						if (typeof process === 'object') {
-							return modules.load(MODULE_NAME, (fromSource ? 'src/server/NodeJs_IO.js' : 'NodeJs_IO.min.js'), _options);
-						} else {
-							return modules.load(MODULE_NAME, (fromSource ? 'Client_IO.js' : 'Client_IO.min.js'), _options);
-						};
-					});
-
+				if (typeof process === 'object') {
+					files.push(
+						(fromSource ? 'src/common/IO.js' : 'IO.min.js'),
+						(fromSource ? 'src/server/NodeJs_IO.js' : 'NodeJs_IO.min.js')
+					);
+				} else {
+					files.push(
+						(fromSource ? 'IO.js' : 'IO.min.js'),
+						(fromSource ? 'Client_IO.js' : 'Client_IO.min.js')
+					);
+				};
+				
+				return modules.load(MODULE_NAME, files, _options);
 			},
 		};
 		return DD_MODULES;
