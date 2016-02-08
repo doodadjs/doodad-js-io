@@ -35,7 +35,7 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.Client.IO'] = {
 			type: null,
-			version: '0.2d',
+			version: '0.3d',
 			namespaces: null,
 			dependencies: [
 				{
@@ -47,7 +47,7 @@
 				'Doodad.Client', 
 				{
 					name: 'Doodad.IO',
-					version: '0.2',
+					version: '0.3d',
 				}, 
 			],
 			
@@ -455,8 +455,11 @@
 						tags[tags.length - 1][1] = this.element;
 					}),
 					closeElement: doodad.OVERRIDE(function closeElement() {
-						var tags = this.__tags,
-							tag = tags[tags.length - 1],
+						var tags = this.__tags;
+						
+						root.DD_ASSERT && root.DD_ASSERT((tags.length > 0), "No more elements opened.");
+						
+						var tag = tags[tags.length - 1],
 							element = tag[1];
 
 						this._super();
