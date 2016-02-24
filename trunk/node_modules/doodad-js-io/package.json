@@ -1,6 +1,6 @@
 {
   "name": "doodad-js-io",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "\"doodad-js\" I/O (alpha)",
   "homepage": "https://sourceforge.net/projects/doodad-js/",
   "main": "index.js",
@@ -22,7 +22,8 @@
   },
   "keywords": [
     "doodad-js",
-    "io"
+    "io",
+    "i/o"
   ],
   "author": "Claude Petit <doodadjs@gmail.com> (https://sourceforge.net/projects/doodad-js/)",
   "license": "Apache-2.0",

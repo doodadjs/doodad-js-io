@@ -70,9 +70,9 @@
 				{
 					$TYPE_NAME: 'EOF',
 
-					toString: function toString() {
+					toString: doodad.REPLACE(function toString() {
 						return '';
-					},
+					}),
 				})));
 				
 					
