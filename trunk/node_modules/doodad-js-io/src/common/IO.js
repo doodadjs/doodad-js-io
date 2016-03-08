@@ -35,13 +35,13 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.IO'] = {
 			type: null,
-			version: '0.3d',
+			version: '0.4.0d',
 			namespaces: ['MixIns', 'Interfaces'],
 			dependencies: [
 				{
 					name: 'Doodad',
-					version: '1.2r',
-				},
+					version: '2.0.0',
+				}, 
 			],
 
 			create: function create(root, /*optional*/_options) {
@@ -108,7 +108,7 @@
 							options = {};
 						};
 						
-						this.setAttribute('options', options);
+						types.setAttribute(this, 'options', options);
 					}),
 					
 					reset: doodad.PUBLIC(doodad.MUST_OVERRIDE()),
