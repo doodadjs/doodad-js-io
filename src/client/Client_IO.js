@@ -35,19 +35,23 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.Client.IO'] = {
 			type: null,
-			version: '0.3d',
+			version: '0.4.0d',
 			namespaces: null,
 			dependencies: [
 				{
 					name: 'Doodad.Types', 
-					version: '1.1r',
+					version: '2.0.0',
 				},
 				'Doodad.Tools', 
-				'Doodad', 
+				'Doodad.Tools.Files', 
+				{
+					name: 'Doodad',
+					version: '2.0.0',
+				}, 
 				'Doodad.Client', 
 				{
 					name: 'Doodad.IO',
-					version: '0.3d',
+					version: '0.4.0',
 				}, 
 			],
 			
@@ -223,7 +227,7 @@
 							root.DD_ASSERT(types.isNothing(element) || client.isElement(element) || client.isDocument(element), "Invalid element.");
 						};
 
-						this.setAttribute('element', this.options.element);
+						types.setAttribute(this, 'element', this.options.element);
 						
 						this.__buffer = [];
 					}),
@@ -306,7 +310,7 @@
 							};
 						};
 
-						this.setAttribute('document', _document);
+						types.setAttribute(this, 'document', _document);
 					}),
 					destroy: doodad.OVERRIDE(function destroy() {
 						if (this.options.openNew) {
@@ -349,7 +353,7 @@
 						
 						this.__div = element.ownerDocument.createElement('div');
 						
-						this.setAttribute('element', element);
+						types.setAttribute(this, 'element', element);
 					}),
 					
 					prepareFlushState: doodad.OVERRIDE(function prepareFlushState(options) {
@@ -379,7 +383,7 @@
 							if (state.flushElement) {
 								state.flushElement = false;
 								state.flushElementChunk[2] = element = this.element.ownerDocument.createElement('div');
-								this.setAttribute('element', element);
+								types.setAttribute(this, 'element', element);
 								html = null;
 							} else {
 								container = this.__div;
@@ -464,12 +468,12 @@
 
 						this._super();
 						
-						this.setAttribute('element', element);
+						types.setAttribute(this, 'element', element);
 					}),
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 						
-						this.setAttribute('element', this.options.element);
+						types.setAttribute(this, 'element', this.options.element);
 					}),
 					clear: doodad.OVERRIDE(function clear() {
 						this._super();
@@ -661,11 +665,11 @@
 					if (!__Internal__.streamsSupported) {
 						throw new types.NotSupported("Streams are not supported.");
 					};
-					url = tools.getOptions().hooks.urlParser(url, types.get(options, 'parseOptions'));
-					root.DD_ASSERT && root.DD_ASSERT(url instanceof tools.Url, "Invalid url.");
+					url = files.getOptions().hooks.urlParser(url, types.get(options, 'parseOptions'));
+					root.DD_ASSERT && root.DD_ASSERT(url instanceof files.Url, "Invalid url.");
 					url = url.toString();
 					var encoding = types.get(options, 'encoding', null);
-					var Promise = tools.getPromise();
+					var Promise = types.getPromise();
 					return new Promise(function(resolve, reject) {
 						var headers = new __Natives__.windowHeaders(types.get(options, 'headers'));
 						if (!headers.has('Accept')) {

@@ -35,19 +35,20 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.NodeJs.IO'] = {
 			type: null,
-			version: '0.3d',
+			version: '0.4.0d',
 			namespaces: ['MixIns'],
 			dependencies: [
 				'Doodad.Types', 
 				'Doodad.Tools', 
+				'Doodad.Tools.Files', 
 				{
 					name: 'Doodad',
-					version: '1.2r',
-				},
+					version: '2.0.0',
+				}, 
 				'Doodad.NodeJs', 
 				{
 					name: 'Doodad.IO',
-					version: '0.3d',
+					version: '0.4.0',
 				}, 
 			],
 			
@@ -67,7 +68,8 @@
 					
 					nodeStream = require('stream'),
 					nodeFs = require('fs'),
-					nodeStringDecoder = require('string_decoder').StringDecoder;
+					nodeStringDecoder = require('string_decoder').StringDecoder,
+					nodeCluster = require('cluster');
 				
 				//===================================
 				// IO Streams
@@ -213,7 +215,7 @@
 							
 						this._super(options);
 						
-						this.setAttribute('stream', stream);
+						types.setAttribute(this, 'stream', stream);
 						
 						this.__buffer = [];
 					}),
@@ -348,7 +350,7 @@
 						//this.streamOnClose.attach(stream);
 						this.streamOnError.attach(stream);
 						
-						this.setAttribute('stream', stream);
+						types.setAttribute(this, 'stream', stream);
 						
 						this.__buffer = [];
 					}),
@@ -519,18 +521,18 @@
 
 				
 				files.openFile = function openFile(path, /*optional*/options) {
-					path = tools.getOptions().hooks.urlParser(path, options.parseOptions);
+					path = files.getOptions().hooks.urlParser(path, options.parseOptions);
 					
-					root.DD_ASSERT && root.DD_ASSERT((path instanceof tools.Path) || ((path instanceof tools.Url) && (path.protocol === 'file')), "Invalid path.")
+					root.DD_ASSERT && root.DD_ASSERT((path instanceof files.Path) || ((path instanceof files.Url) && (path.protocol === 'file')), "Invalid path.")
 					
-					if (path instanceof tools.Url) {
-						path = tools.Path.parse(path);
+					if (path instanceof files.Url) {
+						path = files.Path.parse(path);
 					};
 					
 					path = path.toString();
 					
 					const encoding = types.get(options, 'encoding'),
-						Promise = tools.getPromise();
+						Promise = types.getPromise();
 						
 					return new Promise(function(resolve, reject) {
 						try {
@@ -550,8 +552,13 @@
 				return function init(/*optional*/options) {
 					// NOTE: Every "std" must be a stream.
 					const stdout = new nodejsIO.TextOutputStream(process.stdout, {autoFlush: true, bufferSize: 1});
+					// <PRB> Since Node version 5.6.0 or 5.7.0, children of a cluster are taking control of 'stdin'.
+					if (nodeCluster.isMaster) {
+						io.setStds({
+							stdin: new nodejsIO.TextInputStream(process.stdin, {autoFlush: true, bufferSize: 1}),
+						});
+					};
 					io.setStds({
-						stdin: new nodejsIO.TextInputStream(process.stdin, {autoFlush: true, bufferSize: 1}),
 						stdout: stdout,
 						stderr: ((process.stderr === process.stdout) ? stdout : new nodejsIO.TextOutputStream(process.stderr, {autoFlush: true, bufferSize: 1})),
 					});

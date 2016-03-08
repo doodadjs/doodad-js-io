@@ -28,9 +28,9 @@ module.exports = {
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['doodad-js-io'] = {
 			type: null,
-			version: '0a',
+			version: '0.4.0d',
 			namespaces: null,
-			dependencies: [],
+			dependencies: null,
 			exports: module.exports,
 			
 			create: function create(root, /*optional*/_options) {
@@ -40,22 +40,12 @@ module.exports = {
 				} catch(ex) {
 				};
 				
-				var fromSource = root.getOptions().settings.fromSource,
-					modules = {};
+				var modules = {};
 				
-				if (fromSource) {
-					require("./dist/doodad-js-io/IO.js").add(modules);
-					require("./dist/doodad-js-io/Client_IO.js").add(modules);
-				} else {
-					// TODO: Find a way to prevent browserify to bundle both versions.
-					//require("./dist/doodad-js-io/IO.min.js").add(modules);
-					//require("./dist/doodad-js-io/Client_IO.min.js").add(modules);
-					
-					require("./dist/doodad-js-io/IO.js").add(modules);
-					require("./dist/doodad-js-io/Client_IO.js").add(modules);
-				};
+				require("./dist/doodad-js-io/IO.js").add(modules);
+				require("./dist/doodad-js-io/Client_IO.js").add(modules);
 				
-				return root.Doodad.Namespaces.loadNamespaces(null, false, config, modules);
+				return root.Doodad.Namespaces.loadNamespaces(modules, null, config, false);
 			},
 		};
 		return DD_MODULES;
