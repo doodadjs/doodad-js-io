@@ -35,12 +35,12 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.IO'] = {
 			type: null,
-			version: '0.4.0d',
+			version: '1.0.0a',
 			namespaces: ['MixIns', 'Interfaces'],
 			dependencies: [
 				{
 					name: 'Doodad',
-					version: '2.0.0',
+					version: '2.2.0',
 				}, 
 			],
 
@@ -80,7 +80,7 @@
 				{
 					$TYPE_NAME: 'Transformable',
 					
-					transform: doodad.PUBLIC(function transform(data) {
+					transform: doodad.PUBLIC(function transform(data, /*optional*/options) {
 						data.valueOf = function valueOf() {
 							return this.raw;
 						};
@@ -128,7 +128,11 @@
 							};
 						};
 
-						stream.write(data.valueOf(), data.options);
+						if (data.raw === io.EOF) {
+							stream.write(io.EOF, data.options);
+						} else {
+							stream.write(data.valueOf(), data.options);
+						};
 					}),
 					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
@@ -201,11 +205,13 @@
 				{
 					$TYPE_NAME: 'TextTransformable',
 					
-					transform: doodad.REPLACE(function transform(data) {
+					transform: doodad.REPLACE(function transform(data, /*optional*/options) {
+						// TODO: Use "TextDecoder"
+						//var encoding = types.get(options, 'encoding', this.options.encoding);
 						data.text = String(data.raw);
 						data.valueOf = function valueOf() {
 							if (this.raw === io.EOF) {
-								return this.raw;
+								return null;
 							} else {
 								return this.text;
 							};
@@ -264,8 +270,7 @@
 						throw new types.Error("This function is in need for a complete review.");
 						/*
 						return tools.reduce(this.read(options), function(result, data) {
-							var val = data.valueOf();
-							return result + (val === io.EOF ? '' : val);
+							return result + (data.raw === io.EOF ? '' : data.valueOf());
 						}, "");
 						*/
 					}),
@@ -548,23 +553,22 @@
 						var data = {
 							raw : html,
 						};
-						data = this.transform(data) || data;
+						data = this.transform(data, options) || data;
 
 						this.onWrite(new doodad.Event(data));
 						
 						var buffer = this.__buffer,
-							htmlType = types.getType(this).$__bufferTypes.Html,
-							value = data.valueOf();
+							htmlType = types.getType(this).$__bufferTypes.Html;
 
 						var write = function write() {
-							if (value !== io.EOF) {
+							if (data.raw !== io.EOF) {
 								var bufferLen = buffer.length,
 									lastItem = buffer[bufferLen - 1];
 									
 								if (!lastItem || (lastItem[0] !== htmlType)) {
-									buffer[bufferLen] = [htmlType, value, false];
+									buffer[bufferLen] = [htmlType, data.valueOf(), false];
 								} else {
-									lastItem[1] += value;
+									lastItem[1] += data.valueOf();
 								};
 							};
 						};
@@ -575,8 +579,8 @@
 							
 						if (this.options.autoFlush) {
 							write();
-							if ((value === io.EOF) || (buffer.length >= bufferSize)) {
-								if (value === io.EOF) {
+							if ((data.raw === io.EOF) || (buffer.length >= bufferSize)) {
+								if (data.raw === io.EOF) {
 									this.flush({
 										callback: function() {
 											//if (this.__buffer.length > bufferSize) {
@@ -630,7 +634,7 @@
 						var html = ('<' + this.options.printTag);
 
 						if (attrs) {
-							html += (' ' + attrs.trim());
+							html += (' ' + tools.trim(attrs));
 						};
 						
 						html += ('>' + tools.escapeHtml(tools.format(text, types.get(options, 'params'))) + '</' + this.options.printTag + '>');
@@ -663,7 +667,7 @@
 						} else if (type === state.bufferTypes.Open) {
 							var attrs = data[2];
 							if (attrs) {
-								attrs = attrs.trim();
+								attrs = tools.trim(attrs);
 							};
 							if (attrs && attrs.length) {
 								data = ('<' + data[1] + ' ' + attrs + '>' + state.newLine);
@@ -756,7 +760,7 @@
 										identSpace = tools.repeat(identStr, state.identCount);
 										linesLen = lines.length;
 										for (var j = 0; j < linesLen; j++) {
-											line = lines[j].trim(identStr);
+											line = tools.trim(lines[j], identStr);
 											if (line.length) {
 												state.html += (identSpace + line + state.newLine);
 											};
@@ -798,10 +802,9 @@
 						if (!data.options.flushElement) {
 							var buffer = ev.handlerData[0],
 								bufferIndex = ev.handlerData[1],
-								bufferTypes = types.getType(this).$__bufferTypes,
-								value = data.valueOf();
+								bufferTypes = types.getType(this).$__bufferTypes;
 								
-							buffer[bufferIndex] = [bufferTypes.Html, (value === io.EOF ? '' : value), ev.obj.options.identLines];
+							buffer[bufferIndex] = [bufferTypes.Html, (data.raw === io.EOF ? '' : data.valueOf()), ev.obj.options.identLines];
 							
 							ev.obj.onFlush.detach(this, this.__streamOnFlushHandler, ev.handlerData);
 						};
@@ -889,7 +892,6 @@
 					info: doodad.PUBLIC(doodad.METHOD()), //function info(raw, /*optional*/options)
 					warn: doodad.PUBLIC(doodad.METHOD()), //function warn(raw, /*optional*/options)
 					error: doodad.PUBLIC(doodad.METHOD()), //function error(raw, /*optional*/options)
-					exception: doodad.PUBLIC(doodad.METHOD()), //function exception(raw, /*optional*/options)
 					log: doodad.PUBLIC(doodad.METHOD()), //function log(raw, /*optional*/options)
 				}))));
 				
@@ -905,11 +907,19 @@
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super(options);
 						
-						var name = types.get(this.options, 'name', 'log');
+						var name = types.get(this.options, 'name');
 						
-						root.DD_ASSERT && root.DD_ASSERT(types.isString(name) && (tools.findItem(['log', 'debug', 'error', '_exception', 'info', 'warn'], name) !== null), "Invalid name.");
-
-						this.__fn = global.console[name];
+						if ((name === 'info') && global.console.info) {
+							this.__fn = 'info';
+						} else if ((name === 'warn') && global.console.warn) {
+							this.__fn = 'warn';
+						} else if ((name === 'error') && global.console.error) {
+							this.__fn = 'error';
+						} else if ((name === 'error') && global.console.exception) {
+							this.__fn = 'exception';
+						} else {
+							this.__fn = 'log';
+						};
 						
 						this.__buffer = [];
 					}),
@@ -925,7 +935,7 @@
 						var data = {
 							raw : raw,
 						};
-						data = this.transform(data) || data;
+						data = this.transform(data, options) || data;
 
 						this.onWrite(new doodad.Event(data));
 						
@@ -935,7 +945,7 @@
 							
 						if (this.options.autoFlush) {
 							buffer.push(data);
-							if ((data.valueOf() === io.EOF) || (buffer.length >= bufferSize)) {
+							if ((data.raw === io.EOF) || (buffer.length >= bufferSize)) {
 								this.flush({
 									callback: function() {
 										if (callback) {
@@ -963,12 +973,8 @@
 						var data;
 						var buffer = this.__buffer;
 						while (data = buffer.shift()) {
-							var value = data.valueOf();
-							if (value !== io.EOF) {
-								// <PRB> Chrome requires the context of "console"
-								//this.__fn(raw);
-								//??? this.__fn.call(global.console, value);
-								this.__fn.call(console, value);
+							if (data.raw !== io.EOF) {
+								global.console[this.__fn](data.valueOf());
 							};
 						};
 						
@@ -984,24 +990,38 @@
 					
 					// Console hook
 					log: doodad.OVERRIDE(ioInterfaces.IConsole, function log(raw, /*optional*/options) {
-						var fn = console.log;
-						fn.call(console, raw);
+						if (global.console) {
+							global.console.log(raw);
+						};
 					}),
 					info: doodad.OVERRIDE(ioInterfaces.IConsole, function info(raw, /*optional*/options) {
-						var fn = (console.info || console.log);
-						fn.call(console, raw);
+						if (global.console) {
+							if (console.info) {
+								global.console.info(raw);
+							} else {
+								global.console.log(raw);
+							};
+						};
 					}),
 					warn: doodad.OVERRIDE(ioInterfaces.IConsole, function warn(raw, /*optional*/options) {
-						var fn = (console.warn || console.log);
-						fn.call(console, raw);
+						if (global.console) {
+							if (console.warn) {
+								global.console.warn(raw);
+							} else {
+								global.console.log(raw);
+							};
+						};
 					}),
 					error: doodad.OVERRIDE(ioInterfaces.IConsole, function error(raw, /*optional*/options) {
-						var fn = (console.error || console.exception || console.log);
-						fn.call(console, raw);
-					}),
-					exception: doodad.OVERRIDE(ioInterfaces.IConsole, function exception(raw, /*optional*/options) {
-						var fn = (console.exception || console.error || console.log);
-						fn.call(console, raw);
+						if (global.console) {
+							if (global.console.error) {
+								global.console.error(raw);
+							} else if (global.console.exception) {
+								global.console.exception(raw);
+							} else {
+								global.console.log(raw);
+							};
+						};
 					}),
 					
 				}));
@@ -1056,6 +1076,7 @@
 					io.stderr = null;
 				};
 					
+					
 				return function init(/*optional*/options) {
 					// NOTE: Every "std" must be a stream.
 					io.setStds({
@@ -1067,14 +1088,19 @@
 						hooks: {
 							console: function consoleHook(fn, message) {
 								// NOTE: Every "std" must be a stream. For output to a widget (by example), replace this hook by another.
-								if (types._implements(io.stderr, ioInterfaces.IConsole)) {
-									var _interface = io.stderr.getInterface(ioInterfaces.IConsole);
-									fn = _interface[fn];
-									fn.call(_interface, message);
-								} else if (types._implements(io.stderr, ioMixIns.TextOutput)) {
-									io.stderr.writeLine(message);
-								} else if (types._implements(io.stderr, ioMixIns.OutputStream)) {
-									io.stderr.write(message);
+								var std;
+								if (fn === 'log') {
+									std = io.stdout;
+								} else {
+									std = io.stderr;
+								};
+								if (types._implements(std, ioInterfaces.IConsole)) {
+									var _interface = std.getInterface(ioInterfaces.IConsole);
+									_interface[fn](message);
+								} else if (types._implements(std, ioMixIns.TextOutput)) {
+									std.writeLine(message);
+								} else if (types._implements(std, ioMixIns.OutputStream)) {
+									std.write(message);
 								};
 							},
 						},
