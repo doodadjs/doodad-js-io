@@ -35,7 +35,7 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES[MODULE_NAME] = {
 			type: 'Package',
-			version: '0.4.0d',
+			version: '1.0.0a',
 			namespaces: null,
 			dependencies: ['Doodad.Modules'],
 			exports: exports,

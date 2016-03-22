@@ -35,23 +35,23 @@
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.Client.IO'] = {
 			type: null,
-			version: '0.4.0d',
+			version: '1.0.0a',
 			namespaces: null,
 			dependencies: [
 				{
 					name: 'Doodad.Types', 
-					version: '2.0.0',
+					version: '2.2.0',
 				},
 				'Doodad.Tools', 
 				'Doodad.Tools.Files', 
 				{
 					name: 'Doodad',
-					version: '2.0.0',
+					version: '2.2.0',
 				}, 
 				'Doodad.Client', 
 				{
 					name: 'Doodad.IO',
-					version: '0.4.0',
+					version: '1.0.0',
 				}, 
 			],
 			
@@ -107,7 +107,7 @@
 						functionKeys: null,
 					}),
 					
-					transform: doodad.OVERRIDE(function transform(data) {
+					transform: doodad.OVERRIDE(function transform(data, /*optional*/options) {
 						// NOTE: data.raw is a "keydown" or "keypress" event object
 						var data = this._super(data) || data;
 						if (data.raw.type === 'keypress') {
@@ -325,9 +325,9 @@
 							buffer = this.__buffer;
 						
 						while (data = buffer.shift()) {
-							var value = data.valueOf();
-							if (value !== io.EOF) {
-								this.document.write(value);
+							if (data.raw !== io.EOF) {
+								var value = data.valueOf();
+								this.document.write(value.valueOf());
 							};
 						};
 
@@ -428,7 +428,7 @@
 						};
 
 						if (attrs) {
-							attrs = attrs.trim();
+							attrs = tools.trim(attrs);
 						};
 						var container = this.__div;
 						if (attrs && attrs.length) {
@@ -548,7 +548,7 @@
 							
 							if (!prevent) {
 								if (this.__buffer.length < this.options.bufferSize) {
-									this.__buffer.push(data.valueOf());
+									this.__buffer.push(data);
 								} else {
 									throw new types.BufferOverflow();
 								};
@@ -582,7 +582,7 @@
 								
 								if (!prevent) {
 									if (this.__buffer.length < this.options.bufferSize) {
-										this.__buffer.push(data.valueOf());
+										this.__buffer.push(data);
 									} else {
 										throw new types.BufferOverflow();
 									};
@@ -709,7 +709,6 @@
 				return function init(/*optional*/options) {
 					io.setStds({
 						stdin: (new clientIO.KeyboardInputStream()),
-						stdout: (new clientIO.DomOutputStream({autoFlush: true})),
 					});
 				};
 			},
