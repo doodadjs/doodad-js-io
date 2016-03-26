@@ -27,11 +27,15 @@ module.exports = {
 	add: function add(DD_MODULES) {
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['doodad-js-io'] = {
-			type: null,
-			version: '1.0.0a',
+			type: 'Package',
+			//! INSERT("version:'" + VERSION('doodad-js-io') + "',")
 			namespaces: null,
-			dependencies: null,
-			exports: module.exports,
+			dependencies: [
+				{
+					name: 'doodad-js',
+					//! INSERT("version:'" + VERSION('doodad-js') + "',")
+				},
+			],
 			
 			create: function create(root, /*optional*/_options) {
 				var config = null;
@@ -45,7 +49,10 @@ module.exports = {
 				require("./dist/doodad-js-io/IO.min.js").add(modules);
 				require("./dist/doodad-js-io/Client_IO.min.js").add(modules);
 				
-				return root.Doodad.Namespaces.loadNamespaces(modules, null, config, false);
+				return root.Doodad.Namespaces.loadNamespaces(modules, null, config, false)
+					.then(function() {
+						// Returns nothing
+					});
 			},
 		};
 		return DD_MODULES;
