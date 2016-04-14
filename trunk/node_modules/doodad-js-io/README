@@ -63,7 +63,7 @@ Then load 'doodad-js-io' :
         // your code here...
     };
     
-    namespaces.loadNamespaces(modules, startup);
+    namespaces.load(modules, startup);
 ```
 
 ## Example
