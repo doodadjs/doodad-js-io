@@ -1,4 +1,4 @@
-//! REPLACE_BY("// Copyright 2016 Claude Petit, licensed under Apache License version 2.0\n")
+//! REPLACE_BY("// Copyright 2016 Claude Petit, licensed under Apache License version 2.0\n", true)
 // dOOdad - Object-oriented programming framework
 // File: IO.js - IO tools
 // Project home: https://sourceforge.net/projects/doodad-js/
@@ -27,17 +27,22 @@
 	var global = this;
 
 	var exports = {};
-	if (typeof process === 'object') {
-		module.exports = exports;
+	
+	//! BEGIN_REMOVE()
+	if ((typeof process === 'object') && (typeof module === 'object')) {
+	//! END_REMOVE()
+		//! IF_DEF("serverSide")
+			module.exports = exports;
+		//! END_IF()
+	//! BEGIN_REMOVE()
 	};
+	//! END_REMOVE()
 	
 	exports.add = function add(DD_MODULES) {
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.IO'] = {
-			type: null,
-			//! INSERT("version:'" + VERSION('doodad-js-io') + "',")
+			version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE() */,
 			namespaces: ['MixIns', 'Interfaces'],
-			dependencies: null,
 
 			create: function create(root, /*optional*/_options) {
 				"use strict";
@@ -986,21 +991,53 @@
 					// Console hook
 					log: doodad.OVERRIDE(ioInterfaces.IConsole, function log(raw, /*optional*/options) {
 						if (global.console) {
-							global.console.log(raw);
+							//! BEGIN_REMOVE()
+								if ((typeof process === 'object') && (typeof module === 'object')) {
+									global.console.warn(raw); // force stderr
+								} else {
+							//! END_REMOVE()
+							
+							//! IF_UNDEF("serverSide")
+									global.console.log(raw);
+							//! END_IF()
+								
+							//! BEGIN_REMOVE()
+								};
+							//! END_REMOVE()
+							
+							//! IF_DEF("serverSide")
+								//! INJECT("global.console.warn(raw)") // force stderr
+							//! END_IF()
 						};
 					}),
 					info: doodad.OVERRIDE(ioInterfaces.IConsole, function info(raw, /*optional*/options) {
 						if (global.console) {
-							if (console.info) {
-								global.console.info(raw);
-							} else {
-								global.console.log(raw);
-							};
+							//! BEGIN_REMOVE()
+								if ((typeof process === 'object') && (typeof module === 'object')) {
+									global.console.warn(raw); // force stderr
+								} else {
+							//! END_REMOVE()
+							
+							//! IF_UNDEF("serverSide")
+									if (global.console.info) {
+										global.console.info(raw);
+									} else {
+										global.console.log(raw);
+									};
+							//! END_IF()
+								
+							//! BEGIN_REMOVE()
+								};
+							//! END_REMOVE()
+							
+							//! IF_DEF("serverSide")
+								//! INJECT("global.console.warn(raw)") // force stderr
+							//! END_IF()
 						};
 					}),
 					warn: doodad.OVERRIDE(ioInterfaces.IConsole, function warn(raw, /*optional*/options) {
 						if (global.console) {
-							if (console.warn) {
+							if (global.console.warn) {
 								global.console.warn(raw);
 							} else {
 								global.console.log(raw);
@@ -1081,21 +1118,25 @@
 					
 					tools.setOptions({
 						hooks: {
-							console: function consoleHook(fn, message) {
-								// NOTE: Every "std" must be a stream. For output to a widget (by example), replace this hook by another.
-								var std;
-								if (fn === 'log') {
-									std = io.stdout;
-								} else {
-									std = io.stderr;
-								};
-								if (types._implements(std, ioInterfaces.IConsole)) {
-									var _interface = std.getInterface(ioInterfaces.IConsole);
+							console: function consoleHook(level, message) {
+								// NOTE: Every "std" must be a stream.
+								if (types._implements(io.stderr, ioInterfaces.IConsole)) {
+									var _interface = io.stderr.getInterface(ioInterfaces.IConsole);
+									var fn;
+									if (level === tools.LogLevels.Info) {
+										fn = 'info';
+									} else if (level === tools.LogLevels.Warning) {
+										fn = 'warn';
+									} else if (level === tools.LogLevels.Error) {
+										fn = 'error';
+									} else {
+										fn = 'log';
+									};
 									_interface[fn](message);
-								} else if (types._implements(std, ioMixIns.TextOutput)) {
-									std.writeLine(message);
-								} else if (types._implements(std, ioMixIns.OutputStream)) {
-									std.write(message);
+								} else if (types._implements(io.stderr, ioMixIns.TextOutput)) {
+									io.stderr.writeLine(message);
+								} else if (types._implements(io.stderr, ioMixIns.OutputStream)) {
+									io.stderr.write(message);
 								};
 							},
 						},
@@ -1107,8 +1148,23 @@
 		return DD_MODULES;
 	};
 	
-	if (typeof process !== 'object') {
-		// <PRB> export/import are not yet supported in browsers
-		global.DD_MODULES = exports.add(global.DD_MODULES);
+	//! BEGIN_REMOVE()
+	if ((typeof process !== 'object') || (typeof module !== 'object')) {
+	//! END_REMOVE()
+		//! IF_UNDEF("serverSide")
+			// <PRB> export/import are not yet supported in browsers
+			global.DD_MODULES = exports.add(global.DD_MODULES);
+		//! END_IF()
+	//! BEGIN_REMOVE()
 	};
-}).call((typeof global !== 'undefined') ? global : ((typeof window !== 'undefined') ? window : this));
+	//! END_REMOVE()
+}).call(
+	//! BEGIN_REMOVE()
+	(typeof window !== 'undefined') ? window : ((typeof global !== 'undefined') ? global : this)
+	//! END_REMOVE()
+	//! IF_DEF("serverSide")
+	//! 	INJECT("global")
+	//! ELSE()
+	//! 	INJECT("window")
+	//! END_IF()
+);
