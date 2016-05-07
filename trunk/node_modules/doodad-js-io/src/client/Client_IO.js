@@ -43,12 +43,7 @@
 		DD_MODULES['Doodad.Client.IO'] = {
 			version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE() */,
 			dependencies: [
-				//{
-				//	name: 'doodad-js', 
-				//	version: /*! REPLACE_BY(TO_SOURCE(VERSION('doodad-js'))) */ null /*! END_REPLACE() */,
-				//},
-				'Doodad.Client', 
-				'Doodad.IO', 
+				'Doodad.IO/common', 
 			],
 			
 			create: function create(root, /*optional*/_options) {
@@ -104,46 +99,53 @@
 					}),
 					
 					transform: doodad.OVERRIDE(function transform(data, /*optional*/options) {
-						// NOTE: data.raw is a "keydown" or "keypress" event object
-						var data = this._super(data) || data;
-						if (data.raw.type === 'keypress') {
-							var unifiedEv = data.raw.getUnified();
-							data.text = String.fromCharCode(unifiedEv.which);
-							
-						} else {
-							var	functionKeys = 0,
-								charCode = data.raw.charCode,
-								scanCode = data.raw.keyCode;
-							
-							if (data.raw.shiftKey) {
-								functionKeys |= io.KeyboardFunctionKeys.Shift;
-							};
-							if (data.raw.ctrlKey) {
-								functionKeys |= io.KeyboardFunctionKeys.Ctrl;
-							};
-							if (data.raw.altKey) {
-								functionKeys |= io.KeyboardFunctionKeys.Alt;
-							};
-							if (data.raw.metaKey) {
-								functionKeys |= io.KeyboardFunctionKeys.Meta;
-							};
-							
-							if (!functionKeys) {
-								if (charCode === 0) {
-									// TODO: Fix every other wrong char codes
-									if (scanCode === io.KeyboardScanCodes.Enter) {
-										charCode = 10; // "\n"
+						if (client.isEvent(data.raw)) {
+							this.overrideSuper();
+							// NOTE: data.raw is a "keydown" or "keypress" event object
+							if (data.raw.type === 'keypress') {
+								var unifiedEv = data.raw.getUnified();
+								data.text = String.fromCharCode(unifiedEv.which);
+								
+							} else {
+								var	functionKeys = 0,
+									charCode = data.raw.charCode,
+									scanCode = data.raw.keyCode;
+								
+								if (data.raw.shiftKey) {
+									functionKeys |= io.KeyboardFunctionKeys.Shift;
+								};
+								if (data.raw.ctrlKey) {
+									functionKeys |= io.KeyboardFunctionKeys.Ctrl;
+								};
+								if (data.raw.altKey) {
+									functionKeys |= io.KeyboardFunctionKeys.Alt;
+								};
+								if (data.raw.metaKey) {
+									functionKeys |= io.KeyboardFunctionKeys.Meta;
+								};
+								
+								if (!functionKeys) {
+									if (charCode === 0) {
+										// TODO: Fix every other wrong char codes
+										if (scanCode === io.KeyboardScanCodes.Enter) {
+											charCode = 10; // "\n"
+										};
 									};
 								};
-							};
 
-							data.charCode = charCode;
-							data.scanCode = scanCode;
-							data.text = String.fromCharCode(charCode);
-							data.functionKeys = functionKeys;
+								data.charCode = charCode;
+								data.scanCode = scanCode;
+								data.text = String.fromCharCode(charCode);
+								data.functionKeys = functionKeys;
+							};
+						} else {
+							data = this._super(data, options) || data;
+							data.text = data.valueOf();
+							data.charCode = null;
+							data.scanCode = null;
+							data.functionKeys = null;
 						};
 						data.valueOf = function() {
-							// TODO: ANSI sequence ?
 							if (data.functionKeys & io.KeyboardFunctionKeys.Alt) {
 								return '';
 							};
@@ -157,6 +159,7 @@
 							};
 							return data.text;
 						};
+						return data;
 					}),
 
 					onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(ev) {
@@ -179,23 +182,8 @@
 					onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT(['keydown', 'keypress'], function onJsKeyDown(ev) {
 						var prevent = false;
 						try {
-							this.__pendingData.raw = ev;
-							var data = this.transform(this.__pendingData) || this.__pendingData;
-
-							data.options = this.options;
-
 							if (this.__listening) {
-								var readyEv = new doodad.Event(data);
-								this.onReady(readyEv);
-								prevent = readyEv.prevent;
-							};
-							
-							if (!prevent) {
-								if (this.__buffer.length < this.options.bufferSize) {
-									this.__buffer.push(data);
-								} else {
-									throw new types.BufferOverflow();
-								};
+								prevent = !this.push(ev);
 							};
 							
 						} catch(ex) {
@@ -217,15 +205,13 @@
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super(options);
 						
-						var element = types.getDefault(this.options, 'element', global.document);
+						var element = types.get(this.options, 'element', global.document);
 
 						if (root.DD_ASSERT) {
 							root.DD_ASSERT(types.isNothing(element) || client.isElement(element) || client.isDocument(element), "Invalid element.");
 						};
 
-						types.setAttribute(this, 'element', this.options.element);
-						
-						this.__buffer = [];
+						types.setAttribute(this, 'element', element);
 					}),
 					destroy: doodad.OVERRIDE(function destroy() {
 						this.stopListening();
@@ -241,6 +227,7 @@
 							this.__listening = true;
 							this.onJsClick.attach(this.element);
 							this.onJsKeyDown.attach(this.element);
+							this.onListen(new doodad.Event());
 						};
 					}),
 					stopListening: doodad.OVERRIDE(function stopListening(/*optional*/options) {
@@ -248,61 +235,34 @@
 							this.__listening = false;
 							this.onJsClick.clear();
 							this.onJsKeyDown.clear();
+							this.onStopListening(new doodad.Event());
 						};
-					}),
-					getCount: doodad.OVERRIDE(function getCount(/*optional*/options) {
-						return this.__buffer.length;
-					}),
-					read: doodad.OVERRIDE(function read(/*optional*/options) {
-						if (root.DD_ASSERT) {
-							root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
-						};
-						
-						var count = types.get(options, 'count');
-
-						if (root.DD_ASSERT) {
-							root.DD_ASSERT(types.isNothing(count) || types.isInteger(count), "Invalid count.");
-						};
-
-						if (types.isNothing(count)) {
-							return this.__buffer.shift();
-						} else {
-							return this.__buffer.splice(0, count);
-						};
-					}),
-					clear: doodad.OVERRIDE(function clear() {
-						this._super();
-						this.__buffer = [];
-					}),
-					reset: doodad.OVERRIDE(function reset() {
-						this._super();
-						this.__buffer = [];
 					}),
 				}));
 
 				
-				
+				/* TODO: Complete and Test
 				clientIO.REGISTER(io.HtmlOutputStream.$extend(
 				{
 					$TYPE_NAME: 'DocumentOutputStream',
 					
 					document: doodad.READ_ONLY(null),
 					
-					create: doodad.OVERRIDE(function create(/*optional*/options) {
+					create: doodad.OVERRIDE(function create(/ *optional* /options) {
 						this._super(options);
 						
 						var _document = types.getDefault(this.options, 'document', global.document),
-							mimeType = types.get(this.options, 'mimeType', null),
-							openNew = types.get(this.options, 'openNew', false);
+							mimeType = types.getDefault(this.options, 'mimeType', 'text/html'),
+							openNew = types.getDefault(this.options, 'openNew', false);
 						
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(mimeType) || types.isString(mimeType), "Invalid mime type.");
 						root.DD_ASSERT && root.DD_ASSERT(client.isDocument(_document), "Invalid document.");
 						
 						if (openNew) {
 							if (this.options.replaceHistory) {
-								_document.open(mimeType || 'text/html', 'replace');
+								_document.open(mimeType, 'replace');
 							} else {
-								_document.open(mimeType || 'text/html');
+								_document.open(mimeType);
 							};
 						};
 
@@ -316,20 +276,15 @@
 						this._super();
 					}),
 					
-					flush: doodad.OVERRIDE(function flush(/*optional*/options) {
-						var data,
-							buffer = this.__buffer;
-						
-						while (data = buffer.shift()) {
-							if (data.raw !== io.EOF) {
-								var value = data.valueOf();
-								this.document.write(value.valueOf());
-							};
+					onFlushData: doodad.OVERRIDE(function onFlushData(ev) {
+						var retval = this._super(ev);
+						if (ev.data.raw !== io.EOF) {
+							this.document.write(ev.data.valueOf());
 						};
-
-						this._super(options);
+						return retval;
 					}),
 				}));
+				*/
 
 
 				clientIO.REGISTER(io.HtmlOutputStream.$extend(
@@ -361,11 +316,13 @@
 						
 						return state;
 					}),
-					handleBufferData: doodad.SUPER(function handleBufferData(bufferIndex, state) {
-						var html = this._super(bufferIndex, state);
+					
+					handleBufferData: doodad.SUPER(function handleBufferData(data, state) {
+						var html = this._super(data, state);
 						
-						var data = state.buffer[bufferIndex],
-							type = data[0],
+						data = data.valueOf();
+						
+						var	type = data[0],
 							container,
 							element;
 						
@@ -385,9 +342,10 @@
 								container = this.__div;
 								container.innerHTML = html;
 								element = client.getFirstElement(container);
-								root.DD_ASSERT && root.DD_ASSERT(element);
 								container.innerHTML = '';
-								state.parent.appendChild(element);
+								if (element) {
+									state.parent.appendChild(element);
+								};
 							};
 							state.parent = element;
 						} else if (type === state.bufferTypes.Close) {
@@ -437,16 +395,7 @@
 						
 						container.innerHTML = '';
 
-						var stream = this._super(options);
-						
-						var deletedType = bufferTypes.Deleted,
-							buffer = this.__buffer,
-							pos = buffer.length - 3;
-						
-						buffer[pos][0] = deletedType;
-						buffer[pos + 2][0] = deletedType;
-						
-						return stream;
+						return this._super(types.extend({}, options, {noOpenClose: true}));
 					}),
 					openElement: doodad.OVERRIDE(function openElement(/*optional*/options) {
 						this._super(options);
@@ -491,7 +440,7 @@
 					__fileReader: doodad.PROTECTED(null),
 					__fileOffset: doodad.PROTECTED(null),
 					
-					__buffer: doodad.PROTECTED([]),
+					__buffer: doodad.PROTECTED(null),
 
 					create: doodad.OVERRIDE(function create(file, /*optional*/options) {
 						if (!__Internal__.streamsSupported) {
@@ -528,27 +477,7 @@
 							this.onError(new doodad.ErrorEvent(this.__fileReader.error));
 							
 						} else {
-							var data = {
-								raw: this.__fileReader.result,
-							};
-							data = this.transform(data) || data;
-							
-							var readyEvent = new doodad.Event(data),
-								prevent = false;
-							
-							if (this.__listening) {
-								var readyEv = new doodad.Event(data);
-								this.onReady(readyEv);
-								prevent = readyEv.prevent;
-							};
-							
-							if (!prevent) {
-								if (this.__buffer.length < this.options.bufferSize) {
-									this.__buffer.push(data);
-								} else {
-									throw new types.BufferOverflow();
-								};
-							};
+							this.push(this.__fileReader.result);
 							
 							var encoding = types.get(this.options, 'encoding', null);
 
@@ -559,30 +488,14 @@
 
 							if (remaining > 0) {
 								if (encoding) {
+									// TODO: Create class "TextInputStream" and implement "TextTransformable" instead
 									this.__fileReader.readAsText(this.__file.slice(this.__fileOffset, end), encoding);
 								} else {
 									this.__fileReader.readAsArrayBuffer(this.__file.slice(this.__fileOffset, end));
 								};
 								
 							} else {
-								var data = {
-									raw: io.EOF,
-								};
-								data = this.transform(data) || data;
-								
-								if (this.__listening) {
-									var readyEv = new doodad.Event(data);
-									this.onReady(readyEv);
-									prevent = readyEv.prevent;
-								};
-								
-								if (!prevent) {
-									if (this.__buffer.length < this.options.bufferSize) {
-										this.__buffer.push(data);
-									} else {
-										throw new types.BufferOverflow();
-									};
-								};
+								this.push(io.EOF);
 							};
 						};
 					})),
@@ -611,6 +524,7 @@
 									this.__fileReader.readAsArrayBuffer(this.__file.slice(0, this.options.chunkSize))
 								};
 							};
+							this.onListen(new doodad.Event());
 						};
 					}),
 					
@@ -621,39 +535,8 @@
 							if (this.__fileReader && (this.__fileReader.readyState === __Natives__.windowFileReader.LOADING)) {
 								this.__fileReader.abort();
 							};
+							this.onStopListening(new doodad.Event());
 						};
-					}),
-					
-					getCount: doodad.OVERRIDE(function getCount(/*optional*/options) {
-						return this.__buffer.length;
-					}),
-					
-					read: doodad.OVERRIDE(function read(/*optional*/options) {
-						if (root.DD_ASSERT) {
-							root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
-						};
-						
-						var count = types.get(options, 'count');
-
-						if (root.DD_ASSERT) {
-							root.DD_ASSERT(types.isNothing(count) || types.isInteger(count), "Invalid count.");
-						};
-
-						if (types.isNothing(count)) {
-							return this.__buffer.shift();
-						} else {
-							return this.__buffer.splice(0, count);
-						};
-					}),
-					
-					clear: doodad.OVERRIDE(function clear() {
-						this._super();
-						this.__buffer = [];
-					}),
-					
-					reset: doodad.OVERRIDE(function reset() {
-						this._super();
-						this.__buffer = [];
 					}),
 				}));
 				

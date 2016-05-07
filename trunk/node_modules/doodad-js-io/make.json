@@ -27,7 +27,6 @@
 	"dependencies": [
 		{
 			"name": "doodad-js",
-			"optional": false,
 			"client": true,
 			"server": true,
 			"browserify": true
@@ -35,9 +34,21 @@
 	],
 	"modules": [
 		{
+			"src": "common/IO_Base.js",
+			"client": true,
+			"server": true,
+			"browserify": true
+		},
+		{
 			"src": "common/IO.js",
 			"client": true,
 			"server": true,
+			"browserify": true
+		},
+		{
+			"src": "client/IO_Root.js",
+			"client": true,
+			"server": false,
 			"browserify": true
 		},
 		{
@@ -45,6 +56,18 @@
 			"client": true,
 			"server": false,
 			"browserify": true
+		},
+		{
+			"src": "server/NodeJs_IO_Base.js",
+			"client": false,
+			"server": true,
+			"browserify": false
+		},
+		{
+			"src": "server/IO_Root.js",
+			"client": false,
+			"server": true,
+			"browserify": false
 		},
 		{
 			"src": "server/NodeJs_IO.js",
