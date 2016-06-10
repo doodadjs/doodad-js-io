@@ -291,7 +291,7 @@
 				// Text transformable client implementation
 				//=====================================================
 
-				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Transformable.$extend(
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextTransformable.$extend(
 											ioMixIns.Stream,
 											mixIns.Creatable,
 				{
@@ -299,6 +299,16 @@
 					
 					__decoder: doodad.PROTECTED( null ),
 					__decoderEncoding: doodad.PROTECTED( null ),
+					
+					$isValidEncoding: doodad.OVERRIDE(function isValidEncoding(encoding) {
+						// TODO: Find a better way
+						try {
+							new __Natives__.windowTextDecoder(encoding, {fatal: true});
+							return true;
+						} catch(o) {
+							return false;
+						};
+					}),
 					
 					create: doodad.OVERRIDE(function create(/*paramarray*/) {
 						this._super.apply(this, arguments);

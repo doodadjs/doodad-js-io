@@ -62,9 +62,13 @@
 					nodejsIO = nodejs.IO,
 					nodejsIOMixIns = nodejsIO.MixIns,
 					nodejsIOInterfaces = nodejsIO.Interfaces,
-					
+
 					nodeStringDecoder = require('string_decoder').StringDecoder;
 				
+
+				var __Natives__ = {
+					globalBuffer: global.Buffer,
+				};
 				
 				
 				//=====================================================
@@ -252,7 +256,7 @@
 						return retval;
 					}),
 					
-					onFlush: doodad.OVERRIDE(function onWrite(ev) {
+					onFlush: doodad.OVERRIDE(function onFlush(ev) {
 						const retval = this._super(ev);
 						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
 						if (iwritable) {
@@ -361,7 +365,7 @@
 				// TextTransformable server implementation
 				//=====================================================
 
-				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Transformable.$extend(
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextTransformable.$extend(
 											ioMixIns.Stream,
 											mixIns.Creatable,
 				{
@@ -369,6 +373,10 @@
 					
 					__transformEncoding: doodad.PROTECTED(  null  ),
 					__transformDecoder: doodad.PROTECTED(  null  ),
+					
+					$isValidEncoding: doodad.OVERRIDE(function isValidEncoding(encoding) {
+						return __Natives__.globalBuffer.isEncoding(encoding);
+					}),
 					
 					create: doodad.OVERRIDE(function create(/*paramarray*/) {
 						this._super.apply(this, arguments);

@@ -92,21 +92,21 @@
 					__defaultPaused: doodad.PROTECTED(false),
 					
 					isPaused: doodad.PUBLIC(function isPaused() {
-						if (types._implements(this.__host, nodejsIO.BinaryInputStream)) {
-							return this.__host.stream.isPaused();
+						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
+							return this[doodad.HostSymbol].stream.isPaused();
 						} else {
 							return this.__defaultPaused;
 						};
 					}),
 					
 					pause: doodad.PUBLIC(function pause() {
-						if (types._implements(this.__host, nodejsIO.BinaryInputStream)) {
+						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
 							const cb = new doodad.Callback(this, function() {
-								this.__host.stream.removeListener('pause', cb);
+								this[doodad.HostSymbol].stream.removeListener('pause', cb);
 								this.emit("pause");
 							});
-							this.__host.stream.once('pause', cb);
-							this.__host.stream.pause();
+							this[doodad.HostSymbol].stream.once('pause', cb);
+							this[doodad.HostSymbol].stream.pause();
 						} else if (!this.__defaultPaused) {
 							this.__defaultPaused = true;
 							this.emit("pause");
@@ -159,8 +159,8 @@
 								},
 							});
 							
-							if (!this.__host.isListening()) {
-								this.__host.listen();
+							if (!this[doodad.HostSymbol].isListening()) {
+								this[doodad.HostSymbol].listen();
 							};
 							
 							this.pause(); // force flow control (uses 'readable' event instead of 'data' event)
@@ -179,8 +179,8 @@
 					}),
 					
 					_read: doodad.PUBLIC(function _read(/*optional*/size) {
-						if (types._implements(this.__host, nodejsIO.BinaryInputStream)) {
-							return this.__host.stream._read(size);
+						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
+							return this[doodad.HostSymbol].stream._read(size);
 						} else {
 							throw new types.NotSupported("'_read' is not supported by this stream.");
 						};
@@ -188,7 +188,7 @@
 					
 					read: doodad.PUBLIC(function read(/*optional*/size) {
 						// TODO: "size" (in bytes)
-						const data = this.__host.read({
+						const data = this[doodad.HostSymbol].read({
 								//size: size,
 							});
 						
@@ -198,13 +198,13 @@
 					}),
 					
 					resume: doodad.PUBLIC(function resume() {
-						if (types._implements(this.__host, nodejsIO.BinaryInputStream)) {
+						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
 							const cb = new doodad.Callback(this, function() {
-								this.__host.stream.removeListener('resume', cb);
+								this[doodad.HostSymbol].stream.removeListener('resume', cb);
 								this.emit("resume");
 							});
-							this.__host.stream.once('resume', cb);
-							this.__host.stream.resume();
+							this[doodad.HostSymbol].stream.once('resume', cb);
+							this[doodad.HostSymbol].stream.resume();
 						} else if (this.__defaultPaused) {
 							this.__defaultPaused = false;
 							this.emit("resume");
@@ -212,8 +212,8 @@
 					}),
 					
 					setEncoding: doodad.PUBLIC(function setEncoding(encoding) {
-						if (this.__host._implements(ioMixIns.TextTransformable)) {
-							this.__host.options.encoding = encoding;
+						if (this[doodad.HostSymbol]._implements(ioMixIns.TextTransformable)) {
+							this[doodad.HostSymbol].options.encoding = encoding;
 						};
 						this.__defaultEncoding = encoding;
 					}),
@@ -246,26 +246,26 @@
 					}),
 					
 					push: doodad.PUBLIC(function push(chunk, /*optional*/encoding) {
-						if (types._implements(this.__host, nodejsIO.BinaryInputStream)) {
-							return this.__host.stream.push(chunk, encoding);
+						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
+							return this[doodad.HostSymbol].stream.push(chunk, encoding);
 						} else {
-							this.__host.push(chunk, {noEvents: true, encoding: encoding || this.__defaultEncoding});
+							this[doodad.HostSymbol].push(chunk, {noEvents: true, encoding: encoding || this.__defaultEncoding});
 							this._read();
 							return true; // TODO: Return 'false' when buffer is full, before it raises an error
 						};
 					}),
 					
 					unshift: doodad.PUBLIC(function unshift(chunk) {
-						if (types._implements(this.__host, nodejsIO.BinaryInputStream)) {
-							return this.__host.stream.unshift(chunk);
+						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
+							return this[doodad.HostSymbol].stream.unshift(chunk);
 						} else {
-							return this.__host.push(chunk, {next: true, noEvents: true});
+							return this[doodad.HostSymbol].push(chunk, {next: true, noEvents: true});
 						};
 					}),
 					
 					wrap: doodad.PUBLIC(function wrap(stream) {
-						if (types._implements(this.__host, nodejsIO.BinaryInputStream)) {
-							return this.__host.stream.wrap(stream);
+						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
+							return this[doodad.HostSymbol].stream.wrap(stream);
 						} else {
 							throw new types.NotSupported("'wrap' is not supported by this stream.");
 						};
@@ -285,16 +285,16 @@
 					__defaultEncoding: doodad.PROTECTED(null),
 					
 					cork: doodad.PUBLIC(function cork() {
-						if (types._implements(this.__host, nodejsIO.BinaryOutputStream)) {
-							this.__host.stream.cork();
+						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryOutputStream)) {
+							this[doodad.HostSymbol].stream.cork();
 						} else {
 							throw new types.NotSupported("'cork' is not supported by this stream.");
 						};
 					}),
 					
 					uncork: doodad.PUBLIC(function uncork() {
-						if (types._implements(this.__host, nodejsIO.BinaryOutputStream)) {
-							this.__host.stream.uncork();
+						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryOutputStream)) {
+							this[doodad.HostSymbol].stream.uncork();
 						} else {
 							throw new types.NotSupported("'uncork' is not supported by this stream.");
 						};
@@ -322,13 +322,13 @@
 							options.encoding = encoding;
 						};
 						
-						this.__host.write(chunk, options);
+						this[doodad.HostSymbol].write(chunk, options);
 						
-						if (this.__host.options.autoFlush) {
+						if (this[doodad.HostSymbol].options.autoFlush) {
 							return true;
 						};
 						
-						tools.callAsync(this.__host.flush, 0, this.__host);
+						tools.callAsync(this[doodad.HostSymbol].flush, 0, this[doodad.HostSymbol]);
 						
 						return false;
 					}),
@@ -368,14 +368,14 @@
 									this.emit('error', err);
 								};
 							} else {
-								this.__host.flush({
+								this[doodad.HostSymbol].flush({
 									callback: flushCb,
 								});
 							};
 						});
 						
 						if (types.isNothing(chunk)) {
-							this.__host.write(io.EOF, {
+							this[doodad.HostSymbol].write(io.EOF, {
 								callback: writeEOFCb,
 							});
 						} else {
@@ -387,7 +387,7 @@
 										this.emit('error', err);
 									};
 								} else {
-									this.__host.write(io.EOF, {
+									this[doodad.HostSymbol].write(io.EOF, {
 										callback: writeEOFCb,
 									});
 								};
