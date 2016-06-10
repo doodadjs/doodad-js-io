@@ -677,15 +677,15 @@
 				
 				
 				io.setStds = function setStds(stds) {
-					if (types.hasKey(stds, 'stdin')) {
+					if (types.has(stds, 'stdin')) {
 						doodad.ASSERT && doodad.ASSERT(types._implements(stds.stdin, ioMixIns.InputStream), "");
 						__Internal__.stdin = stds.stdin;
 					};
-					if (types.hasKey(stds, 'stdout')) {
+					if (types.has(stds, 'stdout')) {
 						doodad.ASSERT && doodad.ASSERT(types._implements(stds.stdout, ioMixIns.OutputStream), "");
 						__Internal__.stdout = stds.stdout;
 					};
-					if (types.hasKey(stds, 'stderr')) {
+					if (types.has(stds, 'stderr')) {
 						doodad.ASSERT && doodad.ASSERT(types._implements(stds.stderr, ioMixIns.OutputStream), "");
 						__Internal__.stderr = stds.stderr;
 					};

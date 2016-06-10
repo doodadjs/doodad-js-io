@@ -90,6 +90,14 @@
 				}))));
 				
 				
+				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.Transformable.$extend(
+				{
+					$TYPE_NAME: 'TextTransformable',
+					
+					$isValidEncoding: doodad.PUBLIC(doodad.TYPE(doodad.MUST_OVERRIDE())),
+				}))));
+				
+				
 				ioInterfaces.REGISTER(doodad.INTERFACE(doodad.Class.$extend(
 									mixIns.Events,
 				{
@@ -279,9 +287,8 @@
 					}),
 					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
-						var stream = ev.handlerData[0],
-							options = ev.data.options;
-						stream.flush(options);
+						var stream = ev.handlerData[0];
+						stream.flush();
 					}),
 						
 					pipe: doodad.PUBLIC(function pipe(stream, /*optional*/transform) {

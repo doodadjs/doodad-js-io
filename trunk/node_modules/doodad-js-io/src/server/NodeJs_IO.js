@@ -80,7 +80,13 @@
 					stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
 					__listening: doodad.PROTECTED(false),
-
+					__ended: doodad.PROTECTED(false),
+					__closed: doodad.PROTECTED(false),
+					
+					isClosed: doodad.PUBLIC(function isClosed() {
+						return this.__closed;
+					}),
+					
 					streamOnReadable: doodad.NODE_EVENT('readable', function streamOnReadable(context) {
 						if (this.stream.isPaused()) {
 							const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
@@ -96,11 +102,15 @@
 					}),
 					
 					streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
+						this.__ended = true;
 						this.push(io.EOF);
 					}),
 
 					streamOnClose: doodad.NODE_EVENT('close', function streamOnClose(context) {
-						this.stopListening();
+						if (!this.__ended) {
+							this.push(io.EOF);
+						};
+						this.__closed = true;
 						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 						ireadable.emit('close');
 					}),
@@ -121,6 +131,9 @@
 					}),
 					
 					destroy: doodad.OVERRIDE(function destroy() {
+						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
+						ireadable.emit('destroy');
+
 						this.stopListening();
 						
 						this._super();
@@ -183,6 +196,13 @@
 						
 						return this._super(options);
 					}),
+					
+					push: doodad.OVERRIDE(function push(data, /*optional*/options) {
+						if (this.__closed) {
+							throw new types.NotAvailable("Stream closed.");
+						};
+						return this._super(data, options);
+					}),
 				}));
 				
 				
@@ -202,6 +222,11 @@
 					stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
 					__buffer: doodad.PROTECTED(null),
+					__closed: doodad.PROTECTED(false),
+					
+					isClosed: doodad.PUBLIC(function isClosed() {
+						return this.__closed;
+					}),
 					
 					streamOnFinish: doodad.NODE_EVENT('finish', function streamOnFinish(context) {
 						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
@@ -216,6 +241,12 @@
 						context.data.callback(ex);
 					}),
 					
+					streamOnClose: doodad.NODE_EVENT('close', function streamOnClose(context) {
+						this.__closed = true;
+						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
+						iwritable.emit('close');
+					}),
+					
 					
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						const stream = types.get(options, 'nodeStream');
@@ -227,13 +258,18 @@
 
 						this.streamOnFinish.attach(stream);
 						this.streamOnError.attach(stream);
+						this.streamOnClose.attach(stream);
 						
 						types.setAttribute(this, 'stream', stream);
 					}),
 					
 					destroy: doodad.OVERRIDE(function destroy() {
+						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
+						iwritable.emit('destroy');
+
 						this.streamOnFinish.clear();
 						this.streamOnError.clear();
+						this.streamOnClose.clear();
 						this.streamOnDrain.clear();
 						
 						this._super();
@@ -267,6 +303,13 @@
 								};
 							};
 						};
+					}),
+					
+					push: doodad.OVERRIDE(function push(data, /*optional*/options) {
+						if (this.__closed) {
+							throw new types.NotAvailable("Stream closed.");
+						};
+						return this._super(data, options);
 					}),
 				}));
 				
@@ -325,16 +368,12 @@
 					const encoding = types.get(options, 'encoding'),
 						Promise = types.getPromise();
 						
-					return new Promise(function(resolve, reject) {
-						try {
-							const nodeStream = nodeFs.createReadStream(path, {autoClose: true});
-							if (encoding) {
-								resolve(new nodejsIO.TextInputStream({nodeStream: nodeStream, encoding: encoding}));
-							} else {
-								resolve(new nodejsIO.BinaryInputStream({nodeStream: nodeStream}));
-							};
-						} catch(ex) {
-							reject(ex);
+					return Promise.try(function() {
+						const nodeStream = nodeFs.createReadStream(path, {autoClose: true});
+						if (encoding) {
+							return new nodejsIO.TextInputStream({nodeStream: nodeStream, encoding: encoding});
+						} else {
+							return new nodejsIO.BinaryInputStream({nodeStream: nodeStream});
 						};
 					});
 				};

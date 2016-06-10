@@ -169,7 +169,7 @@
 								this.element.focus();
 							};
 						} catch(ex) {
-							if (ex instanceof types.ScriptAbortedError) {
+							if (ex instanceof types.ScriptInterruptedError) {
 								throw ex;
 							};
 							if (root.DD_ASSERT) {
@@ -187,7 +187,7 @@
 							};
 							
 						} catch(ex) {
-							if (ex instanceof types.ScriptAbortedError) {
+							if (ex instanceof types.ScriptInterruptedError) {
 								throw ex;
 							};
 							if (root.DD_ASSERT) {
