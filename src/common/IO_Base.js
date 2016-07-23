@@ -1,6 +1,6 @@
 //! REPLACE_BY("// Copyright 2016 Claude Petit, licensed under Apache License version 2.0\n", true)
 // dOOdad - Object-oriented programming framework
-// File: IO.js - IO tools
+// File: IO_Baqse.js - IO Base Tools
 // Project home: https://sourceforge.net/projects/doodad-js/
 // Trunk: svn checkout svn://svn.code.sf.net/p/doodad-js/code/trunk doodad-js-code
 // Author: Claude Petit, Quebec city
@@ -44,7 +44,7 @@
 			version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE() */,
 			namespaces: ['MixIns', 'Interfaces'],
 
-			create: function create(root, /*optional*/_options) {
+			create: function create(root, /*optional*/_options, _shared) {
 				"use strict";
 
 				var doodad = root.Doodad,
@@ -76,7 +76,7 @@
 				// Interfaces
 				//=====================================================
 				
-				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(doodad.Class.$extend(
+				ioMixIns.REGISTER(doodad.MIX_IN(doodad.Class.$extend(
 				{
 					$TYPE_NAME: 'Transformable',
 					
@@ -84,15 +84,15 @@
 						data.valueOf = function valueOf() {
 							return this.raw;
 						};
-						
+						data.options = options;
 						return data;
 					}),
-				}))));
+				})));
 				
 				
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.Transformable.$extend(
 				{
-					$TYPE_NAME: 'TextTransformable',
+					$TYPE_NAME: 'TextTransformableBase',
 					
 					$isValidEncoding: doodad.PUBLIC(doodad.TYPE(doodad.MUST_OVERRIDE())),
 				}))));
@@ -112,15 +112,15 @@
 				})));
 				
 
-				io.KeyboardFunctionKeys = {
+				io.KeyboardFunctionKeys = types.freezeObject({
 					Shift: 1,
 					Ctrl: 2,
 					Alt: 4,
 					Meta: 8,
-				};
+				});
 				
 				// Source: http://www.cambiaresearch.com/articles/15/javascript-char-codes-key-codes
-				io.KeyboardScanCodes = {
+				io.KeyboardScanCodes = types.freezeObject({
 					Backspace: 8,
 					Tab: 9,
 					Enter: 13,
@@ -219,7 +219,7 @@
 					BackSlash: 220,
 					CloseBraket: 221,
 					SingleQuote: 222,
-				};
+				});
 				
 				ioInterfaces.REGISTER(doodad.ISOLATED(doodad.INTERFACE(doodad.Class.$extend(
 				{
@@ -243,6 +243,8 @@
 					options: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
 					onError: doodad.ERROR_EVENT(), // function onError(ev)
+					onFlushData: doodad.EVENT(true),
+					onFlush: doodad.EVENT(false),
 					
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super();
@@ -255,85 +257,121 @@
 						
 						types.getDefault(options, 'bufferSize', 1024);
 
-						types.setAttribute(this, 'options', options);
+						_shared.setAttribute(this, 'options', options);
 						
 						this.reset();
 					}),
 					
 					getCount: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					push: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(data, /*optional*/options)
+					pull: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					reset: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
 					clear: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
+					pipe: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(stream, /*optional*/transform)
+					unpipe: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/stream)
+
+					__flushInternal: doodad.PROTECTED(function(state, data, /*optional*/options) {
+						options = types.extend({}, options);
+
+						var ev = new doodad.Event({state: state, data: data, options: options});
+
+						this.onFlushData(ev);
+
+						if (!ev.prevent) {
+							var callback = types.get(options, 'callback');
+							if (callback) {
+								var cbObj = types.get(options, 'callbackObj');
+								delete options.callbackObj;
+								delete options.callback;
+								callback = new doodad.Callback(cbObj, callback);
+								callback(); // sync
+							};
+						};
+					}),
 					
-					__pipeOnReady: doodad.PROTECTED(function __pipeOnReady(ev) {
-						ev.preventDefault();
-						
-						var stream = ev.handlerData[0],
-							transform = ev.handlerData[1],
-							data = ev.data;
+					flush: doodad.PUBLIC(function flush(/*optional*/options) {
+						options = types.extend({}, options);
+
+						var output = types.getDefault(options, 'output', true);
 							
-						if (transform) {
-							var retval = transform(data);
-							if (retval !== undefined) {
-								data = retval;
+						var callback = types.get(options, 'callback');
+						if (callback) {
+							var cbObj = types.get(options, 'callbackObj');
+							delete options.callbackObj;
+							delete options.callback;
+							callback = new doodad.Callback(cbObj, callback);
+						};
+
+						var state = {};
+
+						var _flush = function _flush() {
+							state.ok = true;
+
+							while (state.ok && (this.getCount(options) > 0)) {
+								var data = this.pull(options);
+								this.__flushInternal(state, data, types.extend({}, options, { // sync/async
+										callbackObj: this,
+										callback: function(err) {
+											if (err) {
+												this.onError(new doodad.ErrorEvent(err));
+												if (!state.ok && callback) {
+													callback(err); // sync
+												};
+											} else {
+												if (!state.ok) {
+													_flush.call(this); // sync
+												};
+											};
+										},
+									}));
+							};
+							
+							if (state.ok && (this.getCount(options) <= 0)) {
+								this.onFlush(new doodad.Event({options: options}));
+								if (callback) {
+									callback(); // sync
+								};
 							};
 						};
 
-						if (data.raw === io.EOF) {
-							stream.write(io.EOF, data.options);
-						} else {
-							stream.write(data.valueOf(), data.options);
-						};
+						_flush.call(this); // sync
 					}),
-					
-					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
-						var stream = ev.handlerData[0];
-						stream.flush();
-					}),
-						
-					pipe: doodad.PUBLIC(function pipe(stream, /*optional*/transform) {
-						if (!types._implements(stream, ioMixIns.OutputStreamBase)) {
-							throw new types.TypeError("Stream must implement 'Doodad.IO.MixIns.OutputStreamBase'.");
-						};
-						if (types._implements(this, ioMixIns.InputStreamBase)) {
-							this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform]);
-						} else if (types._implements(this, ioMixIns.OutputStreamBase)) {
-							this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform]);
-						};
-						if (types._implements(this, ioMixIns.OutputStreamBase)) {
-							this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
-						};
-						if (types._implements(this, ioInterfaces.Listener)) {
-							this.listen();
-						};
-					}),
-					
-					unpipe: doodad.PUBLIC(function unpipe(/*optional*/stream) {
-						if (types._implements(this, ioInterfaces.Listener)) {
-							this.stopListening();
-						};
-						if (stream) {
-							if (types._implements(this, ioMixIns.InputStreamBase)) {
-								this.onReady.detach(this, this.__pipeOnReady, [stream]);
-							} else if (types._implements(this, ioMixIns.OutputStreamBase)) {
-								this.onWrite.detach(this, this.__pipeOnReady, [stream]);
+
+					flushAsync: doodad.PUBLIC(doodad.ASYNC(function flushAsync(/*optional*/options) {
+						var Promise = types.getPromise();
+						return Promise.create(function flushAsyncPromise(resolve, reject) {
+							function errorHandler(ev) {
+								detach.call(this);
+								reject(ev.error);
 							};
-							if (types._implements(this, ioMixIns.OutputStreamBase)) {
-								this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
+							function detach() {
+								this.onError.detach(this, errorHandler);
 							};
-						} else {
-							if (types._implements(this, ioMixIns.InputStreamBase)) {
-								this.onReady.detach(this, this.__pipeOnReady);
-							} else if (types._implements(this, ioMixIns.OutputStreamBase)) {
-								this.onWrite.detach(this, this.__pipeOnReady);
-							};
-							if (types._implements(this, ioMixIns.OutputStreamBase)) {
-								this.onFlush.detach(this, this.__pipeOnFlush);
-							};
-						};
-					}),
+							this.onError.attachOnce(this, errorHandler);
+							this.flush(types.extend({}, options, {callbackObj: this, callback: function(err) {
+								detach.call(this);
+								if (err) {
+									reject(err);
+								} else {
+									resolve();
+								};
+							}}));
+						}, this);
+					})),
 				}))));
 					
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
+				{
+					$TYPE_NAME: 'TextStreamBase',
+					
+					create: doodad.OVERRIDE(function create(/*optional*/options) {
+						this._super(options);
+						
+						var newLine = types.getDefault(this.options, 'newLine', tools.getOS().newLine);
+						
+						root.DD_ASSERT && root.DD_ASSERT(types.isString(newLine), "Invalid new line string.");
+					}),
+				})));
 				
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 									ioInterfaces.Listener,
@@ -344,44 +382,42 @@
 
 					read: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					
-					readAsync: doodad.PUBLIC(function readAsync(/*optional*/options) {
+					readAsync: doodad.PUBLIC(doodad.ASYNC(function readAsync(/*optional*/options) {
 						var Promise = types.getPromise();
 						var result = this.read(options);
 						if (result) {
-							return Promise.resolve(result);
+							return result;
 						} else if (this.isListening()) {
-							var self = this;
-							return new Promise(function(resolve, reject) {
+							return Promise.create(function readAsyncPromise(resolve, reject) {
 								function readyHandler(ev) {
-									detach();
+									detach.call(this);
 									ev.preventDefault();
 									resolve(ev.data);
 								};
 								function errorHandler(ev) {
-									detach();
+									detach.call(this);
 									reject(ev.error);
 								};
 								function stopHandler(ev) {
-									detach();
+									detach.call(this);
 									resolve();
 								};
 								function detach() {
-									self.onReady.detach(self, readyHandler);
-									self.onError.detach(self, errorHandler);
-									self.onStopListening.detach(self, stopHandler);
+									this.onReady.detach(this, readyHandler);
+									this.onError.detach(this, errorHandler);
+									this.onStopListening.detach(this, stopHandler);
 								};
-								self.onReady.attachOnce(self, readyHandler);
-								self.onError.attachOnce(self, errorHandler);
-								self.onStopListening.attachOnce(self, stopHandler);
-							});
-						} else {
-							return Promise.resolve();
+								this.onReady.attachOnce(this, readyHandler);
+								this.onError.attachOnce(this, errorHandler);
+								this.onStopListening.attachOnce(this, stopHandler);
+							}, this);
 						};
-					}),
+					})),
 				}))));
 				
 				
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.InputStreamBase.$extend(
+									ioMixIns.TextStreamBase,
 				{
 					$TYPE_NAME: 'TextInputStreamBase',
 					
@@ -391,75 +427,69 @@
 					// Non-formatted text + newline
 					readLine: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					
-					readTextAsync: doodad.PUBLIC(function readTextAsync(/*optional*/options) {
+					readTextAsync: doodad.PUBLIC(doodad.ASYNC(function readTextAsync(/*optional*/options) {
 						var Promise = types.getPromise();
 						var result = this.readText(options);
 						if (result) {
-							return Promise.resolve(result);
+							return result;
 						} else if (this.isListening()) {
-							var self = this;
-							return new Promise(function(resolve, reject) {
+							return Promise.create(function readTextAsyncPromise(resolve, reject) {
 								function readyHandler(ev) {
-									detach();
+									detach.call(this);
 									ev.preventDefault();
 									resolve(ev.data);
 								};
 								function errorHandler(ev) {
-									detach();
+									detach.call(this);
 									reject(ev.error);
 								};
 								function stopHandler(ev) {
-									detach();
+									detach.call(this);
 									resolve();
 								};
 								function detach() {
-									self.onReady.detach(self, readyHandler);
-									self.onError.detach(self, errorHandler);
-									self.onStopListening.detach(self, stopHandler);
+									this.onReady.detach(this, readyHandler);
+									this.onError.detach(this, errorHandler);
+									this.onStopListening.detach(this, stopHandler);
 								};
-								self.onReady.attachOnce(self, readyHandler);
-								self.onError.attachOnce(self, errorHandler);
-								self.onStopListening.attachOnce(self, stopHandler);
-							});
-						} else {
-							return Promise.resolve();
+								this.onReady.attachOnce(this, readyHandler);
+								this.onError.attachOnce(this, errorHandler);
+								this.onStopListening.attachOnce(this, stopHandler);
+							}, this);
 						};
-					}),
+					})),
 						
-					readLineAsync: doodad.PUBLIC(function readLineAsync(/*optional*/options) {
+					readLineAsync: doodad.PUBLIC(doodad.ASYNC(function readLineAsync(/*optional*/options) {
 						var Promise = types.getPromise();
 						var result = this.readLine(options);
 						if (result) {
-							return Promise.resolve(result);
+							return result;
 						} else if (this.isListening()) {
-							var self = this;
-							return new Promise(function(resolve, reject) {
+							return Promise.create(function readLineAsyncPromise(resolve, reject) {
 								function readyHandler(ev) {
-									detach();
+									detach.call(this);
 									ev.preventDefault();
 									resolve(ev.data);
 								};
 								function errorHandler(ev) {
-									detach();
+									detach.call(this);
 									reject(ev.error);
 								};
 								function stopHandler(ev) {
-									detach();
+									detach.call(this);
 									resolve();
 								};
 								function detach() {
-									self.onReady.detach(self, readyHandler);
-									self.onError.detach(self, errorHandler);
-									self.onStopListening.detach(self, stopHandler);
+									this.onReady.detach(this, readyHandler);
+									this.onError.detach(this, errorHandler);
+									this.onStopListening.detach(this, stopHandler);
 								};
-								self.onReady.attachOnce(self, readyHandler);
-								self.onError.attachOnce(self, errorHandler);
-								self.onStopListening.attachOnce(self, stopHandler);
-							});
-						} else {
-							return Promise.resolve();
+								this.onReady.attachOnce(this, readyHandler);
+								this.onError.attachOnce(this, errorHandler);
+								this.onStopListening.attachOnce(this, stopHandler);
+							}, this);
 						};
-					}),
+					})),
 				}))));
 				
 				
@@ -469,8 +499,6 @@
 					$TYPE_NAME: 'OutputStreamBase',
 
 					onWrite: doodad.EVENT(false),
-					onFlushData: doodad.EVENT(false),
-					onFlush: doodad.EVENT(false),
 					
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super(options);
@@ -479,55 +507,33 @@
 					}),
 					
 					write: doodad.PUBLIC(doodad.MUST_OVERRIDE()), //function write(raw, /*optional*/options)
-					flush: doodad.PUBLIC(doodad.MUST_OVERRIDE()), //function(/*optional*/options)
 					
-					writeAsync: doodad.PUBLIC(function writeAsync(raw, /*optional*/options) {
+					writeAsync: doodad.PUBLIC(doodad.ASYNC(function writeAsync(raw, /*optional*/options) {
 						var Promise = types.getPromise();
-						var self = this;
-						return new Promise(function(resolve, reject) {
+						return Promise.create(function writeAsyncPromise(resolve, reject) {
 							function errorHandler(ev) {
-								detach();
+								detach.call(this);
 								reject(ev.error);
 							};
 							function detach() {
-								self.onError.detach(self, errorHandler);
+								this.onError.detach(this, errorHandler);
 							};
-							self.onError.attachOnce(self, errorHandler);
-							self.write(raw, types.extend({}, options, {callback: function(err) {
+							this.onError.attachOnce(this, errorHandler);
+							this.write(raw, types.extend({}, options, {callbackObj: this, callback: function(err) {
+								detach.call(this);
 								if (err) {
 									reject(err);
 								} else {
 									resolve();
 								};
 							}}));
-						});
-					}),
-						
-					flushAsync: doodad.PUBLIC(function flushAsync(/*optional*/options) {
-						var Promise = types.getPromise();
-						var self = this;
-						return new Promise(function(resolve, reject) {
-							function errorHandler(ev) {
-								detach();
-								reject(ev.error);
-							};
-							function detach() {
-								self.onError.detach(self, errorHandler);
-							};
-							self.onError.attachOnce(self, errorHandler);
-							self.flush(types.extend({}, options, {callback: function(err) {
-								if (err) {
-									reject(err);
-								} else {
-									resolve();
-								};
-							}}));
-						});
-					}),
+						}, this);
+					})),
 				}))));
 				
 				
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.OutputStreamBase.$extend(
+									ioMixIns.TextStreamBase,
 				{
 					$TYPE_NAME: 'TextOutputStreamBase',
 					
@@ -540,71 +546,71 @@
 					// Formatted text + newline
 					print: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(text, /*optional*/options)
 					
-					writeTextAsync: doodad.PUBLIC(function writeTextAsync(text, /*optional*/options) {
+					writeTextAsync: doodad.PUBLIC(doodad.ASYNC(function writeTextAsync(text, /*optional*/options) {
 						var Promise = types.getPromise();
-						var self = this;
-						return new Promise(function(resolve, reject) {
+						return Promise.create(function writeTextAsyncPromise(resolve, reject) {
 							function errorHandler(ev) {
-								detach();
+								detach.call(this);
 								reject(ev.error);
 							};
 							function detach() {
-								self.onError.detach(self, errorHandler);
+								this.onError.detach(this, errorHandler);
 							};
-							self.onError.attachOnce(self, errorHandler);
-							self.writeText(text, types.extend({}, options, {callback: function(err) {
+							this.onError.attachOnce(this, errorHandler);
+							this.writeText(text, types.extend({}, options, {callbackObj: this, callback: function(err) {
+								detach.call(this);
 								if (err) {
 									reject(err);
 								} else {
 									resolve();
 								};
 							}}));
-						});
-					}),
+						}, this);
+					})),
 					
-					writeLineAsync: doodad.PUBLIC(function writeLineAsync(text, /*optional*/options) {
+					writeLineAsync: doodad.PUBLIC(doodad.ASYNC(function writeLineAsync(text, /*optional*/options) {
 						var Promise = types.getPromise();
-						var self = this;
-						return new Promise(function(resolve, reject) {
+						return Promise.create(function writeLineAsyncPromise(resolve, reject) {
 							function errorHandler(ev) {
-								detach();
+								detach.call(this);
 								reject(ev.error);
 							};
 							function detach() {
-								self.onError.detach(self, errorHandler);
+								this.onError.detach(this, errorHandler);
 							};
-							self.onError.attachOnce(self, errorHandler);
-							self.writeLine(text, types.extend({}, options, {callback: function(err) {
+							this.onError.attachOnce(this, errorHandler);
+							this.writeLine(text, types.extend({}, options, {callbackObj: this, callback: function(err) {
+								detach.call(this);
 								if (err) {
 									reject(err);
 								} else {
 									resolve();
 								};
 							}}));
-						});
-					}),
+						}, this);
+					})),
 					
-					printAsync: doodad.PUBLIC(function printAsync(text, /*optional*/options) {
+					printAsync: doodad.PUBLIC(doodad.ASYNC(function printAsync(text, /*optional*/options) {
 						var Promise = types.getPromise();
-						var self = this;
-						return new Promise(function(resolve, reject) {
+						return Promise.create(function printAsyncPromise(resolve, reject) {
 							function errorHandler(ev) {
-								detach();
+								detach.call(this);
 								reject(ev.error);
 							};
 							function detach() {
-								self.onError.detach(self, errorHandler);
+								this.onError.detach(this, errorHandler);
 							};
-							self.onError.attachOnce(self, errorHandler);
-							self.print(text, types.extend({}, options, {callback: function(err) {
+							this.onError.attachOnce(this, errorHandler);
+							this.print(text, types.extend({}, options, {callbackObj: this, callback: function(err) {
+								detach.call(this);
 								if (err) {
 									reject(err);
 								} else {
 									resolve();
 								};
 							}}));
-						});
-					}),
+						}, this);
+					})),
 				}))));
 				
 				

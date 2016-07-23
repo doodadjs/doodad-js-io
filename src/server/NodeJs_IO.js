@@ -46,7 +46,7 @@
 				'Doodad.IO/common',
 			],
 			
-			create: function create(root, /*optional*/_options) {
+			create: function create(root, /*optional*/_options, _shared) {
 				"use strict";
 				
 				const doodad = root.Doodad,
@@ -98,17 +98,24 @@
 						if (this.stream.isPaused()) {
 							return;
 						};
-						this.push(chunk);
+						const options = {output: false};
+						const data = this.transform({raw: chunk}, options);
+						this.push(data, options);
 					}),
 					
 					streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
 						this.__ended = true;
-						this.push(io.EOF);
+						const options = {output: false};
+						const data = this.transform({raw: io.EOF}, options);
+						this.push(data, options);
 					}),
 
 					streamOnClose: doodad.NODE_EVENT('close', function streamOnClose(context) {
 						if (!this.__ended) {
-							this.push(io.EOF);
+							this.__ended = true;
+							const options = {output: false};
+							const data = this.transform({raw: io.EOF}, options);
+							this.push(data, options);
 						};
 						this.__closed = true;
 						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
@@ -127,16 +134,7 @@
 						
 						this._super(options);
 						
-						types.setAttribute(this, 'stream', stream);
-					}),
-					
-					destroy: doodad.OVERRIDE(function destroy() {
-						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
-						ireadable.emit('destroy');
-
-						this.stopListening();
-						
-						this._super();
+						_shared.setAttribute(this, 'stream', stream);
 					}),
 					
 					
@@ -260,7 +258,7 @@
 						this.streamOnError.attach(stream);
 						this.streamOnClose.attach(stream);
 						
-						types.setAttribute(this, 'stream', stream);
+						_shared.setAttribute(this, 'stream', stream);
 					}),
 					
 					destroy: doodad.OVERRIDE(function destroy() {
@@ -355,7 +353,7 @@
 				
 				
 				files.openFile = function openFile(path, /*optional*/options) {
-					path = files.getOptions().hooks.urlParser(path, options.parseOptions);
+					path = _shared.urlParser(path, types.get(options, 'parseOptions'));
 					
 					root.DD_ASSERT && root.DD_ASSERT((path instanceof files.Path) || ((path instanceof files.Url) && (path.protocol === 'file')), "Invalid path.")
 					

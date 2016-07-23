@@ -46,7 +46,7 @@
 				'Doodad.IO/common', 
 			],
 			
-			create: function create(root, /*optional*/_options) {
+			create: function create(root, /*optional*/_options, _shared) {
 				"use strict";
 
 				//===================================
@@ -64,19 +64,19 @@
 					ioMixIns = io.MixIns;
 				
 
-				var __Natives__ = {
+				types.complete(_shared.Natives, {
 					windowFile: (types.isNativeFunction(global.File) ? global.File : undefined),
 					windowBlob: (types.isNativeFunction(global.Blob) ? global.Blob : undefined),
 					windowFetch: (types.isNativeFunction(global.fetch) ? global.fetch : undefined),
 					windowHeaders: (types.isNativeFunction(global.Headers) ? global.Headers : undefined),
 					windowFileReader: (types.isNativeFunction(global.FileReader) ? global.FileReader : undefined),
-				};
+				});
 				
 				
 				var __Internal__ = {
-					streamsSupported: (__Natives__.windowFile && types.isNativeFunction(__Natives__.windowFile.prototype.slice)) && 
-									(__Natives__.windowBlob && types.isNativeFunction(__Natives__.windowBlob.prototype.slice)) &&
-									(__Natives__.windowFetch && __Natives__.windowHeaders && __Natives__.windowFileReader),
+					streamsSupported: (_shared.Natives.windowFile && types.isNativeFunction(_shared.Natives.windowFile.prototype.slice)) && 
+									(_shared.Natives.windowBlob && types.isNativeFunction(_shared.Natives.windowBlob.prototype.slice)) &&
+									(_shared.Natives.windowFetch && _shared.Natives.windowHeaders && _shared.Natives.windowFileReader),
 				};
 
 				
@@ -172,7 +172,7 @@
 							if (ex instanceof types.ScriptInterruptedError) {
 								throw ex;
 							};
-							if (root.DD_ASSERT) {
+							if (root.getOptions().debug) {
 								debugger;
 							};
 							this.onError(new doodad.ErrorEvent(ex));
@@ -183,14 +183,16 @@
 						var prevent = false;
 						try {
 							if (this.__listening) {
-								prevent = !this.push(ev);
+								var options = {output: false};
+								var data = this.transform({raw: ev}, options);
+								prevent = !this.push(data, options);
 							};
 							
 						} catch(ex) {
 							if (ex instanceof types.ScriptInterruptedError) {
 								throw ex;
 							};
-							if (root.DD_ASSERT) {
+							if (root.getOptions().debug) {
 								debugger;
 							};
 							this.onError(new doodad.ErrorEvent(ex));
@@ -211,7 +213,7 @@
 							root.DD_ASSERT(types.isNothing(element) || client.isElement(element) || client.isDocument(element), "Invalid element.");
 						};
 
-						types.setAttribute(this, 'element', element);
+						_shared.setAttribute(this, 'element', element);
 					}),
 					destroy: doodad.OVERRIDE(function destroy() {
 						this.stopListening();
@@ -253,20 +255,21 @@
 						
 						var _document = types.getDefault(this.options, 'document', global.document),
 							mimeType = types.getDefault(this.options, 'mimeType', 'text/html'),
-							openNew = types.getDefault(this.options, 'openNew', false);
+							openNew = types.getDefault(this.options, 'openNew', false),
+							replace = types.getDefault(this.options, 'replace', false);
 						
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(mimeType) || types.isString(mimeType), "Invalid mime type.");
 						root.DD_ASSERT && root.DD_ASSERT(client.isDocument(_document), "Invalid document.");
 						
 						if (openNew) {
-							if (this.options.replaceHistory) {
+							if (replace) {
 								_document.open(mimeType, 'replace');
 							} else {
 								_document.open(mimeType);
 							};
 						};
 
-						types.setAttribute(this, 'document', _document);
+						_shared.setAttribute(this, 'document', _document);
 					}),
 					destroy: doodad.OVERRIDE(function destroy() {
 						if (this.options.openNew) {
@@ -304,7 +307,7 @@
 						
 						this.__div = element.ownerDocument.createElement('div');
 						
-						types.setAttribute(this, 'element', element);
+						_shared.setAttribute(this, 'element', element);
 					}),
 					
 					prepareFlushState: doodad.OVERRIDE(function prepareFlushState(options) {
@@ -336,7 +339,7 @@
 							if (state.flushElement) {
 								state.flushElement = false;
 								state.flushElementChunk[2] = element = this.element.ownerDocument.createElement('div');
-								types.setAttribute(this, 'element', element);
+								_shared.setAttribute(this, 'element', element);
 								html = null;
 							} else {
 								container = this.__div;
@@ -413,12 +416,12 @@
 
 						this._super();
 						
-						types.setAttribute(this, 'element', element);
+						_shared.setAttribute(this, 'element', element);
 					}),
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 						
-						types.setAttribute(this, 'element', this.options.element);
+						_shared.setAttribute(this, 'element', this.options.element);
 					}),
 					clear: doodad.OVERRIDE(function clear() {
 						this._super();
@@ -448,7 +451,7 @@
 						};
 
 						if (root.DD_ASSERT) {
-							root.DD_ASSERT((file instanceof __Natives__.windowFile) || (file instanceof __Natives__.windowBlob), "Invalid file or blob object.");
+							root.DD_ASSERT((file instanceof _shared.Natives.windowFile) || (file instanceof _shared.Natives.windowBlob), "Invalid file or blob object.");
 						};
 						
 						this._super(options);
@@ -508,7 +511,7 @@
 						if (!this.__listening) {
 							this.__listening = true;
 							var encoding = types.get(this.options, 'encoding', null);
-							this.__fileReader = new __Natives__.windowFileReader();
+							this.__fileReader = new _shared.Natives.windowFileReader();
 							this.__fileOffset = 0;
 							this.onJsLoadEnd.attach(this.__fileReader);
 							if (this.options.chunkSize >= this.__file.size) {
@@ -532,7 +535,7 @@
 						if (this.__listening) {
 							this.__listening = false;
 							this.onJsLoadEnd.clear();
-							if (this.__fileReader && (this.__fileReader.readyState === __Natives__.windowFileReader.LOADING)) {
+							if (this.__fileReader && (this.__fileReader.readyState === _shared.Natives.windowFileReader.LOADING)) {
 								this.__fileReader.abort();
 							};
 							this.onStopListening(new doodad.Event());
@@ -544,13 +547,13 @@
 					if (!__Internal__.streamsSupported) {
 						throw new types.NotSupported("Streams are not supported.");
 					};
-					url = files.getOptions().hooks.urlParser(url, types.get(options, 'parseOptions'));
+					url = _shared.urlParser(url, types.get(options, 'parseOptions'));
 					root.DD_ASSERT && root.DD_ASSERT(url instanceof files.Url, "Invalid url.");
 					url = url.toString();
 					var encoding = types.get(options, 'encoding', null);
 					var Promise = types.getPromise();
-					return new Promise(function(resolve, reject) {
-						var headers = new __Natives__.windowHeaders(types.get(options, 'headers'));
+					return Promise.create(function openFilePromise(resolve, reject) {
+						var headers = new _shared.Natives.windowHeaders(types.get(options, 'headers'));
 						if (!headers.has('Accept')) {
 							if (encoding) {
 								headers.set('Accept', 'text/plain');
@@ -569,7 +572,7 @@
 							// http://stackoverflow.com/questions/30013131/how-do-i-use-window-fetch-with-httponly-cookies
 							init.credentials = 'include';
 						};
-						__Natives__.windowFetch.call(global, url, init).then(function(response) {
+						_shared.Natives.windowFetch.call(global, url, init).then(function(response) {
 							if (response.ok || types.HttpStatus.isSuccessful(response.status)) {
 								return response.body.getReader().then(function(blob) {
 									resolve(new clientIO.FileInputStream(blob, options));
