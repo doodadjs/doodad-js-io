@@ -46,7 +46,7 @@
 				'Doodad.IO/root',
 			],
 
-			create: function create(root, /*optional*/_options) {
+			create: function create(root, /*optional*/_options, _shared) {
 				"use strict";
 
 				var doodad = root.Doodad,
@@ -78,8 +78,6 @@
 					openStream: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function openStream(/*optional*/options)
 				})));
 					
-					
-					
 				//=====================================================
 				// Basic implementations (continued)
 				//=====================================================
@@ -88,15 +86,6 @@
 									ioMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextInputStream',
-					
-					create: doodad.OVERRIDE(function create(/*optional*/options) {
-						this._super(options);
-
-						var newLine = types.getDefault(this.options, 'newLine', '\n');
-						if (root.DD_ASSERT) {
-							root.DD_ASSERT(types.isNothing(newLine) || types.isString(newLine), "Invalid new line string.");
-						};
-					}),
 					
 					// Non-formatted text
 					readText: doodad.OVERRIDE(function readText(/*optional*/options) {
@@ -140,7 +129,7 @@
 									var remaining = line.slice(index + this.options.newLine.length);
 									line = line.slice(0, index);
 
-									remaining && this.push(remaining, {next: true, noEvents: true});
+									remaining && this.push({raw: remaining, valueOf: function() {return this.raw;}}, {next: true, noEvents: true});
 
 									ok = true;	
 									break;
@@ -148,7 +137,7 @@
 							};
 							
 							if (!ok) {
-								line && this.push(line, {next: true, noEvents: true});
+								line && this.push({raw: line, valueOf: function() {return this.raw;}}, {next: true, noEvents: true});
 								line = null;
 							};
 						};
@@ -163,17 +152,9 @@
 				{
 					$TYPE_NAME: 'TextOutputStream',
 					
-					create: doodad.OVERRIDE(function create(/*optional*/options) {
-						this._super(options);
-						
-						var newLine = types.getDefault(this.options, 'newLine', tools.getOS().newLine);
-						
-						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(newLine) || types.isString(newLine), "Invalid new line string.");
-					}),
-					
 					// Non-formatted text
 					writeText: doodad.OVERRIDE(function writeText(text, /*optional*/options) {
-						this.write(String(text), options);
+						this.write(types.toString(text), options);
 					}),
 					
 					// Non-formatted text + newline
@@ -181,12 +162,12 @@
 						if (types.isNothing(text)) {
 							text = '';
 						};
-						this.writeText(String(text) + this.options.newLine, options);
+						this.writeText(types.toString(text) + this.options.newLine, options);
 					}),
 					
 					// Formatted text + newline
 					print: doodad.OVERRIDE(function print(text, /*optional*/options) {
-						this.writeLine(tools.format(String(text), types.get(options, 'params')), options);
+						this.writeLine(tools.format(types.toString(text), types.get(options, 'params')), options);
 					}),
 				}))));
 				
@@ -341,7 +322,6 @@
 					prepareFlushState: doodad.PROTECTED(function prepareFlushState(options) {
 						return {
 							html: '',
-							newLine: this.options.newLine,
 							flushElement: types.get(options, 'flushElement', false), // boolean
 							flushElementChunk: null,
 							bufferTypes: types.getType(this).$__bufferTypes,
@@ -367,9 +347,9 @@
 								attrs = tools.trim(attrs);
 							};
 							if (attrs && attrs.length) {
-								html = ('<' + data[1] + ' ' + attrs + '>' + state.newLine);
+								html = ('<' + data[1] + ' ' + attrs + '>' + this.options.newLine);
 							} else {
-								html = ('<' + data[1] + '>' + state.newLine);
+								html = ('<' + data[1] + '>' + this.options.newLine);
 							};
 							state.identIncrement = 1;
 						} else if (type === state.bufferTypes.Close) {
@@ -377,7 +357,7 @@
 							if (state.ignoreClose) {
 								state.ignoreClose = false;
 							} else {
-								html = ('</' + data[1] + '>' + state.newLine);
+								html = ('</' + data[1] + '>' + this.options.newLine);
 							};
 							state.identIncrement = -1;
 						} else if (type === state.bufferTypes.Stream) {
@@ -448,13 +428,13 @@
 										state.identCount--;
 										state.identIncrement = 0;
 									};
-									lines = html.split(state.newLine);
+									lines = html.split(this.options.newLine);
 									identSpace = tools.repeat(identStr, state.identCount);
 									linesLen = lines.length;
 									for (var j = 0; j < linesLen; j++) {
 										line = tools.trim(lines[j], identStr);
 										if (line.length) {
-											state.html += (identSpace + line + state.newLine);
+											state.html += (identSpace + line + this.options.newLine);
 										};
 									};
 									if (state.identIncrement > 0) {
@@ -518,7 +498,7 @@
 							stream = cls.$createInstance(options);
 							
 						var noOpenClose = types.get(options, 'noOpenClose', false),
-							pushOpts = {output: true, transformed: true};
+							pushOpts = {output: true};
 						
 						!noOpenClose && this.push({raw: [bufferTypes.Open, tag, attrs], valueOf: function() {return this.raw;}}, pushOpts);
 
@@ -550,7 +530,7 @@
 						var cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
-						this.push({raw: [bufferTypes.Open, tag, attrs], valueOf: function() {return this.raw;}}, {output: true, transformed: true});
+						this.push({raw: [bufferTypes.Open, tag, attrs], valueOf: function() {return this.raw;}}, {output: true});
 					}),
 					
 					closeElement: doodad.PUBLIC(function closeElement() {
@@ -561,7 +541,7 @@
 						var cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
-						this.push({raw: [bufferTypes.Close, tags.pop()[0]], valueOf: function() {return this.raw;}}, {output: true, transformed: true});
+						this.push({raw: [bufferTypes.Close, tags.pop()[0]], valueOf: function() {return this.raw;}}, {output: true});
 					}),
 					
 					reset: doodad.OVERRIDE(function reset() {
@@ -598,8 +578,9 @@
 					
 					onFlushData: doodad.OVERRIDE(function onFlushData(ev) {
 						var retval = this._super(ev);
-						if (ev.data.raw !== io.EOF) {
-							global.console[this.__fn](ev.data.valueOf());
+						var data = ev.data.data;
+						if (data.raw !== io.EOF) {
+							global.console[this.__fn](data.valueOf());
 						};
 						return retval;
 					}),
@@ -735,31 +716,27 @@
 						stderr: (new io.ConsoleOutputStream({name: 'error', autoFlush: true, bufferSize: 1})),
 					});
 					
-					tools.setOptions({
-						hooks: {
-							console: function consoleHook(level, message) {
-								// NOTE: Every "std" must be a stream.
-								if (types._implements(io.stderr, ioInterfaces.IConsole)) {
-									var _interface = io.stderr.getInterface(ioInterfaces.IConsole);
-									var fn;
-									if (level === tools.LogLevels.Info) {
-										fn = 'info';
-									} else if (level === tools.LogLevels.Warning) {
-										fn = 'warn';
-									} else if (level === tools.LogLevels.Error) {
-										fn = 'error';
-									} else {
-										fn = 'log';
-									};
-									_interface[fn](message);
-								} else if (types._implements(io.stderr, ioMixIns.TextOutput)) {
-									io.stderr.writeLine(message);
-								} else if (types._implements(io.stderr, ioMixIns.OutputStream)) {
-									io.stderr.write(message);
-								};
-							},
-						},
-					});
+					_shared.consoleHook = function consoleHook(level, message) {
+						// NOTE: Every "std" must be a stream.
+						if (types._implements(io.stderr, ioInterfaces.IConsole)) {
+							var _interface = io.stderr.getInterface(ioInterfaces.IConsole);
+							var fn;
+							if (level === tools.LogLevels.Info) {
+								fn = 'info';
+							} else if (level === tools.LogLevels.Warning) {
+								fn = 'warn';
+							} else if (level === tools.LogLevels.Error) {
+								fn = 'error';
+							} else {
+								fn = 'log';
+							};
+							_interface[fn](message);
+						} else if (types._implements(io.stderr, ioMixIns.TextOutput)) {
+							io.stderr.writeLine(message);
+						} else if (types._implements(io.stderr, ioMixIns.OutputStream)) {
+							io.stderr.write(message);
+						};
+					};
 				};
 			},
 		};

@@ -1,6 +1,6 @@
 //! REPLACE_BY("// Copyright 2016 Claude Petit, licensed under Apache License version 2.0\n", true)
 // dOOdad - Object-oriented programming framework
-// File: NodeJs_IO.js - Node.js IO Tools
+// File: NodeJs_IO_Base.js - Node.js IO Base Tools
 // Project home: https://sourceforge.net/projects/doodad-js/
 // Trunk: svn checkout svn://svn.code.sf.net/p/doodad-js/code/trunk doodad-js-code
 // Author: Claude Petit, Quebec city
@@ -47,7 +47,7 @@
 				'Doodad.IO',
 			],
 			
-			create: function create(root, /*optional*/_options) {
+			create: function create(root, /*optional*/_options, _shared) {
 				"use strict";
 				
 				const doodad = root.Doodad,
@@ -57,6 +57,7 @@
 					mixIns = doodad.MixIns,
 					io = doodad.IO,
 					ioMixIns = io.MixIns,
+					ioInterfaces = io.Interfaces,
 					nodejs = doodad.NodeJs,
 					nodejsMixIns = nodejs.MixIns,
 					nodejsInterfaces = nodejs.Interfaces,
@@ -75,6 +76,10 @@
 					onclose: doodad.RAW_EVENT(),
 					onerror: doodad.RAW_EVENT(),
 					ondestroy: doodad.RAW_EVENT(),
+					
+					destroy: doodad.PUBLIC(function destroy() {
+						return this[doodad.HostSymbol].destroy();
+					}),
 				}))));
 				
 				nodejsIOInterfaces.REGISTER(doodad.ISOLATED(doodad.MIX_IN(nodejsIOInterfaces.IStream.$extend(
@@ -82,8 +87,6 @@
 					$TYPE_NAME: 'IReadable',
 					
 					ondata: doodad.RAW_EVENT(),
-					onend: doodad.RAW_EVENT(),
-					onreadable: doodad.RAW_EVENT(),
 					onpause: doodad.RAW_EVENT(),
 					onresume: doodad.RAW_EVENT(),
 					
@@ -91,22 +94,97 @@
 					__defaultEncoding: doodad.PROTECTED(null),
 					__defaultPaused: doodad.PROTECTED(false),
 					
+					__pipeFlush: doodad.PROTECTED(false),
+					__pipeWriting: doodad.PROTECTED(0),
+
+					onnewListener: doodad.OVERRIDE(function onnewListener(event, listener) {
+						if ((event === 'readable') && !this.isPaused()) {
+							this.pause();
+						};
+						return this._super(event, listener);
+					}),
+
+					__onFlushDataReadable: doodad.PROTECTED(function(ev) {
+						if (!ev.data.options.output) {
+							const data = ev.data.data;
+							const destinations = this.__destinations;
+							const writeCb = new doodad.Callback(this, function _writeCb() {
+								this.__pipeWriting--;
+								if ((data.raw === io.EOF) && (this.__pipeWriting <= 0)) {
+									let callback = types.get(ev.data.options, 'callback');
+									if (callback) {
+										const cbObj = types.get(ev.data.options, 'callbackObj');
+										delete ev.data.options.callbackObj;
+										delete ev.data.options.callback;
+										callback = new doodad.Callback(cbObj, callback);
+										callback(); // sync
+									};
+								};
+							});
+							if (data.raw === io.EOF) {
+								// End
+								tools.forEach(destinations, function(state) {
+									this.__pipeWriting++;
+									if (state.endDestination) {
+										state.destination.end("", state.encoding, writeCb);
+									} else {
+										state.writeCb = writeCb;
+										state.finishCb();
+									};
+								}, this);
+								if (this.__pipeWriting > 0) {
+									ev.preventDefault();
+								};
+							} else {
+								tools.forEach(destinations, function(state) {
+									this.__pipeWriting++;
+									const ok = state.destination.write(data.valueOf(), state.encoding, writeCb);
+									if (!ok) {
+										ev.data.state.ok = false;
+									};
+								}, this);
+							};
+						};
+					}),
+
+					onreadable: doodad.RAW_EVENT(function onreadable() {
+						const host = this[doodad.HostSymbol];
+						const destinations = this.__destinations;
+						if (destinations.length) {
+							// TODO: Enhance flow control
+							if (this.__pipeWriting <= 0) {
+								this.__pipeWriting = 0;
+
+								host.flush({output: false});
+							};
+
+							// Cancel emit
+							this.overrideSuper();
+							return false;
+
+						} else {
+							return this._super();
+						};
+					}),
+
 					isPaused: doodad.PUBLIC(function isPaused() {
-						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
-							return this[doodad.HostSymbol].stream.isPaused();
+						const host = this[doodad.HostSymbol];
+						if (host._implements(nodejsIO.BinaryInputStream)) {
+							return host.stream.isPaused();
 						} else {
 							return this.__defaultPaused;
 						};
 					}),
 					
 					pause: doodad.PUBLIC(function pause() {
-						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
+						const host = this[doodad.HostSymbol];
+						if (types._implements(host, nodejsIO.BinaryInputStream)) {
 							const cb = new doodad.Callback(this, function() {
-								this[doodad.HostSymbol].stream.removeListener('pause', cb);
+								host.stream.removeListener('pause', cb);
 								this.emit("pause");
 							});
-							this[doodad.HostSymbol].stream.once('pause', cb);
-							this[doodad.HostSymbol].stream.pause();
+							host.stream.once('pause', cb);
+							host.stream.pause();
 						} else if (!this.__defaultPaused) {
 							this.__defaultPaused = true;
 							this.emit("pause");
@@ -117,50 +195,56 @@
 						if (tools.findItem(this.__destinations, function(item) {
 							return (item.destination === destination);
 						}) === null) {
-							const endDestination = types.get(options, 'end', true) && 
-									(tools.indexOf([io.stdout, io.stderr, process.stdout, process.stderr], destination) < 0); // end the writer when the reader ends
-									
-							const endCb = new doodad.Callback(this, function _endCb() {
-								if (endDestination) {
-									destination.end();
-								};
-								this.unpipe(destination);
-							});
-							//this.once('finish', endCb);
-							this.once('end', endCb);
-							this.once('close', endCb);
-							
-							const readableCb = new doodad.Callback(this, function _readableCb() {
-								const chunk = this.read();
-								if (chunk) {
-									destination.write(chunk, this.__defaultEncoding, readableCb);
-								};
-							});
-							this.on('readable', readableCb);
-
-							const errorCb = new doodad.Callback(this, function _errorCb(err) {
-								this.emit('error', err);
-							});
-							destination.on('error', errorCb);
-
-							if (!this.__destinations) {
-								this.__destinations = [];
+							let destinations = this.__destinations;
+							if (!destinations) {
+								this.__destinations = destinations = [];
 							};
 
-							const self = this;
-
-							this.__destinations.push({
+							const state = {
+								endDestination: types.get(options, 'end', true) && (tools.indexOf([io.stdout, io.stderr, process.stdout, process.stderr], destination) < 0),
 								destination: destination,
+								errorCb: null,
+								finishCb: null,
+								writeCb: null,
+								encoding: null,
 								unpipe: function() {
-									destination.removeListener('error', errorCb);
-									self.removeListener('end', endCb);
-									self.removeListener('close', endCb);
-									self.removeListener('readable', readableCb);
+									this.destination.removeListener('error', this.errorCb);
+									this.destination.removeListener('finish', this.finishCb);
 								},
-							});
+							};
+
+							const host = this[doodad.HostSymbol];
 							
-							if (!this[doodad.HostSymbol].isListening()) {
-								this[doodad.HostSymbol].listen();
+							host.onFlushData.attach(this, this.__onFlushDataReadable);
+
+							state.encoding = this.__defaultEncoding;
+							if (!state.encoding) {
+								if (host._implements(ioMixIns.TextTransformable)) {
+									state.encoding = host.options.encoding;
+								};
+							};
+
+							state.errorCb = new doodad.Callback(this, function _errorCb(err) {
+								this.emit('error', err);
+							});
+							destination.on('error', state.errorCb);
+
+							state.finishCb = new doodad.Callback(this, function _finishCb() {
+								this.unpipe(destination);
+								this.writeCb && this.writeCb();
+								if (!this.__destinations.length) {
+									host.onFlushData.detach(this, this.__onFlushDataReadable);
+									this.emit('end');
+								};
+							});
+							destination.once('finish', state.finishCb);
+							
+							this.__destinations.push(state);
+							
+							if (host._implements(ioInterfaces.Listener)) {
+								if (!host.isListening()) {
+									host.listen();
+								};
 							};
 							
 							this.pause(); // force flow control (uses 'readable' event instead of 'data' event)
@@ -175,36 +259,40 @@
                             
 							destination.emit('pipe', this);
 						};
+
 						return destination;
 					}),
 					
 					_read: doodad.PUBLIC(function _read(/*optional*/size) {
-						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
-							return this[doodad.HostSymbol].stream._read(size);
+						const host = this[doodad.HostSymbol];
+						if (host._implements(nodejsIO.BinaryInputStream)) {
+							return host.stream._read(size);
 						} else {
 							throw new types.NotSupported("'_read' is not supported by this stream.");
 						};
 					}),
 					
 					read: doodad.PUBLIC(function read(/*optional*/size) {
-						// TODO: "size" (in bytes)
-						const data = this[doodad.HostSymbol].read({
-								//size: size,
-							});
-						
+						if (!types.isNothing(size)) {
+							throw new types.NotSupported("The 'size' argument is not supported by this stream.");
+						};
+						const host = this[doodad.HostSymbol];
+						const data = host.read();
 						if (data && (data.raw !== io.EOF)) {
 							return data.valueOf();
+						} else {
+							return null;
 						};
 					}),
 					
 					resume: doodad.PUBLIC(function resume() {
-						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
+						const host = this[doodad.HostSymbol];
+						if (host._implements(nodejsIO.BinaryInputStream)) {
 							const cb = new doodad.Callback(this, function() {
-								this[doodad.HostSymbol].stream.removeListener('resume', cb);
 								this.emit("resume");
 							});
-							this[doodad.HostSymbol].stream.once('resume', cb);
-							this[doodad.HostSymbol].stream.resume();
+							host.stream.once('resume', cb);
+							host.stream.resume();
 						} else if (this.__defaultPaused) {
 							this.__defaultPaused = false;
 							this.emit("resume");
@@ -212,14 +300,15 @@
 					}),
 					
 					setEncoding: doodad.PUBLIC(function setEncoding(encoding) {
-						if (this[doodad.HostSymbol]._implements(ioMixIns.TextTransformable)) {
-							this[doodad.HostSymbol].options.encoding = encoding;
+						const host = this[doodad.HostSymbol];
+						if (host._implements(ioMixIns.TextTransformable)) {
+							host.options.encoding = encoding;
 						};
 						this.__defaultEncoding = encoding;
 					}),
 					
 					unpipe: doodad.PUBLIC(function unpipe(/*optional*/destination) {
-						let items = [];
+						let items = null;
 						if (types.isNothing(destination)) {
 							items = this.__destinations;
 						} else {
@@ -231,41 +320,46 @@
 							};
 						};
 						let itm;
-						while (itm = items.pop()) {
-							itm.unpipe();
-							let dest = itm.destination;
-							if (types._implements(dest, nodejsIOInterfaces.ITransform)) {
-								dest = dest.getInterface(nodejsIOInterfaces.ITransform);
-							} else if (types._implements(dest, nodejsIOInterfaces.IDuplex)) {
-								dest = dest.getInterface(nodejsIOInterfaces.IDuplex);
-							} else if (types._implements(dest, nodejsIOInterfaces.IWritable)) {
-								dest = dest.getInterface(nodejsIOInterfaces.IWritable);
+						if (items) {
+							while (itm = items.pop()) {
+								itm.unpipe();
+								let dest = itm.destination;
+								if (types._implements(dest, nodejsIOInterfaces.ITransform)) {
+									dest = dest.getInterface(nodejsIOInterfaces.ITransform);
+								} else if (types._implements(dest, nodejsIOInterfaces.IDuplex)) {
+									dest = dest.getInterface(nodejsIOInterfaces.IDuplex);
+								} else if (types._implements(dest, nodejsIOInterfaces.IWritable)) {
+									dest = dest.getInterface(nodejsIOInterfaces.IWritable);
+								};
+								dest.emit('unpipe', this);
 							};
-							dest.emit('unpipe', this);
 						};
 					}),
 					
 					push: doodad.PUBLIC(function push(chunk, /*optional*/encoding) {
-						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
-							return this[doodad.HostSymbol].stream.push(chunk, encoding);
+						const host = this[doodad.HostSymbol];
+						if (host._implements(nodejsIO.BinaryInputStream)) {
+							return host.stream.push(chunk, encoding || this.__defaultEncoding);
 						} else {
-							this[doodad.HostSymbol].push(chunk, {noEvents: true, encoding: encoding || this.__defaultEncoding});
-							this._read();
+							host.push(chunk, {noEvents: true, encoding: encoding || this.__defaultEncoding});
+							//this._read();
 							return true; // TODO: Return 'false' when buffer is full, before it raises an error
 						};
 					}),
 					
 					unshift: doodad.PUBLIC(function unshift(chunk) {
-						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
-							return this[doodad.HostSymbol].stream.unshift(chunk);
+						const host = this[doodad.HostSymbol];
+						if (host._implements(nodejsIO.BinaryInputStream)) {
+							return host.stream.unshift(chunk);
 						} else {
-							return this[doodad.HostSymbol].push(chunk, {next: true, noEvents: true});
+							return host.push(chunk, {next: true, noEvents: true});
 						};
 					}),
 					
 					wrap: doodad.PUBLIC(function wrap(stream) {
-						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryInputStream)) {
-							return this[doodad.HostSymbol].stream.wrap(stream);
+						const host = this[doodad.HostSymbol];
+						if (host._implements(nodejsIO.BinaryInputStream)) {
+							return host.stream.wrap(stream);
 						} else {
 							throw new types.NotSupported("'wrap' is not supported by this stream.");
 						};
@@ -277,24 +371,26 @@
 				{
 					$TYPE_NAME: 'IWritable',
 					
+					__defaultEncoding: doodad.PROTECTED(null),
+
 					ondrain: doodad.RAW_EVENT(),
 					onfinish: doodad.RAW_EVENT(),
-					onpipe: doodad.RAW_EVENT(),
-					onunpipe: doodad.RAW_EVENT(),
-					
-					__defaultEncoding: doodad.PROTECTED(null),
-					
+					onpipe: doodad.RAW_EVENT(), // function(source)
+					onunpipe: doodad.RAW_EVENT(), // function(source)
+
 					cork: doodad.PUBLIC(function cork() {
-						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryOutputStream)) {
-							this[doodad.HostSymbol].stream.cork();
+						const host = this[doodad.HostSymbol];
+						if (host._implements(nodejsIO.BinaryOutputStream)) {
+							host.stream.cork();
 						} else {
 							throw new types.NotSupported("'cork' is not supported by this stream.");
 						};
 					}),
 					
 					uncork: doodad.PUBLIC(function uncork() {
-						if (types._implements(this[doodad.HostSymbol], nodejsIO.BinaryOutputStream)) {
-							this[doodad.HostSymbol].stream.uncork();
+						const host = this[doodad.HostSymbol];
+						if (host._implements(nodejsIO.BinaryOutputStream)) {
+							host.stream.uncork();
 						} else {
 							throw new types.NotSupported("'uncork' is not supported by this stream.");
 						};
@@ -322,13 +418,15 @@
 							options.encoding = encoding;
 						};
 						
-						this[doodad.HostSymbol].write(chunk, options);
+						const host = this[doodad.HostSymbol];
+
+						host.write(chunk, options);
 						
-						if (this[doodad.HostSymbol].options.autoFlush) {
+						if (host.options.autoFlush) {
 							return true;
 						};
 						
-						tools.callAsync(this[doodad.HostSymbol].flush, 0, this[doodad.HostSymbol]);
+						tools.callAsync(host.flush, 0, host);
 						
 						return false;
 					}),
@@ -347,6 +445,8 @@
 						if (callback) {
 							callback = new doodad.Callback(null, callback);
 						};
+
+						const host = this[doodad.HostSymbol];
 
 						const flushCb = new doodad.Callback(this, function _flushCb(err) {
 							if (err) {
@@ -368,14 +468,14 @@
 									this.emit('error', err);
 								};
 							} else {
-								this[doodad.HostSymbol].flush({
+								host.flush({
 									callback: flushCb,
 								});
 							};
 						});
 						
 						if (types.isNothing(chunk)) {
-							this[doodad.HostSymbol].write(io.EOF, {
+							host.write(io.EOF, {
 								callback: writeEOFCb,
 							});
 						} else {
@@ -387,7 +487,7 @@
 										this.emit('error', err);
 									};
 								} else {
-									this[doodad.HostSymbol].write(io.EOF, {
+									host.write(io.EOF, {
 										callback: writeEOFCb,
 									});
 								};
