@@ -168,27 +168,12 @@
 					}),
 
 					isPaused: doodad.PUBLIC(function isPaused() {
-						const host = this[doodad.HostSymbol];
-						if (host._implements(nodejsIO.BinaryInputStream)) {
-							return host.stream.isPaused();
-						} else {
-							return this.__defaultPaused;
-						};
+						return this.__defaultPaused;
 					}),
 					
 					pause: doodad.PUBLIC(function pause() {
-						const host = this[doodad.HostSymbol];
-						if (types._implements(host, nodejsIO.BinaryInputStream)) {
-							const cb = new doodad.Callback(this, function() {
-								host.stream.removeListener('pause', cb);
-								this.emit("pause");
-							});
-							host.stream.once('pause', cb);
-							host.stream.pause();
-						} else if (!this.__defaultPaused) {
-							this.__defaultPaused = true;
-							this.emit("pause");
-						};
+						this.__defaultPaused = true;
+						this.emit("pause");
 					}),
 					
 					pipe: doodad.PUBLIC(function pipe(destination, /*optional*/options) {
@@ -263,14 +248,7 @@
 						return destination;
 					}),
 					
-					_read: doodad.PUBLIC(function _read(/*optional*/size) {
-						const host = this[doodad.HostSymbol];
-						if (host._implements(nodejsIO.BinaryInputStream)) {
-							return host.stream._read(size);
-						} else {
-							throw new types.NotSupported("'_read' is not supported by this stream.");
-						};
-					}),
+					_read: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function _read(/*optional*/size)
 					
 					read: doodad.PUBLIC(function read(/*optional*/size) {
 						if (!types.isNothing(size)) {
@@ -286,17 +264,8 @@
 					}),
 					
 					resume: doodad.PUBLIC(function resume() {
-						const host = this[doodad.HostSymbol];
-						if (host._implements(nodejsIO.BinaryInputStream)) {
-							const cb = new doodad.Callback(this, function() {
-								this.emit("resume");
-							});
-							host.stream.once('resume', cb);
-							host.stream.resume();
-						} else if (this.__defaultPaused) {
-							this.__defaultPaused = false;
-							this.emit("resume");
-						};
+						this.__defaultPaused = false;
+						this.emit("resume");
 					}),
 					
 					setEncoding: doodad.PUBLIC(function setEncoding(encoding) {
@@ -338,32 +307,16 @@
 					
 					push: doodad.PUBLIC(function push(chunk, /*optional*/encoding) {
 						const host = this[doodad.HostSymbol];
-						if (host._implements(nodejsIO.BinaryInputStream)) {
-							return host.stream.push(chunk, encoding || this.__defaultEncoding);
-						} else {
-							host.push(chunk, {noEvents: true, encoding: encoding || this.__defaultEncoding});
-							//this._read();
-							return true; // TODO: Return 'false' when buffer is full, before it raises an error
-						};
+						host.push(chunk, {noEvents: true, encoding: encoding || this.__defaultEncoding});
+						return true; // TODO: Return 'false' when buffer is full, before it raises an error
 					}),
 					
 					unshift: doodad.PUBLIC(function unshift(chunk) {
 						const host = this[doodad.HostSymbol];
-						if (host._implements(nodejsIO.BinaryInputStream)) {
-							return host.stream.unshift(chunk);
-						} else {
-							return host.push(chunk, {next: true, noEvents: true});
-						};
+						return host.push(chunk, {next: true, noEvents: true});
 					}),
 					
-					wrap: doodad.PUBLIC(function wrap(stream) {
-						const host = this[doodad.HostSymbol];
-						if (host._implements(nodejsIO.BinaryInputStream)) {
-							return host.stream.wrap(stream);
-						} else {
-							throw new types.NotSupported("'wrap' is not supported by this stream.");
-						};
-					}),
+					wrap: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function wrap(stream)
 				}))));
 				
 
@@ -378,23 +331,9 @@
 					onpipe: doodad.RAW_EVENT(), // function(source)
 					onunpipe: doodad.RAW_EVENT(), // function(source)
 
-					cork: doodad.PUBLIC(function cork() {
-						const host = this[doodad.HostSymbol];
-						if (host._implements(nodejsIO.BinaryOutputStream)) {
-							host.stream.cork();
-						} else {
-							throw new types.NotSupported("'cork' is not supported by this stream.");
-						};
-					}),
+					cork: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function()
 					
-					uncork: doodad.PUBLIC(function uncork() {
-						const host = this[doodad.HostSymbol];
-						if (host._implements(nodejsIO.BinaryOutputStream)) {
-							host.stream.uncork();
-						} else {
-							throw new types.NotSupported("'uncork' is not supported by this stream.");
-						};
-					}),
+					uncork: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function()
 					
 					setDefaultEncoding: doodad.PUBLIC(function setDefaultEncoding(encoding) {
 						this.__defaultEncoding = encoding;

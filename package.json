@@ -1,6 +1,6 @@
 {
   "name": "doodad-js-io",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "stage": "a",
   "description": "I/O streams (alpha)",
   "files": [
