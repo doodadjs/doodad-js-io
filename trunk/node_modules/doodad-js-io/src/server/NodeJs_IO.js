@@ -137,7 +137,51 @@
 						_shared.setAttribute(this, 'stream', stream);
 					}),
 					
+					isPaused: doodad.REPLACE(nodejsIOInterfaces.IReadable, function isPaused() {
+						const host = this[doodad.HostSymbol];
+						return host.stream.isPaused();
+					}),
+
+					pause: doodad.REPLACE(nodejsIOInterfaces.IReadable, function pause() {
+						const host = this[doodad.HostSymbol];
+						const cb = new doodad.Callback(this, function() {
+							host.stream.removeListener('pause', cb);
+							this.emit("pause");
+						});
+						host.stream.once('pause', cb);
+						host.stream.pause();
+					}),
+
+					_read: doodad.REPLACE(nodejsIOInterfaces.IReadable, function _read(/*optional*/size) {
+						const host = this[doodad.HostSymbol];
+						return host.stream._read(size);
+					}),
 					
+					resume: doodad.REPLACE(nodejsIOInterfaces.IReadable, function resume() {
+						const host = this[doodad.HostSymbol];
+						const cb = new doodad.Callback(this, function() {
+							host.stream.removeListener('resume', cb);
+							this.emit("resume");
+						});
+						host.stream.once('resume', cb);
+						host.stream.resume();
+					}),
+
+					push: doodad.REPLACE(nodejsIOInterfaces.IReadable, function push(chunk, /*optional*/encoding) {
+						const host = this[doodad.HostSymbol];
+						return host.stream.push(chunk, encoding || this.__defaultEncoding);
+					}),
+					
+					unshift: doodad.REPLACE(nodejsIOInterfaces.IReadable, function unshift(chunk) {
+						const host = this[doodad.HostSymbol];
+						return host.stream.unshift(chunk);
+					}),
+					
+					wrap: doodad.REPLACE(nodejsIOInterfaces.IReadable, function wrap(stream) {
+						const host = this[doodad.HostSymbol];
+						return host.stream.wrap(stream);
+					}),
+
 					isListening: doodad.OVERRIDE(function isListening() {
 						return this.__listening;
 					}),
@@ -303,6 +347,16 @@
 						};
 					}),
 					
+					cork: doodad.REPLACE(nodejsIOInterfaces.IWritable, function cork() {
+						const host = this[doodad.HostSymbol];
+						host.stream.cork();
+					}),
+					
+					uncork: doodad.REPLACE(nodejsIOInterfaces.IWritable, function uncork() {
+						const host = this[doodad.HostSymbol];
+						host.stream.uncork();
+					}),
+
 					push: doodad.OVERRIDE(function push(data, /*optional*/options) {
 						if (this.__closed) {
 							throw new types.NotAvailable("Stream closed.");
