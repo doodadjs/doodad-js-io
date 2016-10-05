@@ -1,6 +1,6 @@
 {
   "name": "doodad-js-io",
-  "version": "3.0.1",
+  "version": "4.0.0",
   "stage": "a",
   "description": "I/O streams (alpha)",
   "files": [
@@ -11,5 +11,13 @@
     "io",
     "i/o"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/doodadjs/doodad-js-io.git"
+  },
+  "bugs": {
+    "url": "https://github.com/doodadjs/doodad-js-io/issues",
+    "email": "doodadjs@gmail.com"
+  },
   "tonicExampleFilename": "tonic.js"
 }

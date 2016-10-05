@@ -1,8 +1,9 @@
+//! BEGIN_MODULE()
+
 //! REPLACE_BY("// Copyright 2016 Claude Petit, licensed under Apache License version 2.0\n", true)
-// dOOdad - Object-oriented programming framework
+// doodad-js - Object-oriented programming framework
 // File: NodeJs_IO.js - Node.js IO Tools
-// Project home: https://sourceforge.net/projects/doodad-js/
-// Trunk: svn checkout svn://svn.code.sf.net/p/doodad-js/code/trunk doodad-js-code
+// Project home: https://github.com/doodadjs/
 // Author: Claude Petit, Quebec city
 // Contact: doodadjs [at] gmail.com
 // Note: I'm still in alpha-beta stage, so expect to find some bugs or incomplete parts !
@@ -23,25 +24,11 @@
 //	limitations under the License.
 //! END_REPLACE()
 
-(function() {
-	var global = this;
-
-	var exports = {};
-	
-	//! BEGIN_REMOVE()
-	if ((typeof process === 'object') && (typeof module === 'object')) {
-	//! END_REMOVE()
-		//! IF_DEF("serverSide")
-			module.exports = exports;
-		//! END_IF()
-	//! BEGIN_REMOVE()
-	};
-	//! END_REMOVE()
-	
-	exports.add = function add(DD_MODULES) {
+module.exports = {
+	add: function add(DD_MODULES) {
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.NodeJs.IO/root'] = {
-			version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE() */,
+			version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE()*/,
 			dependencies: [
 				'Doodad.IO/common',
 			],
@@ -118,8 +105,8 @@
 							this.push(data, options);
 						};
 						this.__closed = true;
-						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
-						ireadable.emit('close');
+						const istream = this.getInterface(nodejsIOInterfaces.IStream);
+						istream.close();
 					}),
 					
 					streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
@@ -285,8 +272,8 @@
 					
 					streamOnClose: doodad.NODE_EVENT('close', function streamOnClose(context) {
 						this.__closed = true;
-						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
-						iwritable.emit('close');
+						const istream = this.getInterface(nodejsIOInterfaces.IStream);
+						istream.close();
 					}),
 					
 					
@@ -318,31 +305,24 @@
 					}),
 					
 					__flushInternal: doodad.REPLACE(function __flushInternal(state, data, /*optional*/options) {
-						this.onFlushData(new doodad.Event(data));
-
-						let callback = types.get(options, 'callback');
-						if (callback) {
-							const cbObj = types.get(options, 'callbackObj');
-							callback = new doodad.AsyncCallback(cbObj, callback);
-						};
+						const callback = types.get(options, 'callback');
 
 						if (data.raw === io.EOF) {
 							this.stream.end(callback); // async
-						} else {
-							if (callback) {
-								state.ok = this.stream.write(data.valueOf());
-								if (state.ok) {
-									callback(); // async
-								} else {
-									// <PRB> "possible EventEmitter memory leak detected"
-									//this.stream.once('drain', callback);
-									this.streamOnDrain.attachOnce(this.stream, {callback: callback}); // async
-								};
+
+						} else if (callback) {
+							state.ok = this.stream.write(data.valueOf());
+							if (state.ok) {
+								callback(); // async
 							} else {
-								state.ok = this.stream.write(data.valueOf());
-								if (!state.ok) {
-									throw new types.BufferOverflow();
-								};
+								// <PRB> "possible EventEmitter memory leak detected"
+								//this.stream.once('drain', callback);
+								this.streamOnDrain.attachOnce(this.stream, {callback: callback}); // async
+							};
+						} else {
+							state.ok = this.stream.write(data.valueOf());
+							if (!state.ok) {
+								throw new types.BufferOverflow();
 							};
 						};
 					}),
@@ -373,29 +353,20 @@
 					$TYPE_NAME: 'TextOutputStream',
 
 					__flushInternal: doodad.REPLACE(function __flushInternal(state, data, /*optional*/options) {
-						this.onFlushData(new doodad.Event(data));
-						
-						let callback = types.get(options, 'callback');
+						const callback = types.get(options, 'callback');
 						
 						if (data.raw === io.EOF) {
-							const cbObj = types.get(options, 'callbackObj');
-							callback = new doodad.Callback(cbObj, callback);
 							this.stream.end(callback); // async
-							
+
 						} else if (callback) {
 							state.ok = this.stream.write(data.valueOf(), this.options.encoding);
 							if (state.ok) {
-								const cbObj = types.get(options, 'callbackObj');
-								callback = new doodad.AsyncCallback(cbObj, callback);
 								callback(); // async
 							} else {
-								const cbObj = types.get(options, 'callbackObj');
-								callback = new doodad.Callback(cbObj, callback);
 								// <PRB> "possible EventEmitter memory leak detected"
 								//this.stream.once('drain', callback);
 								this.streamOnDrain.attachOnce(this.stream, {callback: callback}); // async
 							};
-							
 						} else {
 							state.ok = this.stream.write(data.valueOf(), this.options.encoding);
 							if (!state.ok) {
@@ -439,38 +410,18 @@
 					// <PRB> Since Node version 5.6.0 or 5.7.0, children of a cluster are taking control of 'stdin'.
 					if (nodeCluster.isMaster) {
 						io.setStds({
-							stdin: new nodejsIO.TextInputStream({nodeStream: process.stdin, autoFlush: true, bufferSize: 1}),
+							stdin: new nodejsIO.TextInputStream({nodeStream: process.stdin}),
 						});
 					};
-					const stdout = new nodejsIO.TextOutputStream({nodeStream: process.stdout, autoFlush: true, bufferSize: 1});
+					const stdout = new nodejsIO.TextOutputStream({nodeStream: process.stdout});
 					io.setStds({
 						stdout: stdout,
-						stderr: ((process.stderr === process.stdout) ? stdout : new nodejsIO.TextOutputStream({nodeStream: process.stderr, autoFlush: true, bufferSize: 1})),
+						stderr: ((process.stderr === process.stdout) ? stdout : new nodejsIO.TextOutputStream({nodeStream: process.stderr})),
 					});
 				};
 			},
 		};
-		
 		return DD_MODULES;
-	};
-	
-	//! BEGIN_REMOVE()
-	if ((typeof process !== 'object') || (typeof module !== 'object')) {
-	//! END_REMOVE()
-		//! IF_UNDEF("serverSide")
-			// <PRB> export/import are not yet supported in browsers
-			global.DD_MODULES = exports.add(global.DD_MODULES);
-		//! END_IF()
-	//! BEGIN_REMOVE()
-	};
-	//! END_REMOVE()
-}).call(
-	//! BEGIN_REMOVE()
-	(typeof window !== 'undefined') ? window : ((typeof global !== 'undefined') ? global : this)
-	//! END_REMOVE()
-	//! IF_DEF("serverSide")
-	//! 	INJECT("global")
-	//! ELSE()
-	//! 	INJECT("window")
-	//! END_IF()
-);
+	},
+};
+//! END_MODULE()

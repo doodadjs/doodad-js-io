@@ -1,8 +1,9 @@
+//! BEGIN_MODULE()
+
 //! REPLACE_BY("// Copyright 2016 Claude Petit, licensed under Apache License version 2.0\n", true)
-// dOOdad - Object-oriented programming framework
+// doodad-js - Object-oriented programming framework
 // File: IO.js - IO tools
-// Project home: https://sourceforge.net/projects/doodad-js/
-// Trunk: svn checkout svn://svn.code.sf.net/p/doodad-js/code/trunk doodad-js-code
+// Project home: https://github.com/doodadjs/
 // Author: Claude Petit, Quebec city
 // Contact: doodadjs [at] gmail.com
 // Note: I'm still in alpha-beta stage, so expect to find some bugs or incomplete parts !
@@ -23,25 +24,11 @@
 //	limitations under the License.
 //! END_REPLACE()
 
-(function() {
-	var global = this;
-
-	var exports = {};
-	
-	//! BEGIN_REMOVE()
-	if ((typeof process === 'object') && (typeof module === 'object')) {
-	//! END_REMOVE()
-		//! IF_DEF("serverSide")
-			module.exports = exports;
-		//! END_IF()
-	//! BEGIN_REMOVE()
-	};
-	//! END_REMOVE()
-	
-	exports.add = function add(DD_MODULES) {
+module.exports = {
+	add: function add(DD_MODULES) {
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.IO/common'] = {
-			version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE() */,
+			version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE()*/,
 			dependencies: [
 				'Doodad.IO/root',
 			],
@@ -223,11 +210,11 @@
 					$TYPE_NAME: 'TextInputStream',
 				})));
 
-				io.REGISTER(doodad.BASE(io.OutputStream.$extend(
+				io.REGISTER(io.OutputStream.$extend(
 									ioMixIns.TextOutput,
 				{
 					$TYPE_NAME: 'TextOutputStream',
-				})));
+				}));
 				
 				io.REGISTER(io.TextOutputStream.$extend(
 									ioMixIns.NestedStream,
@@ -454,8 +441,6 @@
 
 							var callback = types.get(options, 'callback');
 							if (callback) {
-								var cbObj = types.get(options, 'callbackObj');
-								callback = new doodad.Callback(cbObj, callback);
 								callback();
 							};
 							
@@ -594,7 +579,7 @@
 								} else {
 							//! END_REMOVE()
 							
-							//! IF_UNDEF("serverSide")
+							//! IF_UNSET("serverSide")
 									global.console.log(raw);
 							//! END_IF()
 								
@@ -602,7 +587,7 @@
 								};
 							//! END_REMOVE()
 							
-							//! IF_DEF("serverSide")
+							//! IF_SET("serverSide")
 								//! INJECT("global.console.warn(raw)") // force stderr
 							//! END_IF()
 						};
@@ -615,7 +600,7 @@
 								} else {
 							//! END_REMOVE()
 							
-							//! IF_UNDEF("serverSide")
+							//! IF_UNSET("serverSide")
 									if (global.console.info) {
 										global.console.info(raw);
 									} else {
@@ -627,7 +612,7 @@
 								};
 							//! END_REMOVE()
 							
-							//! IF_DEF("serverSide")
+							//! IF_SET("serverSide")
 								//! INJECT("global.console.warn(raw)") // force stderr
 							//! END_IF()
 						};
@@ -653,6 +638,18 @@
 						};
 					}),
 					
+				}));
+				
+				
+				
+				io.REGISTER(io.OutputStream.$extend(
+				{
+					$TYPE_NAME: 'NullOutputStream',
+					
+					onWrite: doodad.OVERRIDE(function onWrite(ev) {
+						ev.preventDefault();
+						return this._super(ev);
+					}),
 				}));
 				
 				
@@ -712,8 +709,8 @@
 				return function init(/*optional*/options) {
 					// NOTE: Every "std" must be a stream.
 					io.setStds({
-						stdout: (new io.ConsoleOutputStream({name: 'log', autoFlush: true, bufferSize: 1})),
-						stderr: (new io.ConsoleOutputStream({name: 'error', autoFlush: true, bufferSize: 1})),
+						stdout: (new io.ConsoleOutputStream({name: 'log'})),
+						stderr: (new io.ConsoleOutputStream({name: 'error'})),
 					});
 					
 					_shared.consoleHook = function consoleHook(level, message) {
@@ -740,27 +737,7 @@
 				};
 			},
 		};
-		
 		return DD_MODULES;
-	};
-	
-	//! BEGIN_REMOVE()
-	if ((typeof process !== 'object') || (typeof module !== 'object')) {
-	//! END_REMOVE()
-		//! IF_UNDEF("serverSide")
-			// <PRB> export/import are not yet supported in browsers
-			global.DD_MODULES = exports.add(global.DD_MODULES);
-		//! END_IF()
-	//! BEGIN_REMOVE()
-	};
-	//! END_REMOVE()
-}).call(
-	//! BEGIN_REMOVE()
-	(typeof window !== 'undefined') ? window : ((typeof global !== 'undefined') ? global : this)
-	//! END_REMOVE()
-	//! IF_DEF("serverSide")
-	//! 	INJECT("global")
-	//! ELSE()
-	//! 	INJECT("window")
-	//! END_IF()
-);
+	},
+};
+//! END_MODULE()

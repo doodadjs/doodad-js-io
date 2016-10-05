@@ -1,8 +1,9 @@
+//! BEGIN_MODULE()
+
 //! REPLACE_BY("// Copyright 2016 Claude Petit, licensed under Apache License version 2.0\n", true)
-// dOOdad - Object-oriented programming framework
+// doodad-js - Object-oriented programming framework
 // File: IO_Baqse.js - IO Base Tools
-// Project home: https://sourceforge.net/projects/doodad-js/
-// Trunk: svn checkout svn://svn.code.sf.net/p/doodad-js/code/trunk doodad-js-code
+// Project home: https://github.com/doodadjs/
 // Author: Claude Petit, Quebec city
 // Contact: doodadjs [at] gmail.com
 // Note: I'm still in alpha-beta stage, so expect to find some bugs or incomplete parts !
@@ -23,25 +24,11 @@
 //	limitations under the License.
 //! END_REPLACE()
 
-(function() {
-	var global = this;
-
-	var exports = {};
-	
-	//! BEGIN_REMOVE()
-	if ((typeof process === 'object') && (typeof module === 'object')) {
-	//! END_REMOVE()
-		//! IF_DEF("serverSide")
-			module.exports = exports;
-		//! END_IF()
-	//! BEGIN_REMOVE()
-	};
-	//! END_REMOVE()
-	
-	exports.add = function add(DD_MODULES) {
+module.exports = {
+	add: function add(DD_MODULES) {
 		DD_MODULES = (DD_MODULES || {});
 		DD_MODULES['Doodad.IO'] = {
-			version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE() */,
+			version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE()*/,
 			namespaces: ['MixIns', 'Interfaces'],
 
 			create: function create(root, /*optional*/_options, _shared) {
@@ -98,7 +85,7 @@
 				}))));
 				
 				
-				ioInterfaces.REGISTER(doodad.INTERFACE(doodad.Class.$extend(
+				ioMixIns.REGISTER(doodad.MIX_IN(doodad.Class.$extend(
 									mixIns.Events,
 				{
 					$TYPE_NAME: 'Listener',
@@ -245,6 +232,7 @@
 					onError: doodad.ERROR_EVENT(), // function onError(ev)
 					onFlushData: doodad.EVENT(true),
 					onFlush: doodad.EVENT(false),
+					onEOF: doodad.EVENT(false),
 					
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super();
@@ -271,21 +259,10 @@
 					unpipe: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/stream)
 
 					__flushInternal: doodad.PROTECTED(function(state, data, /*optional*/options) {
-						options = types.extend({}, options);
-
-						var ev = new doodad.Event({state: state, data: data, options: options});
-
-						this.onFlushData(ev);
-
-						if (!ev.prevent) {
-							var callback = types.get(options, 'callback');
-							if (callback) {
-								var cbObj = types.get(options, 'callbackObj');
-								delete options.callbackObj;
-								delete options.callback;
-								callback = new doodad.Callback(cbObj, callback);
-								callback(); // sync
-							};
+						var callback = types.get(options, 'callback');
+						if (callback) {
+							delete options.callback;
+							callback();
 						};
 					}),
 					
@@ -296,10 +273,7 @@
 							
 						var callback = types.get(options, 'callback');
 						if (callback) {
-							var cbObj = types.get(options, 'callbackObj');
-							delete options.callbackObj;
 							delete options.callback;
-							callback = new doodad.Callback(cbObj, callback);
 						};
 
 						var state = {};
@@ -309,9 +283,21 @@
 
 							while (state.ok && (this.getCount(options) > 0)) {
 								var data = this.pull(options);
+
+								if (data.raw === io.EOF) {
+									this.onEOF(new doodad.Event({output: types.get(options, 'output')}));
+								};
+
+								var ev = new doodad.Event({data: data, options: options});
+
+								this.onFlushData(ev);
+
+								if (ev.prevent) {
+									continue;
+								};
+
 								this.__flushInternal(state, data, types.extend({}, options, { // sync/async
-										callbackObj: this,
-										callback: function(err) {
+										callback: new doodad.Callback(this, function(err) {
 											if (err) {
 												this.onError(new doodad.ErrorEvent(err));
 												if (!state.ok && callback) {
@@ -322,7 +308,7 @@
 													_flush.call(this); // sync
 												};
 											};
-										},
+										}),
 									}));
 							};
 							
@@ -348,14 +334,14 @@
 								this.onError.detach(this, errorHandler);
 							};
 							this.onError.attachOnce(this, errorHandler);
-							this.flush(types.extend({}, options, {callbackObj: this, callback: function(err) {
+							this.flush(types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
 								detach.call(this);
 								if (err) {
 									reject(err);
 								} else {
 									resolve();
 								};
-							}}));
+							})}));
 						}, this);
 					})),
 				}))));
@@ -374,7 +360,7 @@
 				})));
 				
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
-									ioInterfaces.Listener,
+									ioMixIns.Listener,
 				{
 					$TYPE_NAME: 'InputStreamBase',
 
@@ -398,18 +384,18 @@
 									detach.call(this);
 									reject(ev.error);
 								};
-								function stopHandler(ev) {
-									detach.call(this);
-									resolve();
-								};
+								//function stopHandler(ev) {
+								//	detach.call(this);
+								//	resolve();
+								//};
 								function detach() {
 									this.onReady.detach(this, readyHandler);
 									this.onError.detach(this, errorHandler);
-									this.onStopListening.detach(this, stopHandler);
+									//this.onStopListening.detach(this, stopHandler);
 								};
 								this.onReady.attachOnce(this, readyHandler);
 								this.onError.attachOnce(this, errorHandler);
-								this.onStopListening.attachOnce(this, stopHandler);
+								//this.onStopListening.attachOnce(this, stopHandler);
 							}, this);
 						};
 					})),
@@ -437,24 +423,25 @@
 								function readyHandler(ev) {
 									detach.call(this);
 									ev.preventDefault();
+									// FIXME: Return text, not a chunk
 									resolve(ev.data);
 								};
 								function errorHandler(ev) {
 									detach.call(this);
 									reject(ev.error);
 								};
-								function stopHandler(ev) {
-									detach.call(this);
-									resolve();
-								};
+								//function stopHandler(ev) {
+								//	detach.call(this);
+								//	resolve();
+								//};
 								function detach() {
 									this.onReady.detach(this, readyHandler);
 									this.onError.detach(this, errorHandler);
-									this.onStopListening.detach(this, stopHandler);
+									//this.onStopListening.detach(this, stopHandler);
 								};
 								this.onReady.attachOnce(this, readyHandler);
 								this.onError.attachOnce(this, errorHandler);
-								this.onStopListening.attachOnce(this, stopHandler);
+								//this.onStopListening.attachOnce(this, stopHandler);
 							}, this);
 						};
 					})),
@@ -469,24 +456,25 @@
 								function readyHandler(ev) {
 									detach.call(this);
 									ev.preventDefault();
+									// FIXME: Return a line, not a chunk
 									resolve(ev.data);
 								};
 								function errorHandler(ev) {
 									detach.call(this);
 									reject(ev.error);
 								};
-								function stopHandler(ev) {
-									detach.call(this);
-									resolve();
-								};
+								//function stopHandler(ev) {
+								//	detach.call(this);
+								//	resolve();
+								//};
 								function detach() {
 									this.onReady.detach(this, readyHandler);
 									this.onError.detach(this, errorHandler);
-									this.onStopListening.detach(this, stopHandler);
+									//this.onStopListening.detach(this, stopHandler);
 								};
 								this.onReady.attachOnce(this, readyHandler);
 								this.onError.attachOnce(this, errorHandler);
-								this.onStopListening.attachOnce(this, stopHandler);
+								//this.onStopListening.attachOnce(this, stopHandler);
 							}, this);
 						};
 					})),
@@ -501,9 +489,15 @@
 					onWrite: doodad.EVENT(false),
 					
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
+						options = types.nullObject(options);
+
+						types.getDefault(options, 'autoFlush', true);
+
+						if (options.autoFlush) {
+							types.getDefault(options, 'bufferSize', 1);
+						};
+
 						this._super(options);
-						
-						types.getDefault(this.options, 'autoFlush', false);
 					}),
 					
 					write: doodad.PUBLIC(doodad.MUST_OVERRIDE()), //function write(raw, /*optional*/options)
@@ -519,14 +513,14 @@
 								this.onError.detach(this, errorHandler);
 							};
 							this.onError.attachOnce(this, errorHandler);
-							this.write(raw, types.extend({}, options, {callbackObj: this, callback: function(err) {
+							this.write(raw, types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
 								detach.call(this);
 								if (err) {
 									reject(err);
 								} else {
 									resolve();
 								};
-							}}));
+							})}));
 						}, this);
 					})),
 				}))));
@@ -557,14 +551,14 @@
 								this.onError.detach(this, errorHandler);
 							};
 							this.onError.attachOnce(this, errorHandler);
-							this.writeText(text, types.extend({}, options, {callbackObj: this, callback: function(err) {
+							this.writeText(text, types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
 								detach.call(this);
 								if (err) {
 									reject(err);
 								} else {
 									resolve();
 								};
-							}}));
+							})}));
 						}, this);
 					})),
 					
@@ -579,14 +573,14 @@
 								this.onError.detach(this, errorHandler);
 							};
 							this.onError.attachOnce(this, errorHandler);
-							this.writeLine(text, types.extend({}, options, {callbackObj: this, callback: function(err) {
+							this.writeLine(text, types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
 								detach.call(this);
 								if (err) {
 									reject(err);
 								} else {
 									resolve();
 								};
-							}}));
+							})}));
 						}, this);
 					})),
 					
@@ -601,14 +595,14 @@
 								this.onError.detach(this, errorHandler);
 							};
 							this.onError.attachOnce(this, errorHandler);
-							this.print(text, types.extend({}, options, {callbackObj: this, callback: function(err) {
+							this.print(text, types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
 								detach.call(this);
 								if (err) {
 									reject(err);
 								} else {
 									resolve();
 								};
-							}}));
+							})}));
 						}, this);
 					})),
 				}))));
@@ -620,27 +614,7 @@
 				//};
 			},
 		};
-		
 		return DD_MODULES;
-	};
-	
-	//! BEGIN_REMOVE()
-	if ((typeof process !== 'object') || (typeof module !== 'object')) {
-	//! END_REMOVE()
-		//! IF_UNDEF("serverSide")
-			// <PRB> export/import are not yet supported in browsers
-			global.DD_MODULES = exports.add(global.DD_MODULES);
-		//! END_IF()
-	//! BEGIN_REMOVE()
-	};
-	//! END_REMOVE()
-}).call(
-	//! BEGIN_REMOVE()
-	(typeof window !== 'undefined') ? window : ((typeof global !== 'undefined') ? global : this)
-	//! END_REMOVE()
-	//! IF_DEF("serverSide")
-	//! 	INJECT("global")
-	//! ELSE()
-	//! 	INJECT("window")
-	//! END_IF()
-);
+	},
+};
+//! END_MODULE()
