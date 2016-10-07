@@ -288,7 +288,7 @@ module.exports = {
 									this.onEOF(new doodad.Event({output: types.get(options, 'output')}));
 								};
 
-								var ev = new doodad.Event({data: data, options: options});
+								var ev = new doodad.Event(data);
 
 								this.onFlushData(ev);
 
