@@ -228,18 +228,20 @@ module.exports = {
 						//if (tools.indexOf(this.__pipes, stream) >= 0) {
 						//	return;
 						//};
-						const transform = types.get(options, 'transform');
-						const end = types.get(options, 'end', true);
-						if (!types._implements(stream, ioMixIns.OutputStreamBase)) {
-							throw new types.TypeError("Stream must implement 'Doodad.IO.MixIns.OutputStreamBase'.");
-						};
-						if (this._implements(ioMixIns.InputStreamBase)) {
-							this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
-						} else if (this._implements(ioMixIns.OutputStreamBase)) {
-							this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
-						};
-						if (this._implements(ioMixIns.OutputStreamBase)) {
-							this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
+						var transform = types.get(options, 'transform');
+						var end = types.get(options, 'end', true);
+						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
+							if (this._implements(ioMixIns.InputStreamBase)) {
+								this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
+							} else if (this._implements(ioMixIns.OutputStreamBase)) {
+								this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
+							};
+							if (this._implements(ioMixIns.OutputStreamBase)) {
+								this.onFlushData.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
+								this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
+							};
+						} else {
+							throw new types.TypeError("'stream' must implement 'Doodad.IO.MixIns.OutputStreamBase'.");
 						};
 						if (this._implements(ioMixIns.Listener)) {
 							this.listen();
@@ -256,23 +258,24 @@ module.exports = {
 							this.stopListening();
 						};
 						if (stream) {
-							if (types._implements(stream, ioMixIns.OutputStreamBase)) {
+							if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
 								if (this._implements(ioMixIns.InputStreamBase)) {
 									this.onReady.detach(this, this.__pipeOnReady, [stream]);
 								} else if (this._implements(ioMixIns.OutputStreamBase)) {
 									this.onWrite.detach(this, this.__pipeOnReady, [stream]);
 								};
 								if (this._implements(ioMixIns.OutputStreamBase)) {
+									this.onFlushData.detach(this, this.__pipeOnReady, [stream]);
 									this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
 								};
 							};
 						} else {
 							if (this._implements(ioMixIns.InputStreamBase)) {
 								this.onReady.detach(this, this.__pipeOnReady);
-							} else if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onWrite.detach(this, this.__pipeOnReady);
 							};
 							if (this._implements(ioMixIns.OutputStreamBase)) {
+								this.onFlushData.detach(this, this.__pipeOnReady);
+								this.onWrite.detach(this, this.__pipeOnReady);
 								this.onFlush.detach(this, this.__pipeOnFlush);
 							};
 						};

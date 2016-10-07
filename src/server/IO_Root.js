@@ -267,12 +267,16 @@ module.exports = {
 							transform = ev.handlerData[1],
 							end = ev.handlerData[2],
 							isNodeJsStream = ev.handlerData[3],
-							prevent = ev.handlerData[4],
+							output = !!ev.handlerData[4],
 							data = ev.data;
 						
 						if ((isNodeJsStream ? stream.destroyed : stream.isDestroyed())) {
 							this.unpipe(stream);
 							throw new types.ScriptInterruptedError();
+						};
+
+						if (output !== !!types.get(data.options, 'output', false)) {
+							return;
 						};
 
 						if (transform) {
@@ -312,11 +316,12 @@ module.exports = {
 						const end = types.get(options, 'end', true);
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
 							if (this._implements(ioMixIns.InputStreamBase)) {
-								this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end, false]);
+								this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end, false, false]);
 							} else if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform, end, false]);
+								this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform, end, false, true]);
 							};
 							if (this._implements(ioMixIns.OutputStreamBase)) {
+								this.onFlushData.attach(this, this.__pipeOnReady, null, [stream, transform, end, false, false]);
 								this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
 							};
 						} else if (types.isWritableStream(stream)) { // Node streams
@@ -327,7 +332,8 @@ module.exports = {
 								const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 								ireadable.pipe(stream);
 							} else if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform, end, true]);
+								this.onFlushData.attach(this, this.__pipeOnReady, null, [stream, transform, end, true, false]);
+								this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform, end, true, true]);
 							} else {
 								throw new types.TypeError("'this' must implement 'Doodad.NodeJs.IO.Interfaces.IReadable' or 'ioMixIns.OutputStreamBase'.");
 							};
@@ -356,6 +362,7 @@ module.exports = {
 									this.onWrite.detach(this, this.__pipeOnReady, [stream]);
 								};
 								if (this._implements(ioMixIns.OutputStreamBase)) {
+									this.onFlushData.detach(this, this.__pipeOnReady, [stream]);
 									this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
 								};
 							} else if (types.isWritableStream(stream)) { // Node streams
@@ -363,7 +370,8 @@ module.exports = {
 									const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 									ireadable.unpipe(stream);
 								} else if (this._implements(ioMixIns.OutputStreamBase)) {
-									this.onWrite.detach(this, this.__pipeOnReady, null, [stream]);
+									this.onFlushData.detach(this, this.__pipeOnReady, [stream]);
+									this.onWrite.detach(this, this.__pipeOnReady, [stream]);
 								};
 							};
 						} else {
@@ -371,6 +379,7 @@ module.exports = {
 								this.onReady.detach(this, this.__pipeOnReady);
 							};
 							if (this._implements(ioMixIns.OutputStreamBase)) {
+								this.onFlushData.detach(this, this.__pipeOnReady);
 								this.onWrite.detach(this, this.__pipeOnReady);
 								this.onFlush.detach(this, this.__pipeOnFlush);
 							};
