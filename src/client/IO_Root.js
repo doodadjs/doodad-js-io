@@ -122,8 +122,13 @@ module.exports = {
 					push: doodad.OVERRIDE(function push(data, /*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(data));
 						
+						var output = types.get(options, 'output', false);
+
 						var noEvents = (this._implements(ioMixIns.Listener) && !this.isListening()) || types.get(options, 'noEvents', false);
 						if (!noEvents) {
+							data = types.extend({}, data);
+							data.options = types.extend({}, data.options, {output: output});
+
 							var ev = new doodad.Event(data);
 							
 							this.__emitPushEvent(ev, options);
@@ -140,7 +145,6 @@ module.exports = {
 						
 						this.__pushInternal(data, options);
 						
-						const output = types.get(options, 'output', false);
 						if (output) {
 							if (data.raw === io.EOF) {
 								this.onEOF(new doodad.Event({output: output}));
@@ -185,7 +189,7 @@ module.exports = {
 
 						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(data));
 
-						const output = types.get(options, 'output', false);
+						var output = types.get(options, 'output', false);
 						if (!output) {
 							if (data.raw === io.EOF) {
 								this.onEOF(new doodad.Event({output: output}));
@@ -250,7 +254,7 @@ module.exports = {
 					}),
 					
 					unpipe: doodad.OVERRIDE(function unpipe(/*optional*/stream) {
-						//const pos = tools.indexOf(this.__pipes, stream);
+						//var pos = tools.indexOf(this.__pipes, stream);
 						//if (pos < 0) {
 						//	return;
 						//};
@@ -292,7 +296,7 @@ module.exports = {
 					__inputBuffer: doodad.PROTECTED(null),
 
 					getBuffer: doodad.OVERRIDE(function getBuffer(/*optional*/options) {
-						const isOutput = types.get(options, 'output', false);
+						var isOutput = types.get(options, 'output', false);
 						
 						if (isOutput) {
 							return this._super(options);
@@ -303,7 +307,7 @@ module.exports = {
 					}),
 
 					clearBuffer: doodad.OVERRIDE(function clearBuffer(/*optional*/options) {
-						const isOutput = types.get(options, 'output', false);
+						var isOutput = types.get(options, 'output', false);
 
 						if (!isOutput) {
 							this.__inputBuffer = [];
@@ -319,7 +323,7 @@ module.exports = {
 					}),
 
 					__emitPushEvent: doodad.OVERRIDE(function __emitPushEvent(ev, options) {
-						const isOutput = types.get(options, 'output', false);
+						var isOutput = types.get(options, 'output', false);
 						
 						if (!isOutput) {
 							this.onReady(ev);
@@ -347,7 +351,7 @@ module.exports = {
 					__outputBuffer: doodad.PROTECTED(null),
 
 					getBuffer: doodad.OVERRIDE(function getBuffer(/*optional*/options) {
-						const isOutput = types.get(options, 'output', false);
+						var isOutput = types.get(options, 'output', false);
 						
 						if (isOutput) {
 							this.overrideSuper();
@@ -358,7 +362,7 @@ module.exports = {
 					}),
 
 					clearBuffer: doodad.OVERRIDE(function clearBuffer(/*optional*/options) {
-						const isOutput = types.get(options, 'output', false);
+						var isOutput = types.get(options, 'output', false);
 
 						if (isOutput) {
 							this.__outputBuffer = [];
@@ -374,7 +378,7 @@ module.exports = {
 					}),
 
 					__emitPushEvent: doodad.OVERRIDE(function __emitPushEvent(ev, options) {
-						const isOutput = types.get(options, 'output', false);
+						var isOutput = types.get(options, 'output', false);
 						
 						if (isOutput) {
 							this.onWrite(ev);

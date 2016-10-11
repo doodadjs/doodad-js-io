@@ -187,6 +187,9 @@ module.exports = {
 
 						const noEvents = (this._implements(ioMixIns.Listener) && !this.isListening()) || types.get(options, 'noEvents', false);
 						if (!noEvents) {
+							data = types.extend({}, data);
+							data.options = types.extend({}, data.options, {output: output});
+
 							const ev = new doodad.Event(data);
 
 							this.__emitPushEvent(ev, options);
