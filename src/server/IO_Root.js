@@ -275,7 +275,7 @@ module.exports = {
 						
 						if ((isNodeJsStream ? stream.destroyed : stream.isDestroyed())) {
 							this.unpipe(stream);
-							throw new types.ScriptInterruptedError();
+							return;
 						};
 
 						if (output !== !!types.get(data.options, 'output', false)) {
