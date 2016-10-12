@@ -138,7 +138,9 @@ module.exports = {
 									if (state.ok) {
 										this.__pipeWriting--;
 										if (data.raw === io.EOF) {
-											this.unpipe(state.destination);
+											// <PRB> ZLIB stream: Must give time to the stream to raise its 'error' event when unexpected EOF.
+											//this.unpipe(state.destination);
+											tools.callAsync(this.unpipe, 0, this, [state.destination]);
 											if (this.__pipeWriting <= 0) {
 												this.__pipeWriting = 0;
 												callback && callback(); // sync
