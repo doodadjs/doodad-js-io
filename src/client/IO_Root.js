@@ -410,11 +410,15 @@ module.exports = {
 					
 					$isValidEncoding: doodad.OVERRIDE(function isValidEncoding(encoding) {
 						// TODO: Find a better way
-						try {
-							new _shared.Natives.windowTextDecoder(encoding, {fatal: true});
-							return true;
-						} catch(o) {
-							return false;
+						if (_shared.Natives.windowTextDecoder) {
+							try {
+								new _shared.Natives.windowTextDecoder(encoding, {fatal: true});
+								return true;
+							} catch(o) {
+								return false;
+							};
+						} else {
+							return true; // !
 						};
 					}),
 					
@@ -422,6 +426,10 @@ module.exports = {
 						this._super.apply(this, arguments);
 						
 						types.getDefault(this.options, 'encoding', 'utf-8');
+
+						if (!types.getType(this).$isValidEncoding(this.options.encoding)) {
+							throw new types.Error("Invalid encoding : '~0~'.", [this.options.encoding]);
+						};
 					}),
 					
 					transform: doodad.REPLACE(function transform(data, /*optional*/options) {

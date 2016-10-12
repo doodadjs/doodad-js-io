@@ -232,7 +232,7 @@ module.exports = {
 
 							state.errorCb = new doodad.Callback(this, function _errorCb(err) {
 								this.unpipe(destination);
-								this.emit('error', err);
+								_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 							});
 							destination.once('error', state.errorCb);
 
@@ -421,8 +421,7 @@ module.exports = {
 									callback = new doodad.Callback(null, callback);
 									callback(ex);
 								} else {
-									//host.onError(new doodad.ErrorEvent(ex));
-									this.emit('error', ex);
+									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(ex)], _shared.SECRET);
 								};
 								return false;
 							};
@@ -463,7 +462,7 @@ module.exports = {
 								if (callback) {
 									callback(err);
 								} else {
-									this.emit('error', err);
+									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 								};
 							} else {
 								this.emit('finish');
@@ -475,7 +474,7 @@ module.exports = {
 								if (callback) {
 									callback(err);
 								} else {
-									this.emit('error', err);
+									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 								};
 							} else if (!host.isDestroyed()) {
 								host.flush({
@@ -498,7 +497,7 @@ module.exports = {
 									if (callback) {
 										callback(ex);
 									} else {
-										this.emit('error', ex);
+										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(ex)], _shared.SECRET);
 									};
 								};
 							};
@@ -508,7 +507,7 @@ module.exports = {
 									if (callback) {
 										callback(err);
 									} else {
-										this.emit('error', err);
+										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 									};
 								} else {
 									host.write(io.EOF, {
@@ -527,7 +526,7 @@ module.exports = {
 									if (callback) {
 										callback(ex);
 									} else {
-										this.emit('error', ex);
+										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 									};
 								};
 							};

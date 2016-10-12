@@ -565,13 +565,17 @@ module.exports = {
 					__transformDecoder: doodad.PROTECTED(  null  ),
 					
 					$isValidEncoding: doodad.OVERRIDE(function isValidEncoding(encoding) {
-						return _shared.Natives.globalBuffer.isEncoding(encoding);
+						return (encoding !== 'base64') && (encoding !== 'hex') && _shared.Natives.globalBuffer.isEncoding(encoding);
 					}),
 					
 					create: doodad.OVERRIDE(function create(/*paramarray*/) {
 						this._super.apply(this, arguments);
 						
 						types.getDefault(this.options, 'encoding', 'utf-8');
+
+						if (!types.getType(this).$isValidEncoding(this.options.encoding)) {
+							throw new types.Error("Invalid encoding : '~0~'.", [this.options.encoding]);
+						};
 					}),
 					
 					transform: doodad.REPLACE(function transform(data, /*optional*/options) {
