@@ -104,7 +104,7 @@ module.exports = {
 							const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 							ireadable.unpipe();
 							ireadable.readable = false;
-							ireadable._readableState.flowing = null;
+							ireadable._readableState = null;
 						};
 						
 						if (this._implements(nodejsIOInterfaces.IWritable)) {

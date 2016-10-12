@@ -76,8 +76,12 @@ module.exports = {
 					
 					streamOnReadable: doodad.NODE_EVENT('readable', function streamOnReadable(context) {
 						if (this.stream.isPaused()) {
-							const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
-							ireadable.emit('readable');
+							let chunk;
+							while (chunk = this.stream.read()) {
+								const options = {output: false};
+								const data = this.transform({raw: chunk}, options);
+								this.push(data, options);
+							};
 						};
 					}),
 					
