@@ -97,7 +97,6 @@ module.exports = {
 					
 					__destinations: doodad.PROTECTED(null),
 					__defaultEncoding: doodad.PROTECTED(null),
-					__paused: doodad.PROTECTED(false),
 					
 					__pipeWriting: doodad.PROTECTED(0),
 
@@ -134,8 +133,15 @@ module.exports = {
 						if (destinations.length) {
 							const self = this;
 							const createWriteCb = function _createWriteCb(state) {
-								return new doodad.AsyncCallback(self, function _writeCb() { // async
-									if (state.ok) {
+								return new doodad.AsyncCallback(self, function _writeCb(err) { // async
+									if (err) {
+										state.ok = false;
+										if (callback) {
+											callback(err); // sync
+										} else {
+											_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
+										};
+									} else if (state.ok) {
 										this.__pipeWriting--;
 										if (data.raw === io.EOF) {
 											// <PRB> ZLIB stream: Must give time to the stream to raise its 'error' event when unexpected EOF.
@@ -172,6 +178,7 @@ module.exports = {
 									this.__pipeWriting++;
 									state.ok = state.destination.write(data.valueOf(), state.encoding, createWriteCb(state)); // async
 									if (!state.ok) {
+										this.pause();
 										state.drainFn = createWriteCb(state); // async
 									};
 								}, this);
@@ -182,15 +189,13 @@ module.exports = {
 					}),
 
 					isPaused: doodad.PUBLIC(function isPaused() {
-						return this.__paused;
+						const host = this[doodad.HostSymbol];
+						return host.isListening();
 					}),
 					
 					pause: doodad.PUBLIC(function pause() {
-						if (!this.__paused) {
-							this.__paused = true;
-							this._readableState.flowing = false;
-							this.emit("pause");
-						};
+						const host = this[doodad.HostSymbol];
+						host.stopListening();
 					}),
 					
 					pipe: doodad.PUBLIC(function pipe(destination, /*optional*/options) {
@@ -245,6 +250,7 @@ module.exports = {
 								state.ok = true;
 								state.drainFn && state.drainFn();
 								state.drainFn = null;
+								this.resume();
 							});
 							destination.on('drain', state.drainCb);
 							
@@ -253,8 +259,6 @@ module.exports = {
 							if (host._implements(ioMixIns.Listener)) {
 								host.listen();
 							};
-							
-							this.pause(); // force flow control (uses 'readable' event instead of 'data' event)
 							
 							if (types._implements(destination, nodejsIOInterfaces.ITransform)) {
 								destination = destination.getInterface(nodejsIOInterfaces.ITransform);
@@ -293,11 +297,8 @@ module.exports = {
 					}),
 					
 					resume: doodad.PUBLIC(function resume() {
-						if (this.__paused) {
-							this.__paused = false;
-							this._readableState.flowing = true;
-							this.emit("resume");
-						};
+						const host = this[doodad.HostSymbol];
+						host.listen();
 					}),
 					
 					setEncoding: doodad.PUBLIC(function setEncoding(encoding) {
@@ -465,6 +466,7 @@ module.exports = {
 									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 								};
 							} else {
+								callback && callback();
 								this.emit('finish');
 							};
 						});

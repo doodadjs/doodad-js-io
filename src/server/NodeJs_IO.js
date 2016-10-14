@@ -117,7 +117,6 @@ module.exports = {
 						this.onError(new doodad.ErrorEvent(ex));
 					}),
 					
-					
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						const stream = types.get(options, 'nodeStream');
 
@@ -128,34 +127,15 @@ module.exports = {
 						_shared.setAttribute(this, 'stream', stream);
 					}),
 					
-					isPaused: doodad.REPLACE(nodejsIOInterfaces.IReadable, function isPaused() {
-						const host = this[doodad.HostSymbol];
-						return host.stream.isPaused();
-					}),
-
-					pause: doodad.REPLACE(nodejsIOInterfaces.IReadable, function pause() {
-						const host = this[doodad.HostSymbol];
-						const cb = new doodad.Callback(this, function() {
-							host.stream.removeListener('pause', cb);
-							this.emit("pause");
-						});
-						host.stream.once('pause', cb);
-						host.stream.pause();
-					}),
-
 					_read: doodad.REPLACE(nodejsIOInterfaces.IReadable, function _read(/*optional*/size) {
 						const host = this[doodad.HostSymbol];
 						return host.stream._read(size);
 					}),
 					
-					resume: doodad.REPLACE(nodejsIOInterfaces.IReadable, function resume() {
+					pipe: doodad.OVERRIDE(nodejsIOInterfaces.IReadable, function pipe(destination, /*optional*/options) {
 						const host = this[doodad.HostSymbol];
-						const cb = new doodad.Callback(this, function() {
-							host.stream.removeListener('resume', cb);
-							this.emit("resume");
-						});
-						host.stream.once('resume', cb);
-						host.stream.resume();
+						host.stream.pause();  // force flow control (uses 'readable' event instead of 'data' event)
+						return this._super(destination, options);
 					}),
 
 					push: doodad.REPLACE(nodejsIOInterfaces.IReadable, function push(chunk, /*optional*/encoding) {
@@ -193,6 +173,7 @@ module.exports = {
 							this.onListen(new doodad.Event());
 						};
 					}),
+
 					stopListening: doodad.OVERRIDE(function stopListening() {
 						if (this.__listening) {
 							this.__listening = false;
