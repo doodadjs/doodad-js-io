@@ -63,12 +63,16 @@ module.exports = {
 				{
 					$TYPE_NAME: 'Stream',
 
-					//__pipes: doodad.PROTECTED(null),
+					__pipes: doodad.PROTECTED(null),
+
+					create: doodad.OVERRIDE(function create(/*optional*/options) {
+						this._super(options);
+
+						this.__pipes = [];
+					}),
 
 					destroy: doodad.OVERRIDE(function destroy() {
-						if (this._implements(ioMixIns.Listener)) {
-							this.stopListening();
-						};
+						this.unpipe();
 
 						this._super();
 					}),
@@ -87,7 +91,6 @@ module.exports = {
 						this._super();
 
 						this.clearBuffers();
-						//this.__pipes = [];
 					}),
 					
 					getCount: doodad.OVERRIDE(function getCount(/*optional*/options) {
@@ -228,10 +231,16 @@ module.exports = {
 						stream.flush();
 					}),
 						
+					__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
+						this.unpipe(ev.obj);
+						this.onError(ev);
+					}),
+
 					pipe: doodad.OVERRIDE(function pipe(stream, /*optional*/options) {
-						//if (tools.indexOf(this.__pipes, stream) >= 0) {
-						//	return;
-						//};
+						if (tools.indexOf(this.__pipes, stream) >= 0) {
+							// Stream already piped
+							return;
+						};
 						var transform = types.get(options, 'transform');
 						var end = types.get(options, 'end', true);
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
@@ -244,20 +253,25 @@ module.exports = {
 								this.onFlushData.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
 								this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
 							};
+							stream.onError.attachOnce(this, this.__pipeStreamOnError);
 						} else {
 							throw new types.TypeError("'stream' must implement 'Doodad.IO.MixIns.OutputStreamBase'.");
 						};
 						if (this._implements(ioMixIns.Listener)) {
 							this.listen();
 						};
-						//this.__pipes.push(stream);
+						this.__pipes[this.__pipes.length] = stream;
 					}),
 					
 					unpipe: doodad.OVERRIDE(function unpipe(/*optional*/stream) {
-						//var pos = tools.indexOf(this.__pipes, stream);
-						//if (pos < 0) {
-						//	return;
-						//};
+						var pos = -1;
+						if (stream) {
+							pos = tools.indexOf(this.__pipes, stream);
+							if (pos < 0) {
+								// Stream not piped
+								return;
+							};
+						};
 						if (this._implements(ioMixIns.Listener)) {
 							this.stopListening();
 						};
@@ -273,6 +287,7 @@ module.exports = {
 									this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
 								};
 							};
+							stream.onError.detach(this, this.__pipeStreamOnError);
 						} else {
 							if (this._implements(ioMixIns.InputStreamBase)) {
 								this.onReady.detach(this, this.__pipeOnReady);
@@ -282,8 +297,17 @@ module.exports = {
 								this.onWrite.detach(this, this.__pipeOnReady);
 								this.onFlush.detach(this, this.__pipeOnFlush);
 							};
+							tools.forEach(this.__pipes, function(stream) {
+								if (types._implements(stream, ioMixIns.OutputStreamBase)) {
+									stream.onError.detach(this, this.__pipeStreamOnError);
+								};
+							}, this);
 						};
-						//this.__pipes.splice(pos, 1);
+						if (pos >= 0) {
+							this.__pipes.splice(pos, 1);
+						} else {
+							this.__pipes = [];
+						};
 					}),
 				}))));
 

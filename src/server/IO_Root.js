@@ -63,10 +63,11 @@ module.exports = {
 				//=====================================================
 				
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
+								mixIns.NodeEvents,
 				{
 					$TYPE_NAME: 'Stream',
 
-					//__pipes: doodad.PROTECTED(null),
+					__pipes: doodad.PROTECTED(null),
 
 					$extend: doodad.SUPER(function $extend(/*paramarray*/) {
 						const args = types.toArray(arguments);
@@ -99,10 +100,17 @@ module.exports = {
 						return retval;
 					}),
 
+					create: doodad.OVERRIDE(function create(/*optional*/options) {
+						this._super(options);
+
+						this.__pipes = [];
+					}),
+
 					destroy: doodad.OVERRIDE(function destroy() {
+						this.unpipe();
+
 						if (this._implements(nodejsIOInterfaces.IReadable)) {
 							const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
-							ireadable.unpipe();
 							ireadable.readable = false;
 							ireadable._readableState = null;
 						};
@@ -112,10 +120,6 @@ module.exports = {
 							iwritable.writable = false;
 						};
 						
-						if (this._implements(ioMixIns.Listener)) {
-							this.stopListening();
-						};
-
 						if (this._implements(nodejsIOInterfaces.IStream)) {
 							const istream = this.getInterface(nodejsIOInterfaces.IStream);
 							_shared.setAttribute(istream, doodad.HostSymbol, null);
@@ -133,7 +137,6 @@ module.exports = {
 						this._super();
 						
 						this.clearBuffers();
-						//this.__pipes = [];
 					}),
 					
 					clear: doodad.OVERRIDE(function clear() {
@@ -311,10 +314,21 @@ module.exports = {
 						stream.flush();
 					}),
 						
+					__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
+						this.unpipe(ev.obj);
+						this.onError(ev);
+					}),
+
+					__pipeNodeStreamOnError: doodad.PROTECTED(doodad.NODE_EVENT('error', function __pipeNodeStreamOnError(context, err) {
+						this.unpipe(context.emitter);
+						this.onError(new doodad.ErrorEvent(err));
+					})),
+
 					pipe: doodad.OVERRIDE(function pipe(stream, /*optional*/options) {
-						//if (tools.indexOf(this.__pipes, stream) >= 0) {
-						//	return;
-						//};
+						if (tools.indexOf(this.__pipes, stream) >= 0) {
+							// Stream already piped
+							return;
+						};
 						const transform = types.get(options, 'transform');
 						const end = types.get(options, 'end', true);
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
@@ -327,6 +341,7 @@ module.exports = {
 								this.onFlushData.attach(this, this.__pipeOnReady, null, [stream, transform, end, false, false]);
 								this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
 							};
+							stream.onError.attachOnce(this, this.__pipeStreamOnError);
 						} else if (types.isWritableStream(stream)) { // Node streams
 							if (transform) {
 								throw new types.NotSupported("The 'transform' option is not supported with a Node.Js stream.");
@@ -337,6 +352,7 @@ module.exports = {
 							} else if (this._implements(ioMixIns.OutputStreamBase)) {
 								this.onFlushData.attach(this, this.__pipeOnReady, null, [stream, transform, end, true, false]);
 								this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform, end, true, true]);
+								this.__pipeNodeStreamOnError.attachOnce(stream);
 							} else {
 								throw new types.TypeError("'this' must implement 'Doodad.NodeJs.IO.Interfaces.IReadable' or 'ioMixIns.OutputStreamBase'.");
 							};
@@ -346,14 +362,18 @@ module.exports = {
 						if (this._implements(ioMixIns.Listener)) {
 							this.listen();
 						};
-						//this.__pipes.push(stream);
+						this.__pipes[this.__pipes.length] = stream;
 					}),
 					
 					unpipe: doodad.OVERRIDE(function unpipe(/*optional*/stream) {
-						//const pos = tools.indexOf(this.__pipes, stream);
-						//if (pos < 0) {
-						//	return;
-						//};
+						let pos = -1;
+						if (stream) {
+							pos = tools.indexOf(this.__pipes, stream);
+							if (pos < 0) {
+								// Stream not piped
+								return;
+							};
+						};
 						if (this._implements(ioMixIns.Listener)) {
 							this.stopListening();
 						};
@@ -368,6 +388,7 @@ module.exports = {
 									this.onFlushData.detach(this, this.__pipeOnReady, [stream]);
 									this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
 								};
+								stream.onError.detach(this, this.__pipeStreamOnError);
 							} else if (types.isWritableStream(stream)) { // Node streams
 								if (this._implements(nodejsIOInterfaces.IReadable)) {
 									const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
@@ -376,6 +397,7 @@ module.exports = {
 									this.onFlushData.detach(this, this.__pipeOnReady, [stream]);
 									this.onWrite.detach(this, this.__pipeOnReady, [stream]);
 								};
+								this.__pipeNodeStreamOnError.detach(stream);
 							};
 						} else {
 							if (this._implements(ioMixIns.InputStreamBase)) {
@@ -390,8 +412,18 @@ module.exports = {
 								const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 								ireadable.unpipe();
 							};
+							tools.forEach(this.__pipes, function(stream) {
+								if (types._implements(stream, ioMixIns.OutputStreamBase)) {
+									stream.onError.detach(this, this.__pipeStreamOnError);
+								};
+							}, this);
+							this.__pipeNodeStreamOnError.clear();
 						};
-						//this.__pipes.splice(pos, 1);
+						if (pos >= 0) {
+							this.__pipes.splice(pos, 1);
+						} else {
+							this.__pipes = [];
+						};
 					}),
 					
 				}))));
@@ -416,6 +448,34 @@ module.exports = {
 							} else {
 								emitted = ireadable.emit('data', ev.data.valueOf()) && !ireadable.isPaused();
 							};
+						};
+						if (emitted) {
+							ev.preventDefault();
+						};
+						return retval;
+					}),
+
+					onStopListening: doodad.OVERRIDE(function onStopListening(ev) {
+						const retval = this._super(ev);
+						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
+						let emitted = false;
+						if (ireadable) {
+							ireadable._readableState.flowing = false;
+							emitted = ireadable.emit("pause");
+						};
+						if (emitted) {
+							ev.preventDefault();
+						};
+						return retval;
+					}),
+					
+					onListen: doodad.OVERRIDE(function onListen(ev) {
+						const retval = this._super(ev);
+						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
+						let emitted = false;
+						if (ireadable) {
+							ireadable._readableState.flowing = true;
+							emitted = ireadable.emit("resume");
 						};
 						if (emitted) {
 							ev.preventDefault();
