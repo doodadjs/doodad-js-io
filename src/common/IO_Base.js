@@ -233,6 +233,8 @@ module.exports = {
 					onFlushData: doodad.EVENT(true),
 					onFlush: doodad.EVENT(false),
 					onEOF: doodad.EVENT(false),
+
+					__flushState: doodad.PROTECTED(null),
 					
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super();
@@ -253,7 +255,6 @@ module.exports = {
 					getCount: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					push: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(data, /*optional*/options)
 					pull: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
-					reset: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
 					clear: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
 					pipe: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(stream, /*optional*/transform)
 					unpipe: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/stream)
@@ -266,6 +267,13 @@ module.exports = {
 						};
 					}),
 					
+					reset: doodad.PUBLIC(doodad.MUST_OVERRIDE(function() {
+						this.__flushState = {
+							ok: true,
+							eof: false,
+						};
+					})),
+
 					flush: doodad.PUBLIC(function flush(/*optional*/options) {
 						options = types.extend({}, options);
 
@@ -276,18 +284,17 @@ module.exports = {
 							delete options.callback;
 						};
 
-						var state = {};
+						var state = this.__flushState;
+
+						if (callback && !state.ok) {
+							this.onFlush.attachOnce(null, function() {
+								callback();
+							});
+						};
 
 						var _flush = function _flush() {
-							state.ok = true;
-
 							while (state.ok && (this.getCount(options) > 0)) {
 								var data = this.pull(options);
-
-								if (data.raw === io.EOF) {
-									this.onEOF(new doodad.Event({output: types.get(options, 'output')}));
-								};
-
 								var ev = new doodad.Event(data);
 
 								this.onFlushData(ev);
@@ -296,15 +303,22 @@ module.exports = {
 									continue;
 								};
 
+								data = ev.data;
+								if (data.raw === io.EOF) {
+									state.eof = true;
+								};
+
 								this.__flushInternal(state, data, types.extend({}, options, { // sync/async
 										callback: new doodad.Callback(this, function(err) {
 											if (err) {
 												this.onError(new doodad.ErrorEvent(err));
-												if (!state.ok && callback) {
-													callback(err); // sync
+												if (!state.ok) {
+													state.ok = true;
+													callback && callback(err); // sync
 												};
 											} else {
 												if (!state.ok) {
+													state.ok = true;
 													_flush.call(this); // sync
 												};
 											};
@@ -313,6 +327,10 @@ module.exports = {
 							};
 							
 							if (state.ok && (this.getCount(options) <= 0)) {
+								if (state.eof) {
+									state.eof = false;
+									this.onEOF(new doodad.Event({output: output}));
+								};
 								this.onFlush(new doodad.Event({options: options}));
 								if (callback) {
 									callback(); // sync
@@ -344,6 +362,7 @@ module.exports = {
 							})}));
 						}, this);
 					})),
+
 				}))));
 					
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
@@ -500,6 +519,7 @@ module.exports = {
 						this._super(options);
 					}),
 					
+					canWrite: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function canWrite()
 					write: doodad.PUBLIC(doodad.MUST_OVERRIDE()), //function write(raw, /*optional*/options)
 					
 					writeAsync: doodad.PUBLIC(doodad.ASYNC(function writeAsync(raw, /*optional*/options) {
@@ -523,6 +543,7 @@ module.exports = {
 							})}));
 						}, this);
 					})),
+
 				}))));
 				
 				

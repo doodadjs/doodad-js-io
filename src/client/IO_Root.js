@@ -148,12 +148,6 @@ module.exports = {
 						
 						this.__pushInternal(data, options);
 						
-						if (output) {
-							if (data.raw === io.EOF) {
-								this.onEOF(new doodad.Event({output: output}));
-							};
-						};
-
 						if (this.options.autoFlush) {
 							if ((data.raw === io.EOF) || (this.getCount(options) >= this.options.bufferSize)) {
 								this.flush();
@@ -411,10 +405,24 @@ module.exports = {
 						this._super(ev, options);
 					}),
 
+					canWrite: doodad.OVERRIDE(function canWrite() {
+						if (this.options.autoFlush) {
+							return this.__flushState.ok || (this.getCount({output: true}) < this.options.bufferSize);
+						} else {
+							return (this.getCount({output: true}) < this.options.bufferSize);
+						};
+					}),
+
 					write: doodad.OVERRIDE(function write(raw, /*optional*/options) {
 						options = types.extend({}, options, {output: true});
 						var data = this.transform({raw: raw}, options);
-						this.push(data, options);
+						if ((data.raw === io.EOF) && !this.canWrite()) {
+							this.onFlush.attachOnce(this, function() {
+								this.push(data, options);
+							});
+						} else {
+							this.push(data, options);
+						};
 					}),
 				})));
 

@@ -214,12 +214,6 @@ module.exports = {
 						
 						this.__pushInternal(data, options);
 
-						if (output) {
-							if (data.raw === io.EOF) {
-								this.onEOF(new doodad.Event({output: output}));
-							};
-						};
-
 						if (this.options.autoFlush) {
 							if ((data.raw === io.EOF) || (this.getCount(options) >= this.options.bufferSize)) {
 								this.flush();
@@ -269,24 +263,25 @@ module.exports = {
 					}),
 
 					__pipeOnReady: doodad.PROTECTED(function __pipeOnReady(ev) {
-						var stream = ev.handlerData[0],
+						const stream = ev.handlerData[0],
 							transform = ev.handlerData[1],
 							end = ev.handlerData[2],
 							isNodeJsStream = ev.handlerData[3],
-							output = !!ev.handlerData[4],
-							data = ev.data;
-						
+							output = !!ev.handlerData[4];
+
 						if ((isNodeJsStream ? stream.destroyed : stream.isDestroyed())) {
 							this.unpipe(stream);
 							return;
 						};
+
+						let data = ev.data;
 
 						if (output !== !!types.get(data.options, 'output', false)) {
 							return;
 						};
 
 						if (transform) {
-							var retval = transform(data);
+							const retval = transform(data);
 							if (retval !== undefined) {
 								data = retval;
 							};
@@ -310,8 +305,10 @@ module.exports = {
 					}),
 					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
-						var stream = ev.handlerData[0];
-						stream.flush();
+						if (ev.data.options.output) {
+							const stream = ev.handlerData[0];
+							stream.flush(ev.data.options);
+						};
 					}),
 						
 					__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
@@ -343,10 +340,10 @@ module.exports = {
 							};
 							stream.onError.attachOnce(this, this.__pipeStreamOnError);
 						} else if (types.isWritableStream(stream)) { // Node streams
-							if (transform) {
-								throw new types.NotSupported("The 'transform' option is not supported with a Node.Js stream.");
-							};
 							if (this._implements(nodejsIOInterfaces.IReadable)) {
+								if (transform) {
+									throw new types.NotSupported("The 'transform' option is not supported with a Node.Js stream.");
+								};
 								const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 								ireadable.pipe(stream);
 							} else if (this._implements(ioMixIns.OutputStreamBase)) {
@@ -603,11 +600,26 @@ module.exports = {
 						this.__outputBuffer = [];
 					}),
 
+					canWrite: doodad.OVERRIDE(function canWrite() {
+						if (this.options.autoFlush) {
+							return this.__flushState.ok || (this.getCount({output: true}) < this.options.bufferSize);
+						} else {
+							return (this.getCount({output: true}) < this.options.bufferSize);
+						};
+					}),
+
 					write: doodad.OVERRIDE(function write(raw, /*optional*/options) {
 						options = types.extend({}, options, {output: true});
 						const data = this.transform({raw: raw}, options);
-						this.push(data, options);
+						if ((data.raw === io.EOF) && !this.canWrite()) {
+							this.onFlush.attachOnce(this, function() {
+								this.push(data, options);
+							});
+						} else {
+							this.push(data, options);
+						};
 					}),
+
 				})));
 
 

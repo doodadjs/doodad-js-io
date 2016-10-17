@@ -429,7 +429,7 @@ module.exports = {
 						};
 						
 						if (host.options.autoFlush) {
-							return true;
+							return host.canWrite();
 						};
 						
 						tools.callAsync(function() {

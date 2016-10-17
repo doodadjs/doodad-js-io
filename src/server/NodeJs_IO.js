@@ -205,17 +205,17 @@ module.exports = {
 							} else {
 								raw = stream.read(size);
 							};
-							this.push(raw, types.extend({}, options, {next: false, output: false, transformed: false}));
+							this.push(raw, types.extend({}, options, {next: false, output: false}));
 						};
 						
 						return this._super(options);
 					}),
 					
-					push: doodad.OVERRIDE(function push(data, /*optional*/options) {
+					pull: doodad.OVERRIDE(function pull(/*optional*/options) {
 						if (this.__closed) {
 							throw new types.NotAvailable("Stream closed.");
 						};
-						return this._super(data, options);
+						return this._super(options);
 					}),
 				}));
 				
@@ -253,6 +253,8 @@ module.exports = {
 					
 					streamOnDrain: doodad.NODE_EVENT('drain', function streamOnDrain(context, ex) {
 						context.data.callback(ex);
+						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
+						iwritable.emit('drain');
 					}),
 					
 					streamOnClose: doodad.NODE_EVENT('close', function streamOnClose(context) {
@@ -292,8 +294,18 @@ module.exports = {
 					__flushInternal: doodad.REPLACE(function __flushInternal(state, data, /*optional*/options) {
 						const callback = types.get(options, 'callback');
 
-						if (data.raw === io.EOF) {
-							this.stream.end(callback); // async
+						if (state.eof) {
+							state.ok = false;
+							if (callback && this.stream.autoClose) {
+								state.eof = false; // must wait before onEOF
+								this.stream.once('close', new doodad.Callback(this, function() {
+									state.eof = true;
+									callback();
+								}));
+								this.stream.end();
+							} else {
+								this.stream.end(callback); // async
+							};
 
 						} else if (callback) {
 							state.ok = this.stream.write(data.valueOf());
@@ -324,9 +336,14 @@ module.exports = {
 
 					push: doodad.OVERRIDE(function push(data, /*optional*/options) {
 						if (this.__closed) {
-							throw new types.NotAvailable("Stream closed.");
+							if (data.raw === io.EOF) {
+								this.overrideSuper();
+							} else {
+								throw new types.NotAvailable("Stream closed.");
+							};
+						} else {
+							return this._super(data, options);
 						};
-						return this._super(data, options);
 					}),
 				}));
 				
@@ -340,8 +357,18 @@ module.exports = {
 					__flushInternal: doodad.REPLACE(function __flushInternal(state, data, /*optional*/options) {
 						const callback = types.get(options, 'callback');
 						
-						if (data.raw === io.EOF) {
-							this.stream.end(callback); // async
+						if (state.eof) {
+							state.ok = false;
+							if (callback && this.stream.autoClose) {
+								state.eof = false; // must wait before onEOF
+								this.stream.once('close', new doodad.Callback(this, function() {
+									state.eof = true;
+									callback();
+								}));
+								this.stream.end();
+							} else {
+								this.stream.end(callback); // async
+							};
 
 						} else if (callback) {
 							state.ok = this.stream.write(data.valueOf(), this.options.encoding);
