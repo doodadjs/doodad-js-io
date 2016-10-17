@@ -52,6 +52,11 @@ module.exports = {
 
 					nodeStringDecoder = require('string_decoder').StringDecoder;
 				
+				let nodeIConv = null;
+				try {
+					nodeIConv = require('iconv-lite');
+				} catch(ex) {
+				};
 
 				types.complete(_shared.Natives, {
 					globalBuffer: global.Buffer,
@@ -637,7 +642,26 @@ module.exports = {
 					__transformDecoder: doodad.PROTECTED(  null  ),
 					
 					$isValidEncoding: doodad.OVERRIDE(function isValidEncoding(encoding) {
-						return (encoding !== 'base64') && (encoding !== 'hex') && _shared.Natives.globalBuffer.isEncoding(encoding);
+						if (nodeIConv) {
+							return nodeIConv.encodingExists(encoding);
+						} else {
+							return (encoding !== 'base64') && (encoding !== 'hex') && (encoding !== 'binary') && _shared.Natives.globalBuffer.isEncoding(encoding);
+						};
+					}),
+
+					$decode: doodad.PUBLIC(function $decode(buf, encoding) {
+						if (types.isTypedArray(buf) || types.isBuffer(buf)) {
+							if (nodeIConv) {
+								// iconv-lite
+								return nodeIConv.decode(buf, encoding);
+							} else {
+								// StringDecoder
+								const decoder = new nodeStringDecoder(encoding);
+								return decoder.end(buf);
+							};
+						} else {
+							return types.toString(buf);
+						};
 					}),
 					
 					create: doodad.OVERRIDE(function create(/*paramarray*/) {
@@ -652,28 +676,67 @@ module.exports = {
 					
 					transform: doodad.REPLACE(function transform(data, /*optional*/options) {
 						let encoding = types.get(options, 'encoding', this.options.encoding);
-						let startingText = '';
-						if (encoding && (this.__transformEncoding !== encoding)) {
-							if (this.__transformDecoder) {
-								startingText = this.__transformDecoder.end();
-								this.__transformDecoder = null;
+						let text = '';
+
+						if (nodeIConv) {
+							// iconv-lite
+							if (encoding && (this.__transformEncoding !== encoding)) {
+								if (this.__transformDecoder) {
+									this.__transformDecoder.end();
+									let val;
+									while (val = this.__transformDecoder.read()) {
+										text += val;
+									};
+									this.__transformDecoder = null;
+								};
+								this.__transformDecoder = nodeIConv.decodeStream(encoding);
+								this.__transformEncoding = encoding;
 							};
-							this.__transformDecoder = new nodeStringDecoder(encoding);
-							this.__transformEncoding = encoding;
-						};
-						data.text = startingText;
-						if (data.raw === io.EOF) {
-							if (this.__transformDecoder) {
-								data.text += this.__transformDecoder.end();
-								this.__transformDecoder = null;
+							if (data.raw === io.EOF) {
+								if (this.__transformDecoder) {
+									this.__transformDecoder.end();
+									let val;
+									while (val = this.__transformDecoder.read()) {
+										text += val;
+									};
+									this.__transformDecoder = null;
+								};
+							} else {
+								if (this.__transformDecoder && (types.isTypedArray(data.raw) || types.isBuffer(data.raw))) {
+									this.__transformDecoder.write(data.raw);
+									let val;
+									while (val = this.__transformDecoder.read()) {
+										text += val;
+									};
+								} else {
+									text += types.toString(data.raw);
+								};
 							};
 						} else {
-							if (this.__transformDecoder && (types.isTypedArray(data.raw) || types.isBuffer(data.raw))) {
-								data.text += this.__transformDecoder.write(data.raw);
+							// StringDecoder
+							if (encoding && (this.__transformEncoding !== encoding)) {
+								if (this.__transformDecoder) {
+									text = this.__transformDecoder.end();
+									this.__transformDecoder = null;
+								};
+								this.__transformDecoder = new nodeStringDecoder(encoding);
+								this.__transformEncoding = encoding;
+							};
+							if (data.raw === io.EOF) {
+								if (this.__transformDecoder) {
+									text += this.__transformDecoder.end();
+									this.__transformDecoder = null;
+								};
 							} else {
-								data.text += types.toString(data.raw);
+								if (this.__transformDecoder && (types.isTypedArray(data.raw) || types.isBuffer(data.raw))) {
+									text += this.__transformDecoder.write(data.raw);
+								} else {
+									text += types.toString(data.raw);
+								};
 							};
 						};
+
+						data.text = text;
 						data.valueOf = function valueOf() {
 							if (this.raw === io.EOF) {
 								return null;

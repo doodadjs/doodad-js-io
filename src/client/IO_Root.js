@@ -454,6 +454,15 @@ module.exports = {
 						};
 					}),
 					
+					$decode: doodad.PUBLIC(function $decode(buf, encoding) {
+						if (encoding && _shared.Natives.windowTextDecoder && types.isTypedArray(buf)) {
+							const decoder = new _shared.Natives.windowTextDecoder(encoding);
+							return decoder.decode(buf, {stream: false});
+						} else {
+							return types.toString(buf);
+						};
+					}),
+
 					create: doodad.OVERRIDE(function create(/*paramarray*/) {
 						this._super.apply(this, arguments);
 						
@@ -466,7 +475,7 @@ module.exports = {
 					
 					transform: doodad.REPLACE(function transform(data, /*optional*/options) {
 						var encoding = types.get(options, 'encoding', this.options.encoding);
-						if (types.isTypedArray(data.raw) && encoding && _shared.Natives.windowTextDecoder) {
+						if (encoding && _shared.Natives.windowTextDecoder && types.isTypedArray(data.raw)) {
 							var text = '';
 							if ((data.raw !== io.EOF) && (!this.__decoder || (this.__decoderEncoding !== encoding))) {
 								if (this.__decoder) {

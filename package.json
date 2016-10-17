@@ -19,5 +19,8 @@
     "url": "https://github.com/doodadjs/doodad-js-io/issues",
     "email": "doodadjs@gmail.com"
   },
-  "tonicExampleFilename": "tonic.js"
+  "tonicExampleFilename": "tonic.js",
+  "optionalDependencies": {
+    "iconv-lite": "^0.4.13"
+  }
 }
