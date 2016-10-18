@@ -54,7 +54,7 @@ module.exports = {
 					nodeFs = require('fs'),
 					nodeCluster = require('cluster');
 				
-				
+
 				//=====================================================
 				// Stream objects
 				//=====================================================
@@ -389,6 +389,200 @@ module.exports = {
 				}));
 				
 				
+				io.REGISTER(io.Stream.$extend(
+									io.TextInputStream,
+									io.TextOutputStream,
+				{
+					$TYPE_NAME: 'UrlDecoderStream',
+
+					__listening: doodad.PROTECTED(false),
+					__remaining: doodad.PROTECTED(null),
+					__mode: doodad.PROTECTED(0),
+
+					$Modes: doodad.PUBLIC(doodad.READ_ONLY(types.freezeObject({
+						Key: 0,
+						Value: 1,
+					}))),
+
+					create: doodad.OVERRIDE(function create(/*optional*/options) {
+						this._super(options);
+
+						types.getDefault(options, 'maxStringLength', 1024 * 1024 * 1);
+					}),
+
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
+
+						this.__listening = false;
+						this.__remaining = '';
+						this.__mode = 0;
+					}),
+
+					isListening: doodad.OVERRIDE(function isListening() {
+						return this.__listening;
+					}),
+					
+					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
+						options = types.nullObject(options);
+						if (!this.__listening) {
+							this.__listening = true;
+							this.onListen(new doodad.Event());
+						};
+					}),
+					
+					stopListening: doodad.OVERRIDE(function stopListening() {
+						if (this.__listening) {
+							this.__listening = false;
+							this.onStopListening(new doodad.Event());
+						};
+					}),
+
+					onWrite: doodad.OVERRIDE(function onWrite(ev) {
+						const retval = this._super(ev);
+						if (!ev.prevent) {
+							ev.preventDefault();
+
+							const data = ev.data;
+
+							const type = types.getType(this);
+							const Modes = type.$Modes;
+							const encoding = this.options.encoding;
+							const decode = function decode(value) {
+								value = _shared.Natives.windowUnescape(value);
+								value = _shared.Natives.globalBuffer.from(value, 'binary');
+								value = type.$decode(value, encoding);
+								return value;
+							};
+
+							const url = this.__remaining + ((data.raw === io.EOF) ? '' : data.valueOf());
+							if (url.length > this.options.maxStringLength) {
+								throw new types.BufferOverflow("Key/Value exceeded maximum permitted length.");
+							};
+							const delimiters = /\=|\&/g;
+							let last = 0,
+								result;
+							while (result = delimiters.exec(url)) {
+								const chr = result[0];
+								if ((this.__mode === Modes.Value) && (chr === '=')) {
+									continue;
+								};
+								let value = url.slice(last, result.index);
+								value = decode(value);
+								this.push({
+									mode: this.__mode, 
+									Modes: Modes, 
+									text: value, 
+									valueOf: function() {
+										return this.text;
+									}
+								}, {output: false});
+								if (this.__mode === Modes.Key) {
+									this.__mode = Modes.Value;
+								} else {
+									this.__mode = Modes.Key;
+								};
+								last = result.index + chr.length;
+							};
+
+							if (data.raw === io.EOF) {
+								let value = url.slice(last);
+								if (value) {
+									value = decode(value);
+									this.push({
+										mode: this.__mode, 
+										Modes: Modes, 
+										text: value, 
+										valueOf: function() {
+											return this.text;
+										}
+									}, {output: false});
+								};
+								this.push(data, {output: false});
+							} else {
+								this.__remaining = url.slice(last);
+							};
+						};
+						return retval;
+					}),
+				}));
+
+
+				io.REGISTER(io.Stream.$extend(
+									io.InputStream,
+									io.OutputStream,
+				{
+					$TYPE_NAME: 'Base64DecoderStream',
+
+					__listening: doodad.PROTECTED(false),
+					__buffer: doodad.PROTECTED(null),
+					__bufferLength: doodad.PROTECTED(0),
+					__decoder: doodad.PROTECTED(null),
+
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
+
+						this.__listening = false;
+						this.__buffer = '';
+					}),
+
+					isListening: doodad.OVERRIDE(function isListening() {
+						return this.__listening;
+					}),
+					
+					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
+						options = types.nullObject(options);
+						if (!this.__listening) {
+							this.__listening = true;
+							this.onListen(new doodad.Event());
+						};
+					}),
+					
+					stopListening: doodad.OVERRIDE(function stopListening() {
+						if (this.__listening) {
+							this.__listening = false;
+							this.onStopListening(new doodad.Event());
+						};
+					}),
+
+					onWrite: doodad.OVERRIDE(function onWrite(ev) {
+						const retval = this._super(ev);
+
+						if (!ev.prevent) {
+							ev.preventDefault();
+
+							const data = ev.data;
+							
+							const eof = (data.raw === io.EOF);
+
+							const buf = this.__buffer + (eof ? '' : data.valueOf().toString('ascii').replace(/\n|\r/gm, ''));
+							this.__buffer = '';
+
+							const bufLen = buf.length;
+							const chunkLen = (eof ? bufLen : (bufLen >> 2) << 2); // Math.floor(bufLen / 4)
+
+							if (chunkLen) {
+								const chunk = Buffer.from(buf.slice(0, chunkLen), 'base64');
+								if (chunkLen !== bufLen) {
+									this.__buffer = buf.slice(chunkLen);
+								};
+								this.push({
+									raw: chunk,
+									valueOf: function() {
+										return this.raw;
+									},
+								}, {output: false});
+							};
+
+							if (eof) {
+								this.push(data, {output: false});
+							};
+						};
+
+						return retval;
+					}),
+				}));
+
+
 				files.openFile = function openFile(path, /*optional*/options) {
 					path = _shared.urlParser(path, types.get(options, 'parseOptions'));
 					
