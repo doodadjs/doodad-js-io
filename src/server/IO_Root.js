@@ -682,32 +682,20 @@ module.exports = {
 							// iconv-lite
 							if (encoding && (this.__transformEncoding !== encoding)) {
 								if (this.__transformDecoder) {
-									this.__transformDecoder.end();
-									let val;
-									while (val = this.__transformDecoder.read()) {
-										text += val;
-									};
+									text += this.__transformDecoder.end();
 									this.__transformDecoder = null;
 								};
-								this.__transformDecoder = nodeIConv.decodeStream(encoding);
+								this.__transformDecoder = nodeIConv.getDecoder(encoding);
 								this.__transformEncoding = encoding;
 							};
 							if (data.raw === io.EOF) {
 								if (this.__transformDecoder) {
-									this.__transformDecoder.end();
-									let val;
-									while (val = this.__transformDecoder.read()) {
-										text += val;
-									};
+									text += this.__transformDecoder.end();
 									this.__transformDecoder = null;
 								};
 							} else {
 								if (this.__transformDecoder && (types.isTypedArray(data.raw) || types.isBuffer(data.raw))) {
-									this.__transformDecoder.write(data.raw);
-									let val;
-									while (val = this.__transformDecoder.read()) {
-										text += val;
-									};
+									text += this.__transformDecoder.write(data.raw);
 								} else {
 									text += types.toString(data.raw);
 								};
