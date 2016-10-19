@@ -219,7 +219,6 @@ module.exports = {
 								drainFn: null,
 								unpipe: function() {
 									this.destination.removeListener('error', this.errorCb);
-		//									this.destination.removeListener('finish', this.finishCb);
 									this.destination.removeListener('drain', this.drainCb);
 								},
 							};
@@ -241,11 +240,6 @@ module.exports = {
 							});
 							destination.once('error', state.errorCb);
 
-		//							// NOTE: Must be Async or else we can bug Node's stream object on ".end()"
-		//							state.finishCb = new doodad.AsyncCallback(this, function _finishCb() {
-		//							});
-		//							destination.once('finish', state.finishCb);
-
 							state.drainCb = new doodad.Callback(this, function _drainCb() {
 								state.ok = true;
 								state.drainFn && state.drainFn();
@@ -260,11 +254,7 @@ module.exports = {
 								host.listen();
 							};
 							
-							if (types._implements(destination, nodejsIOInterfaces.ITransform)) {
-								destination = destination.getInterface(nodejsIOInterfaces.ITransform);
-							} else if (types._implements(destination, nodejsIOInterfaces.IDuplex)) {
-								destination = destination.getInterface(nodejsIOInterfaces.IDuplex);
-							} else if (types._implements(destination, nodejsIOInterfaces.IWritable)) {
+							if (types._implements(destination, nodejsIOInterfaces.IWritable)) {
 								destination = destination.getInterface(nodejsIOInterfaces.IWritable);
 							};
 							
@@ -330,11 +320,7 @@ module.exports = {
 							while (itm = items.pop()) {
 								itm.unpipe();
 								let dest = itm.destination;
-								if (types._implements(dest, nodejsIOInterfaces.ITransform)) {
-									dest = dest.getInterface(nodejsIOInterfaces.ITransform);
-								} else if (types._implements(dest, nodejsIOInterfaces.IDuplex)) {
-									dest = dest.getInterface(nodejsIOInterfaces.IDuplex);
-								} else if (types._implements(dest, nodejsIOInterfaces.IWritable)) {
+								if (types._implements(dest, nodejsIOInterfaces.IWritable)) {
 									dest = dest.getInterface(nodejsIOInterfaces.IWritable);
 								};
 								dest.emit('unpipe', this);
