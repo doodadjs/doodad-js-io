@@ -53,6 +53,12 @@ module.exports = {
 					nodeStream = require('stream'),
 					nodeFs = require('fs'),
 					nodeCluster = require('cluster');
+
+
+				types.complete(_shared.Natives, {
+					windowUnescape: global.unescape,
+					globalBuffer: global.Buffer,
+				});
 				
 
 				//=====================================================
@@ -456,7 +462,7 @@ module.exports = {
 
 							const url = this.__remaining + ((data.raw === io.EOF) ? '' : data.valueOf());
 							if (url.length > this.options.maxStringLength) {
-								throw new types.BufferOverflow("Key/Value exceeded maximum permitted length.");
+								throw new types.BufferOverflow("URL buffer exceeded maximum permitted length.");
 							};
 							const delimiters = /\=|\&/g;
 							let last = 0,
@@ -558,10 +564,10 @@ module.exports = {
 							this.__buffer = '';
 
 							const bufLen = buf.length;
-							const chunkLen = (eof ? bufLen : (bufLen >> 2) << 2); // Math.floor(bufLen / 4)
+							const chunkLen = (eof ? bufLen : (bufLen >> 2) << 2); // Math.floor(bufLen / 4) * 4
 
 							if (chunkLen) {
-								const chunk = Buffer.from(buf.slice(0, chunkLen), 'base64');
+								const chunk = _shared.Natives.globalBuffer.from(buf.slice(0, chunkLen), 'base64');
 								if (chunkLen !== bufLen) {
 									this.__buffer = buf.slice(chunkLen);
 								};
