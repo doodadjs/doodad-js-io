@@ -170,9 +170,8 @@ module.exports = {
 						var prevent = false;
 						try {
 							if (this.__listening) {
-								var options = {output: false};
-								var data = this.transform({raw: ev}, options);
-								prevent = !this.push(data, options);
+								var data = this.transform({raw: ev});
+								prevent = !this.push(data);
 							};
 							
 						} catch(ex) {
