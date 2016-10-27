@@ -173,7 +173,7 @@ module.exports = {
 							if (this.options.autoFlush) {
 								if (this.getCount() + 1 >= this.options.bufferSize) {
 									this.__pushInternal(data, options);
-									this.flush();
+									this.flush(this.options.autoFlushOptions);
 								} else {
 									this.__pushInternal(data, options);
 								};
@@ -407,7 +407,7 @@ module.exports = {
 						return this.__buffer.length;
 					}),
 
-					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {
+					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
 						const next = types.get(options, 'next', false),
 							buffer = this.__buffer;
 
@@ -421,7 +421,7 @@ module.exports = {
 							buffer.push(data);
 						};
 
-						this._super(data, options);
+						this.__consumeData(data);
 
 						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 						if (ireadable.isPaused()) {

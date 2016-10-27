@@ -277,10 +277,9 @@ module.exports = {
 						this.__lastWriteOk = true;
 					}),
 					
-					// TODO: Fix bug in Doodad that forces to use POSITION for nodeJsIO.TextOutputStream
-					canWrite: doodad.POSITION(0, ioMixIns.OutputStream, doodad.REPLACE(function canWrite() {
+					canWrite: doodad.REPLACE(function canWrite() {
 						return this.__lastWriteOk;
-					})),
+					}),
 
 					__writeToStream: doodad.PROTECTED(function __writeToStream(raw, /*optional*/callback) {
 						return this.stream.write(raw, null, callback);

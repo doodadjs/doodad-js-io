@@ -79,13 +79,13 @@ module.exports = {
 				{
 					$TYPE_NAME: 'Transformable',
 					
-					transform: doodad.PUBLIC(function transform(data, /*optional*/options) {
+					transform: doodad.PUBLIC(doodad.RETURNS(types.isJsObject, function transform(data, /*optional*/options) {
 						data.valueOf = function valueOf() {
 							return this.raw;
 						};
 						data.options = options;
 						return data;
-					}),
+					})),
 				})));
 				
 				
@@ -414,6 +414,7 @@ module.exports = {
 
 						if (options.autoFlush) {
 							types.getDefault(options, 'bufferSize', 1);
+							types.getDefault(options, 'autoFlushOptions', null);
 						};
 
 						this._super(options);
