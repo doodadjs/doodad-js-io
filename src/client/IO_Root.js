@@ -77,7 +77,7 @@ module.exports = {
 						this._super();
 					}),
 
-					__consumeData: doodad.PROTECTED(function __consumeData(data) {
+					__consumeData: doodad.PUBLIC(function __consumeData(data) {
 						if (!types.get(data, 'consumed', false)) {
 							data.consumed = true;
 

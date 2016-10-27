@@ -143,7 +143,7 @@ module.exports = {
 											if (this.__pipeWriting <= 0) {
 												this.__pipeWriting = 0;
 												data.consumed = false;
-												this.__consumeData(data);
+												host.__consumeData(data);
 
 												this.emit('end');
 											};
@@ -151,7 +151,7 @@ module.exports = {
 											if (this.__pipeWriting <= 0) {
 												this.__pipeWriting = 0;
 												data.consumed = false;
-												this.__consumeData(data);
+												host.__consumeData(data);
 											};
 										};
 									};
