@@ -1,8 +1,7 @@
 {
   "name": "doodad-js-io",
-  "version": "4.0.0",
-  "stage": "a",
   "description": "I/O streams (alpha)",
+  "version": "0.0.0",
   "files": [
 	"tonic.js"
   ],
