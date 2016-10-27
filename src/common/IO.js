@@ -187,7 +187,7 @@ module.exports = {
 				//=====================================================
 				
 				io.REGISTER(doodad.BASE(doodad.Object.$extend(
-									ioMixIns.Stream,
+									ioMixIns.BufferedStream,
 				{
 					$TYPE_NAME: 'Stream',
 				})));
@@ -248,7 +248,7 @@ module.exports = {
 					
 					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {
 						var next = types.get(options, 'next', false),
-							buffer = this.getBuffer(options),
+							buffer = this.__buffer,
 							value = data.valueOf();
 
 						if ((data.raw !== io.EOF) && types.isString(value)) {
@@ -351,7 +351,7 @@ module.exports = {
 							var stream = data[1];
 							state.idented = stream.options.identLines;
 							stream.flush();
-							stream.onFlushData.detach(this);
+							stream.onWrite.detach(this);
 							html = this.handleBufferData(data, state);
 						} else if (type === state.bufferTypes.Flush) {
 							state.ignoreClose = true;
@@ -364,7 +364,7 @@ module.exports = {
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						
 						var state = this.prepareFlushState(options),
-							buffer = this.getBuffer(types.extend({}, options, {output: true})),
+							buffer = this.__buffer,
 							bufferStart = 0,
 							bufferLen = buffer.length,
 							identLines = types.get(options, 'identLines', false), // boolean
@@ -451,7 +451,7 @@ module.exports = {
 						};
 					}),
 					
-					__streamOnFlushDataHandler: doodad.PROTECTED(function streamOnFlushDataHandler(ev) {
+					__streamOnWrite: doodad.PROTECTED(function __streamOnWrite(ev) {
 						if (!ev.data.options.flushElement) {
 							var cls = types.getType(this),
 								bufferTypes = cls.$__bufferTypes,
@@ -482,17 +482,16 @@ module.exports = {
 							bufferTypes = cls.$__bufferTypes,
 							stream = cls.$createInstance(options);
 							
-						var noOpenClose = types.get(options, 'noOpenClose', false),
-							pushOpts = {output: true};
+						var noOpenClose = types.get(options, 'noOpenClose', false);
 						
-						!noOpenClose && this.push({raw: [bufferTypes.Open, tag, attrs], valueOf: function() {return this.raw;}}, pushOpts);
+						!noOpenClose && this.push({raw: [bufferTypes.Open, tag, attrs], valueOf: function() {return this.raw;}});
 
 						var streamData = {raw: [bufferTypes.Stream, stream], valueOf: function() {return this.raw;}};
 						this.push(streamData, pushOpts); // <--- Will get replaced on flush
 
-						!noOpenClose && this.push({raw: [bufferTypes.Close, tag], valueOf: function() {return this.raw;}}, pushOpts);
+						!noOpenClose && this.push({raw: [bufferTypes.Close, tag], valueOf: function() {return this.raw;}});
 						
-						stream.onFlushData.attach(this, this.__streamOnFlushDataHandler, 50, [streamData]);
+						stream.onWrite.attach(this, this.__streamOnWrite, 50, [streamData]);
 
 						return stream;
 					}),
@@ -515,7 +514,7 @@ module.exports = {
 						var cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
-						this.push({raw: [bufferTypes.Open, tag, attrs], valueOf: function() {return this.raw;}}, {output: true});
+						this.push({raw: [bufferTypes.Open, tag, attrs], valueOf: function() {return this.raw;}});
 					}),
 					
 					closeElement: doodad.PUBLIC(function closeElement() {
@@ -526,7 +525,7 @@ module.exports = {
 						var cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
-						this.push({raw: [bufferTypes.Close, tags.pop()[0]], valueOf: function() {return this.raw;}}, {output: true});
+						this.push({raw: [bufferTypes.Close, tags.pop()[0]], valueOf: function() {return this.raw;}});
 					}),
 					
 					reset: doodad.OVERRIDE(function reset() {
@@ -561,12 +560,16 @@ module.exports = {
 						};
 					}),
 					
-					onFlushData: doodad.OVERRIDE(function onFlushData(ev) {
+					onWrite: doodad.OVERRIDE(function onWrite(ev) {
 						var retval = this._super(ev);
-						var data = ev.data.data;
+
+						ev.preventDefault();
+
+						var data = ev.data;
 						if (data.raw !== io.EOF) {
 							global.console[this.__fn](data.valueOf());
 						};
+
 						return retval;
 					}),
 

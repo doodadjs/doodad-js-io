@@ -49,13 +49,25 @@ module.exports = {
 				};
 					
 
-				io.REGISTER(types.SINGLETON(doodad.Class.$extend(
+				io.REGISTER(doodad.Class.$extend(
 				{
-					$TYPE_NAME: 'EOF',
+					$TYPE_NAME: 'Signal',
 
 					toString: doodad.REPLACE(function toString() {
 						return '';
 					}),
+				}));
+				
+					
+				io.REGISTER(types.SINGLETON(io.Signal.$extend(
+				{
+					$TYPE_NAME: 'BOF',
+				})));
+				
+					
+				io.REGISTER(types.SINGLETON(io.Signal.$extend(
+				{
+					$TYPE_NAME: 'EOF',
 				})));
 				
 					
@@ -230,12 +242,10 @@ module.exports = {
 					options: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
 					onError: doodad.ERROR_EVENT(), // function onError(ev)
-					onFlushData: doodad.EVENT(true),
 					onFlush: doodad.EVENT(false),
+					onBOF: doodad.EVENT(false),
 					onEOF: doodad.EVENT(false),
 
-					__flushState: doodad.PROTECTED(null),
-					
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super();
 						
@@ -252,97 +262,44 @@ module.exports = {
 						this.reset();
 					}),
 					
-					getCount: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
+					getCount: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
 					push: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(data, /*optional*/options)
 					pull: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					clear: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
 					pipe: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(stream, /*optional*/transform)
 					unpipe: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/stream)
 
-					__flushInternal: doodad.PROTECTED(function(state, data, /*optional*/options) {
-						var callback = types.get(options, 'callback');
-						if (callback) {
-							delete options.callback;
-							callback();
-						};
-					}),
-					
-					reset: doodad.PUBLIC(doodad.MUST_OVERRIDE(function() {
-						this.__flushState = {
-							ok: true,
-							eof: false,
-						};
-					})),
+					__emitPushEvent: doodad.PROTECTED(doodad.METHOD()),
+
+					reset: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
 
 					flush: doodad.PUBLIC(function flush(/*optional*/options) {
-						options = types.extend({}, options);
-
-						var output = types.getDefault(options, 'output', true);
-							
 						var callback = types.get(options, 'callback');
-						if (callback) {
-							delete options.callback;
-						};
+						var count = types.get(options, 'count', Infinity);
 
-						var state = this.__flushState;
-
-						if (callback && !state.ok) {
-							this.onFlush.attachOnce(null, function() {
-								callback();
-							});
-						};
-
-						var _flush = function _flush() {
-							while (state.ok && (this.getCount(options) > 0)) {
+						if (count > 0) {
+							while ((count-- > 0) && (this.getCount() > 0)) {
 								var data = this.pull(options);
-								var ev = new doodad.Event(data);
 
-								this.onFlushData(ev);
+								this.__emitPushEvent(data);
 
-								if (ev.prevent) {
-									continue;
+								if (data.raw === io.BOF) {
+									break;
 								};
-
-								data = ev.data;
-								if (data.raw === io.EOF) {
-									state.eof = true;
-								};
-
-								this.__flushInternal(state, data, types.extend({}, options, { // sync/async
-										callback: new doodad.Callback(this, function(err) {
-											if (err) {
-												this.onError(new doodad.ErrorEvent(err));
-												if (!state.ok) {
-													state.ok = true;
-													callback && callback(err); // sync
-												};
-											} else {
-												if (!state.ok) {
-													state.ok = true;
-													_flush.call(this); // sync
-												};
-											};
-										}),
-									}));
 							};
 							
-							if (state.ok && (this.getCount(options) <= 0)) {
-								if (state.eof) {
-									state.eof = false;
-									this.onEOF(new doodad.Event({output: output}));
-								};
-								this.onFlush(new doodad.Event({options: options}));
-								if (callback) {
-									callback(); // sync
-								};
-							};
-						};
+							callback && callback();
 
-						_flush.call(this); // sync
+							this.onFlush(new doodad.Event({options: options}));
+
+						} else {
+							callback && callback();
+						};
 					}),
 
 					flushAsync: doodad.PUBLIC(doodad.ASYNC(function flushAsync(/*optional*/options) {
 						var Promise = types.getPromise();
+						var callback = types.get(options, 'callback');
 						return Promise.create(function flushAsyncPromise(resolve, reject) {
 							function errorHandler(ev) {
 								detach.call(this);
@@ -355,8 +312,10 @@ module.exports = {
 							this.flush(types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
 								detach.call(this);
 								if (err) {
+									callback && callback(err);
 									reject(err);
 								} else {
+									callback && callback();
 									resolve();
 								};
 							})}));
@@ -390,32 +349,13 @@ module.exports = {
 					readAsync: doodad.PUBLIC(doodad.ASYNC(function readAsync(/*optional*/options) {
 						var Promise = types.getPromise();
 						var result = this.read(options);
-						if (result) {
+						if (!types.isNothing(result)) {
 							return result;
 						} else if (this.isListening()) {
-							return Promise.create(function readAsyncPromise(resolve, reject) {
-								function readyHandler(ev) {
-									detach.call(this);
-									ev.preventDefault();
-									resolve(ev.data);
-								};
-								function errorHandler(ev) {
-									detach.call(this);
-									reject(ev.error);
-								};
-								//function stopHandler(ev) {
-								//	detach.call(this);
-								//	resolve();
-								//};
-								function detach() {
-									this.onReady.detach(this, readyHandler);
-									this.onError.detach(this, errorHandler);
-									//this.onStopListening.detach(this, stopHandler);
-								};
-								this.onReady.attachOnce(this, readyHandler);
-								this.onError.attachOnce(this, errorHandler);
-								//this.onStopListening.attachOnce(this, stopHandler);
-							}, this);
+							return this.onReady.promise()
+								.then(function(ev) {
+									return this.read(options);
+								});
 						};
 					})),
 				}))));
@@ -435,66 +375,26 @@ module.exports = {
 					readTextAsync: doodad.PUBLIC(doodad.ASYNC(function readTextAsync(/*optional*/options) {
 						var Promise = types.getPromise();
 						var result = this.readText(options);
-						if (result) {
+						if (!types.isNothing(result)) {
 							return result;
 						} else if (this.isListening()) {
-							return Promise.create(function readTextAsyncPromise(resolve, reject) {
-								function readyHandler(ev) {
-									detach.call(this);
-									ev.preventDefault();
-									// FIXME: Return text, not a chunk
-									resolve(ev.data);
-								};
-								function errorHandler(ev) {
-									detach.call(this);
-									reject(ev.error);
-								};
-								//function stopHandler(ev) {
-								//	detach.call(this);
-								//	resolve();
-								//};
-								function detach() {
-									this.onReady.detach(this, readyHandler);
-									this.onError.detach(this, errorHandler);
-									//this.onStopListening.detach(this, stopHandler);
-								};
-								this.onReady.attachOnce(this, readyHandler);
-								this.onError.attachOnce(this, errorHandler);
-								//this.onStopListening.attachOnce(this, stopHandler);
-							}, this);
+							return this.onReady.promise()
+								.then(function(ev) {
+									return this.readText(options);
+								});
 						};
 					})),
 						
 					readLineAsync: doodad.PUBLIC(doodad.ASYNC(function readLineAsync(/*optional*/options) {
 						var Promise = types.getPromise();
 						var result = this.readLine(options);
-						if (result) {
+						if (!types.isNothing(result)) {
 							return result;
 						} else if (this.isListening()) {
-							return Promise.create(function readLineAsyncPromise(resolve, reject) {
-								function readyHandler(ev) {
-									detach.call(this);
-									ev.preventDefault();
-									// FIXME: Return a line, not a chunk
-									resolve(ev.data);
-								};
-								function errorHandler(ev) {
-									detach.call(this);
-									reject(ev.error);
-								};
-								//function stopHandler(ev) {
-								//	detach.call(this);
-								//	resolve();
-								//};
-								function detach() {
-									this.onReady.detach(this, readyHandler);
-									this.onError.detach(this, errorHandler);
-									//this.onStopListening.detach(this, stopHandler);
-								};
-								this.onReady.attachOnce(this, readyHandler);
-								this.onError.attachOnce(this, errorHandler);
-								//this.onStopListening.attachOnce(this, stopHandler);
-							}, this);
+							return this.onReady.promise()
+								.then(function(ev) {
+									return this.readLine(options);
+								});
 						};
 					})),
 				}))));
