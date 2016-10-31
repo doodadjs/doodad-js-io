@@ -213,15 +213,26 @@ module.exports = {
 							};
 						};
 
+						const hasCallback = !!types.get(data.options, 'callback');
+
 						ev.preventDefault();
+						data.consumed = true; // Will be consumed later
+
+						const consumeCallback = new doodad.Callback(this, function consume() {
+							data.consumed = false;
+							this.__consumeData(data);
+						});
+
 
 						if (data.raw === io.EOF) {
 							if (end) {
 								if (isNodeJsStream) {
-									stream.end(types.get(data.options, 'callback'));
+									stream.end(consumeCallback);
 								} else {
-									stream.write(io.EOF, data.options);
+									stream.write(io.EOF, {callback: consumeCallback});
 								};
+							} else {
+								consumeCallback();
 							};
 
 							this.unpipe(stream);
@@ -229,14 +240,26 @@ module.exports = {
 						} else {
 							if (isNodeJsStream) {
 								if (!(data.raw instanceof io.Signal)) {
+									let ok = false;
 									if (this._implements(ioMixIns.TextTransformable)) {
-										stream.write(data.valueOf(), types.get(data.options, 'encoding', this.options.encoding), types.get(data.options, 'callback'));
+										ok = stream.write(data.valueOf(), types.get(data.options, 'encoding', this.options.encoding), function(ex) {
+											if (ok) {
+												consumeCallback();
+											};
+										});
 									} else {
-										stream.write(data.valueOf(), types.get(data.options, 'callback'));
+										ok = stream.write(data.valueOf(), function(ex) {
+											if (ok) {
+												consumeCallback();
+											};
+										});
+									};
+									if (!ok) {
+										this.__pipeNodeStreamOnDrain.attachOnce(stream, {callback: consumeCallback});
 									};
 								};
 							} else {
-								stream.write(data.valueOf(), data.options);
+								stream.write(data.valueOf(), types.extend({}, data.options, {callback: consumeCallback}));
 							};
 						};
 					}),
@@ -262,6 +285,11 @@ module.exports = {
 							this.stopListening();
 						};
 					}),
+
+					__pipeNodeStreamOnDrain: doodad.PROTECTED(doodad.NODE_EVENT('drain', function __pipeNodeStreamOnError(context, err) {
+						const callback = types.get(context.data, 'callback');
+						callback && callback(err);
+					})),
 
 					__pipeNodeStreamOnError: doodad.PROTECTED(doodad.NODE_EVENT('error', function __pipeNodeStreamOnError(context, err) {
 						this.unpipe(context.emitter);
@@ -347,6 +375,7 @@ module.exports = {
 									this.onWrite.detach(this, this.__pipeOnReady, [stream]);
 								};
 								this.__pipeNodeStreamOnError.detach(stream);
+								this.__pipeNodeStreamOnDrain.detach(stream);
 							};
 						} else {
 							if (this._implements(ioMixIns.InputStreamBase)) {
@@ -370,6 +399,7 @@ module.exports = {
 								};
 							}, this);
 							this.__pipeNodeStreamOnError.clear();
+							this.__pipeNodeStreamOnDrain.clear();
 						};
 						if (pos >= 0) {
 							this.__pipes.splice(pos, 1);
@@ -575,10 +605,10 @@ module.exports = {
 						} else {
 							if ((data.raw === io.EOF) && !this.canWrite()) {
 								this.onFlush.attachOnce(this, function() {
-									this.push(data, options);
+									this.push(data);
 								});
 							} else {
-								this.push(data, options);
+								this.push(data);
 							};
 						};
 					}),

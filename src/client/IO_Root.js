@@ -149,14 +149,24 @@ module.exports = {
 							};
 						};
 
+						var hasCallback = !!types.get(data.options, 'callback');
+
 						ev.preventDefault();
+						data.consumed = true; // Will be consumed later
+
+						var consumeCallback = new doodad.Callback(this, function consume() {
+							data.consumed = false;
+							this.__consumeData(data);
+						});
 
 						if (data.raw === io.EOF) {
 							if (end) {
-								stream.write(io.EOF, data.options);
+								stream.write(io.EOF, {callback: consumeCallback});
+							} else {
+								consumeCallback();
 							};
 						} else {
-							stream.write(data.valueOf(), data.options);
+							stream.write(data.valueOf(), types.extend({}, data.options, {callback: consumeCallback}));
 						};
 					}),
 					
@@ -380,10 +390,10 @@ module.exports = {
 						} else {
 							if ((data.raw === io.EOF) && !this.canWrite()) {
 								this.onFlush.attachOnce(this, function() {
-									this.push(data, options);
+									this.push(data);
 								});
 							} else {
-								this.push(data, options);
+								this.push(data);
 							};
 						};
 					}),

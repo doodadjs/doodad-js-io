@@ -295,7 +295,6 @@ module.exports = {
 						data.consumed = true; // Will be consumed later
 
 						const consumeCallback = new doodad.Callback(this, function consume() {
-							// Consumed
 							data.consumed = false;
 							this.__consumeData(data);
 						});
@@ -308,10 +307,13 @@ module.exports = {
 								this.stream.end(consumeCallback); // async
 							//};
 						} else if (this.__lastWriteOk || hasCallback) {
-							this.__lastWriteOk = this.__writeToStream(data.valueOf());
-							if (this.__lastWriteOk) {
-								consumeCallback();
-							} else {
+							let ok = false;
+							this.__lastWriteOk = ok = this.__writeToStream(data.valueOf(), function(ex) {
+								if (ok) {
+									consumeCallback();
+								};
+							});
+							if (!ok) {
 								this.streamOnDrain.attachOnce(this.stream, {callback: consumeCallback}); // async
 							};
 						} else {

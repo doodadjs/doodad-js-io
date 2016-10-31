@@ -390,29 +390,19 @@ module.exports = {
 						} catch(ex) {
 							if (ex.critical) {
 								throw ex;
-							} else if (ex.bubble) {
-								// Do nothing
 							} else {
-								if (callback) {
-									callback = new doodad.Callback(null, callback);
-									callback(ex);
-								} else {
-									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(ex)], _shared.SECRET);
+								if (!ex.bubble) {
+									if (callback) {
+										callback(ex);
+									} else {
+										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(ex)], _shared.SECRET);
+									};
 								};
 								return false;
 							};
 						};
 						
 						const ok = host.canWrite();
-						
-						//if (!ok) {
-						//	tools.callAsync(function() {
-						//		if (!this.isDestroyed()) {
-						//			this.flush();
-						//		};
-						//	}, 0, host, null, null, _shared.SECRET);
-						//};
-						
 						return ok;
 					}),
 					
@@ -433,21 +423,6 @@ module.exports = {
 
 						const host = this[doodad.HostSymbol];
 
-/*
-						const flushCb = new doodad.Callback(this, function _flushCb(err) {
-							if (err) {
-								if (callback) {
-									callback(err);
-								} else {
-									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
-								};
-							} else {
-								callback && callback();
-								this.emit('finish');
-							};
-						});
-*/
-
 						const writeEOFCb = new doodad.Callback(this, function _writeEOFCb(err) {
 							if (err) {
 								if (callback) {
@@ -455,10 +430,6 @@ module.exports = {
 								} else {
 									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 								};
-							//} else if (!host.isDestroyed()) {
-							//	host.flush({
-							//		callback: flushCb,
-							//	});
 							} else if (!host.isDestroyed()) {
 								callback && callback();
 								this.emit('finish');
@@ -471,9 +442,9 @@ module.exports = {
 									callback: writeEOFCb,
 								});
 							} catch(ex) {
-								if (ex.bubble) {
+								if (ex.critical) {
 									throw ex;
-								} else if (ex instanceof types.ScriptInterruptedError) {
+								} else if (ex.bubble) {
 									// Do nothing
 								} else {
 									if (callback) {
@@ -498,7 +469,7 @@ module.exports = {
 								};
 							});
 							try {
-								this.write(chunk, encoding, writeChunkCb);
+								host.write(chunk, {encoding: encoding, callback: writeChunkCb});
 							} catch(ex) {
 								if (ex.critical) {
 									throw ex;

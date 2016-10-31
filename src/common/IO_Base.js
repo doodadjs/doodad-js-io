@@ -241,6 +241,8 @@ module.exports = {
 
 					options: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
+					__flushing: doodad.PROTECTED(false),
+
 					onError: doodad.ERROR_EVENT(), // function onError(ev)
 					onFlush: doodad.EVENT(false),
 					onBOF: doodad.EVENT(false),
@@ -271,29 +273,49 @@ module.exports = {
 
 					__emitPushEvent: doodad.PROTECTED(doodad.METHOD()),
 
-					reset: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
+					reset: doodad.PUBLIC(function() {
+						this.__flushing = false;
+					}),
 
 					flush: doodad.PUBLIC(function flush(/*optional*/options) {
 						var callback = types.get(options, 'callback');
 						var count = types.get(options, 'count', Infinity);
 
-						if (count > 0) {
-							while ((count-- > 0) && (this.getCount() > 0)) {
-								var data = this.pull(options);
-
-								this.__emitPushEvent(data);
-
-								if (data.raw === io.BOF) {
-									break;
-								};
+						if (this.__flushing) {
+							if (callback) {
+								this.onFlush.attachOnce(null, callback);
 							};
-							
-							callback && callback();
+						} else if (count > 0) {
+							var __flush = doodad.Callback(this, function() {
+								if ((count-- > 0) && (this.getCount() > 0)) {
+									var data = this.pull();
 
-							this.onFlush(new doodad.Event({options: options}));
+									data.consumed = false;
+									if (!data.options) {
+										data.options = {};
+									};
+									data.options.callback = __flush;
+
+									this.__emitPushEvent(data);
+
+									this.__consumeData(data);
+
+								} else {
+									this.__flushing = false;
+
+									callback && callback();
+
+									this.onFlush(new doodad.Event({options: options}));
+								};
+							});
+
+							this.__flushing = true;
+							__flush();
 
 						} else {
 							callback && callback();
+
+							this.onFlush(new doodad.Event({options: options}));
 						};
 					}),
 
