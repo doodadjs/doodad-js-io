@@ -134,37 +134,37 @@ module.exports = {
 						this._super();
 					}),
 
-					__consumeData: doodad.PUBLIC(function __consumeData(data) {
-						if (!types.get(data, 'consumed', false)) {
-							data.consumed = true;
-
-							// Consumed
-							const callback = types.get(data.options, 'callback');
-							if (callback) {
-								callback();
-							};
-
-							if (data.raw === io.BOF) {
-								this.onBOF(new doodad.Event(data));
-							} else if (data.raw === io.EOF) {
-								this.onEOF(new doodad.Event(data));
-
-								this.unpipe();
-							};
-						};
-					}),
-
 					__pushInternal: doodad.PROTECTED(function(data, /*optional*/options) {
-						this.__consumeData(data);
+						const noEvents = types.get(options, 'noEvents', false);
+						if (!noEvents) {
+							this.__consumeData(data);
+						};
 					}),
 					
 					push: doodad.OVERRIDE(function push(data, /*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(data));
 
 						let prevent = false;
+
 						const noEvents = (this._implements(ioMixIns.Listener) && !this.isListening()) || types.get(options, 'noEvents', false);
 						if (!noEvents) {
 							prevent = this.__emitPushEvent(data);
+						};
+
+						const callback = types.get(options, 'callback');
+						if (callback) {
+							if (!data.options) {
+								data.options = {};
+							};
+							const dataCb = types.get(data.options, 'callback');
+							if (dataCb) {
+								data.options.callback = function() {
+									dataCb();
+									callback();
+								};
+							} else {
+								data.options.callback = callback;
+							};
 						};
 
 						if (prevent) {
@@ -186,9 +186,27 @@ module.exports = {
 					__pullInternal: doodad.PROTECTED(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 
 					pull: doodad.OVERRIDE(function(/*optional*/options) {
-						let data = this.__pullInternal(options);
+						const callback = types.get(options, 'callback');
+
+						const data = this.__pullInternal(options);
 
 						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(data));
+
+						if (!data.options) {
+							data.options = {};
+						};
+						if (callback) {
+							const dataCb = !data.consumed && types.get(data.options, 'callback');
+							if (dataCb) {
+								data.options.callback = function() {
+									dataCb();
+									callback();
+								};
+							} else {
+								data.options.callback = callback;
+							};
+						};
+						data.consumed = false;
 
 						return data;
 					}),
@@ -218,55 +236,61 @@ module.exports = {
 						ev.preventDefault();
 						data.consumed = true; // Will be consumed later
 
-						const consumeCallback = new doodad.Callback(this, function consume() {
+						const eof = (data.raw === io.EOF);
+
+						const __consume = function consume() {
 							data.consumed = false;
 							this.__consumeData(data);
-						});
+						};
 
 
-						if (data.raw === io.EOF) {
+						if (eof) {
 							if (end) {
 								if (isNodeJsStream) {
-									stream.end(consumeCallback);
+									const consumeCb = doodad.Callback(this, __consume);
+									stream.end(consumeCb);
 								} else {
-									stream.write(io.EOF, {callback: consumeCallback});
+									const consumeCb = doodad.AsyncCallback(this, __consume);
+									stream.write(io.EOF, {callback: consumeCb});
 								};
 							} else {
-								consumeCallback();
+								__consume.call(this);
 							};
 
-							this.unpipe(stream);
-
+						} else if (data.raw instanceof io.Signal) {
+							__consume.call(this);
 						} else {
 							if (isNodeJsStream) {
-								if (!(data.raw instanceof io.Signal)) {
-									let ok = false;
-									if (this._implements(ioMixIns.TextTransformable)) {
-										ok = stream.write(data.valueOf(), types.get(data.options, 'encoding', this.options.encoding), function(ex) {
-											if (ok) {
-												consumeCallback();
-											};
-										});
-									} else {
-										ok = stream.write(data.valueOf(), function(ex) {
-											if (ok) {
-												consumeCallback();
-											};
-										});
-									};
-									if (!ok) {
-										this.__pipeNodeStreamOnDrain.attachOnce(stream, {callback: consumeCallback});
-									};
+								const consumeCb = doodad.Callback(this, __consume);
+								let ok = false;
+								if (this._implements(ioMixIns.TextTransformable)) {
+									ok = stream.write(data.valueOf(), types.get(data.options, 'encoding', this.options.encoding), function(ex) {
+										if (ok) {
+											consumeCb();
+										};
+									});
+								} else {
+									ok = stream.write(data.valueOf(), function(ex) {
+										if (ok) {
+											consumeCb();
+										};
+									});
+								};
+								if (!ok) {
+									this.__pipeNodeStreamOnDrain.attachOnce(stream, {callback: consumeCb});
 								};
 							} else {
-								stream.write(data.valueOf(), types.extend({}, data.options, {callback: consumeCallback}));
+								const consumeCb = doodad.AsyncCallback(this, __consume);
+								stream.write(data.valueOf(), types.extend({}, data.options, {callback: consumeCb}));
 							};
 						};
 					}),
 					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
 						const stream = ev.handlerData[0];
-						stream.flush(ev.data.options);
+						if (!stream.isDestroyed()) {
+							stream.flush(stream.options.autoFlushOptions);
+						};
 					}),
 						
 					__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
@@ -286,9 +310,9 @@ module.exports = {
 						};
 					}),
 
-					__pipeNodeStreamOnDrain: doodad.PROTECTED(doodad.NODE_EVENT('drain', function __pipeNodeStreamOnError(context, err) {
+					__pipeNodeStreamOnDrain: doodad.PROTECTED(doodad.NODE_EVENT('drain', function __pipeNodeStreamOnError(context) {
 						const callback = types.get(context.data, 'callback');
-						callback && callback(err);
+						callback && callback();
 					})),
 
 					__pipeNodeStreamOnError: doodad.PROTECTED(doodad.NODE_EVENT('error', function __pipeNodeStreamOnError(context, err) {
@@ -437,7 +461,7 @@ module.exports = {
 						return this.__buffer.length;
 					}),
 
-					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
+					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {
 						const next = types.get(options, 'next', false),
 							buffer = this.__buffer;
 
@@ -451,21 +475,21 @@ module.exports = {
 							buffer.push(data);
 						};
 
-						this.__consumeData(data);
+						this._super(data, options);
 
 						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
-						if (ireadable.isPaused()) {
+						if (ireadable && ireadable.isPaused()) {
 							ireadable.emit('readable');
 						};
 					}),
 					
 					__pullInternal: doodad.OVERRIDE(function __pullInternal(/*optional*/options) {
-						if (this.getCount() <= 0) {
-							throw new types.BufferOverflow();
-						};
-
 						const next = types.get(options, 'next', false),
 							buffer = this.__buffer;
+
+						if (buffer.length <= 0) {
+							throw new types.BufferOverflow();
+						};
 
 						let data;
 
@@ -510,7 +534,9 @@ module.exports = {
 						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 						let emitted = false;
 						if (ireadable) {
-							ireadable._readableState.flowing = false;
+							if (ireadable._readableState) {
+								ireadable._readableState.flowing = false;
+							};
 							emitted = ireadable.emit("pause");
 						};
 						if (emitted) {
@@ -524,7 +550,9 @@ module.exports = {
 						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 						let emitted = false;
 						if (ireadable) {
-							ireadable._readableState.flowing = true;
+							if (ireadable._readableState) {
+								ireadable._readableState.flowing = true;
+							};
 							emitted = ireadable.emit("resume");
 						};
 						if (emitted) {
@@ -569,9 +597,9 @@ module.exports = {
 					onWrite: doodad.OVERRIDE(function onWrite(ev) {
 						const retval = this._super(ev);
 					
-						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
-						if (iwritable) {
-							if (ev.data.raw === io.EOF) {
+						if (ev.data.raw === io.EOF) {
+							const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
+							if (iwritable) {
 								tools.callAsync(iwritable.emit, -1, iwritable, ['finish'], null, _shared.SECRET); // async
 							};
 						};
@@ -591,7 +619,7 @@ module.exports = {
 					}),
 					
 					canWrite: doodad.OVERRIDE(function canWrite() {
-						return (this.getCount() < this.options.bufferSize);
+						return this._super() && (this.getCount() < this.options.bufferSize);
 					}),
 
 					write: doodad.OVERRIDE(function write(raw, /*optional*/options) {
@@ -603,13 +631,7 @@ module.exports = {
 						if (ev.prevent) {
 							this.__consumeData(data);
 						} else {
-							if ((data.raw === io.EOF) && !this.canWrite()) {
-								this.onFlush.attachOnce(this, function() {
-									this.push(data);
-								});
-							} else {
-								this.push(data);
-							};
+							this.push(data);
 						};
 					}),
 

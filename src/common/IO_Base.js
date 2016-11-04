@@ -81,7 +81,11 @@ module.exports = {
 					
 					transform: doodad.PUBLIC(doodad.RETURNS(types.isJsObject, function transform(data, /*optional*/options) {
 						data.valueOf = function valueOf() {
-							return this.raw;
+							if (this.raw instanceof io.Signal) {
+								return null;
+							} else {
+								return this.raw;
+							};
 						};
 						data.options = options;
 						return data;
@@ -277,45 +281,70 @@ module.exports = {
 						this.__flushing = false;
 					}),
 
+					__consumeData: doodad.PUBLIC(function __consumeData(data) {
+						if (!types.get(data, 'consumed', false)) {
+							data.consumed = true;
+
+							// Consumed
+							const callback = types.get(data.options, 'callback');
+							if (callback) {
+								delete data.options.callback; // Free memory
+								callback();
+							};
+
+							if (data.raw === io.BOF) {
+								this.onBOF(new doodad.Event(data));
+							} else if (data.raw === io.EOF) {
+								this.onEOF(new doodad.Event(data));
+							};
+						};
+					}),
+
 					flush: doodad.PUBLIC(function flush(/*optional*/options) {
 						var callback = types.get(options, 'callback');
 						var count = types.get(options, 'count', Infinity);
+						var listening = !this._implements(ioMixIns.Listener) || this.isListening();
 
 						if (this.__flushing) {
-							if (callback) {
+							 if (callback) {
 								this.onFlush.attachOnce(null, callback);
 							};
-						} else if (count > 0) {
-							var __flush = doodad.Callback(this, function() {
-								if ((count-- > 0) && (this.getCount() > 0)) {
-									var data = this.pull();
+						} else if (listening && (count > 0)) {
+							var state = {count: 0};
+							var __flushCb, __flushCbAsync;
+							var __flush = function flush() {
+								if ((state.count++ < count) && (this.getCount() > 0)) {
+									// NOTE: Alternates between "sync" and "async". "sync" for performance, "async" to avoid stack overflows.
+									var data = this.pull({callback: ((state.count % 30) === 0 ? __flushCbAsync: __flushCb)});
 
-									data.consumed = false;
-									if (!data.options) {
-										data.options = {};
+									var prevent = this.__emitPushEvent(data);
+
+									if (prevent) {
+										this.__consumeData(data);
+									} else {
+										state.count = count; // Stops "flush"
+										this.__pushInternal(data, {next: true});
 									};
-									data.options.callback = __flush;
-
-									this.__emitPushEvent(data);
-
-									this.__consumeData(data);
 
 								} else {
 									this.__flushing = false;
 
 									callback && callback();
 
-									this.onFlush(new doodad.Event({options: options}));
+									this.onFlush(new doodad.Event());
 								};
-							});
+							};
+
+							__flushCb = doodad.Callback(this, __flush);
+							__flushCbAsync = doodad.AsyncCallback(this, __flush);
 
 							this.__flushing = true;
-							__flush();
+							__flush.call(this);
 
 						} else {
 							callback && callback();
 
-							this.onFlush(new doodad.Event({options: options}));
+							this.onFlush(new doodad.Event());
 						};
 					}),
 
@@ -331,15 +360,10 @@ module.exports = {
 								this.onError.detach(this, errorHandler);
 							};
 							this.onError.attachOnce(this, errorHandler);
-							this.flush(types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
+							this.flush(types.extend({}, options, {callback: doodad.Callback(this, function() {
 								detach.call(this);
-								if (err) {
-									callback && callback(err);
-									reject(err);
-								} else {
-									callback && callback();
-									resolve();
-								};
+								callback && callback();
+								resolve();
 							})}));
 						}, this);
 					})),
@@ -442,7 +466,10 @@ module.exports = {
 						this._super(options);
 					}),
 					
-					canWrite: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function canWrite()
+					canWrite: doodad.PUBLIC(function canWrite() {
+						return !this.__flushing;
+					}),
+
 					write: doodad.PUBLIC(doodad.MUST_OVERRIDE()), //function write(raw, /*optional*/options)
 					
 					writeAsync: doodad.PUBLIC(doodad.ASYNC(function writeAsync(raw, /*optional*/options) {
@@ -456,7 +483,7 @@ module.exports = {
 								this.onError.detach(this, errorHandler);
 							};
 							this.onError.attachOnce(this, errorHandler);
-							this.write(raw, types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
+							this.write(raw, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
 								detach.call(this);
 								if (err) {
 									reject(err);
@@ -495,7 +522,7 @@ module.exports = {
 								this.onError.detach(this, errorHandler);
 							};
 							this.onError.attachOnce(this, errorHandler);
-							this.writeText(text, types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
+							this.writeText(text, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
 								detach.call(this);
 								if (err) {
 									reject(err);
@@ -517,7 +544,7 @@ module.exports = {
 								this.onError.detach(this, errorHandler);
 							};
 							this.onError.attachOnce(this, errorHandler);
-							this.writeLine(text, types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
+							this.writeLine(text, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
 								detach.call(this);
 								if (err) {
 									reject(err);
@@ -539,7 +566,7 @@ module.exports = {
 								this.onError.detach(this, errorHandler);
 							};
 							this.onError.attachOnce(this, errorHandler);
-							this.print(text, types.extend({}, options, {callback: new doodad.Callback(this, function(err) {
+							this.print(text, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
 								detach.call(this);
 								if (err) {
 									reject(err);

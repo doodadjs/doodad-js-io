@@ -120,12 +120,14 @@ module.exports = {
 					}),
 
 					__pipeOnReady: doodad.PROTECTED(function __pipeOnReady(ev) {
-						ev.preventDefault();
-
 						const destinations = this.__destinations;
 						const host = this[doodad.HostSymbol];
 
 						const data = ev.data;
+
+						ev.preventDefault();
+
+						const eof = (data.raw === io.EOF);
 
 						if (destinations.length) {
 							// Will be consumed later
@@ -133,40 +135,34 @@ module.exports = {
 
 							const self = this;
 							const createWriteCb = function _createWriteCb(state) {
-								return new doodad.AsyncCallback(self, function _writeCb(err) { // async
+								return doodad.AsyncCallback(self, function _writeCb(err) { // async
 									if (err) {
 										state.ok = false;
 										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 									} else if (state.ok) {
 										this.__pipeWriting--;
-										if (data.raw === io.EOF) {
-											if (this.__pipeWriting <= 0) {
-												this.__pipeWriting = 0;
-												data.consumed = false;
-												host.__consumeData(data);
+										if (this.__pipeWriting <= 0) {
+											this.__pipeWriting = 0;
+											data.consumed = false;
+											host.__consumeData(data);
 
+											if (eof) {
 												this.emit('end');
-											};
-										} else {
-											if (this.__pipeWriting <= 0) {
-												this.__pipeWriting = 0;
-												data.consumed = false;
-												host.__consumeData(data);
 											};
 										};
 									};
 								});
 							};
 
-							if (data.raw === io.EOF) {
+							if (eof) {
 								// End
 								tools.forEach(destinations, function(state) {
 									this.__pipeWriting++;
 									state.ok = true;
 									if (state.endDestination) {
-										state.destination.end(createWriteCb(state)); // async
+										state.destination.end(createWriteCb(state));
 									} else {
-										createWriteCb(state)(); // async
+										createWriteCb(state)();
 									};
 								}, this);
 
@@ -178,12 +174,28 @@ module.exports = {
 									encoding = this.__encoding;
 								};
 
+								const globalState = {drainCount: 0};
 								tools.forEach(destinations, function(state) {
 									this.__pipeWriting++;
-									state.ok = state.destination.write(data.valueOf(), encoding, createWriteCb(state)); // async
+									state.ok = state.destination.write(data.valueOf(), encoding, createWriteCb(state));
 									if (!state.ok) {
-										this.pause();
-										state.drainFn = createWriteCb(state); // async
+										if (globalState.drainCount === 0) {
+											this.pause();
+										};
+										if (!state.drainCb) {
+											const drainFn = createWriteCb(state);
+											state.drainCb = doodad.Callback(this, function _drainCb() {
+												globalState.drainCount--;
+												state.ok = true;
+												state.drainCb = null;
+												drainFn();
+												if (globalState.drainCount <= 0) {
+													this.resume();
+												};
+											});
+											globalState.drainCount++;
+											state.destination.once('drain', state.drainCb);
+										};
 									};
 								}, this);
 							};
@@ -217,10 +229,11 @@ module.exports = {
 								writeCb: null,
 								ok: true,
 								drainCb: null,
-								drainFn: null,
 								unpipe: function() {
 									this.destination.removeListener('error', this.errorCb);
-									this.destination.removeListener('drain', this.drainCb);
+									if (this.drainCb) {
+										this.destination.removeListener('drain', this.drainCb);
+									};
 								},
 							};
 
@@ -228,20 +241,12 @@ module.exports = {
 							
 							host.onReady.attach(this, this.__pipeOnReady);
 
-							state.errorCb = new doodad.Callback(this, function _errorCb(err) {
+							state.errorCb = doodad.Callback(this, function _errorCb(err) {
 								this.unpipe(destination);
 								_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 							});
 							destination.once('error', state.errorCb);
 
-							state.drainCb = new doodad.Callback(this, function _drainCb() {
-								state.ok = true;
-								state.drainFn && state.drainFn();
-								state.drainFn = null;
-								this.resume();
-							});
-							destination.on('drain', state.drainCb);
-							
 							this.__destinations.push(state);
 							
 							const autoListen = types.get(options, 'autoListen', true);
@@ -378,13 +383,20 @@ module.exports = {
 							encoding = this.__defaultEncoding;
 						};
 						
-						var options = {
-							callback: callback,
+						const host = this[doodad.HostSymbol];
+
+						const state = {ok: false};
+
+						const options = {
+							callback: doodad.Callback(this, function() {
+								callback && callback();
+								if (!state.ok) {
+									this.emit('drain');
+								};
+							}),
 							encoding: encoding,
 						};
 						
-						const host = this[doodad.HostSymbol];
-
 						try {
 							host.write(chunk, options);
 						} catch(ex) {
@@ -402,8 +414,9 @@ module.exports = {
 							};
 						};
 						
-						const ok = host.canWrite();
-						return ok;
+						state.ok = host.canWrite();
+
+						return state.ok;
 					}),
 					
 					end: doodad.PUBLIC(function end(/*optional*/chunk, /*optional*/encoding, /*optional*/callback) {
@@ -418,12 +431,12 @@ module.exports = {
 						};
 
 						if (callback) {
-							callback = new doodad.Callback(null, callback);
+							callback = doodad.Callback(null, callback);
 						};
 
 						const host = this[doodad.HostSymbol];
 
-						const writeEOFCb = new doodad.Callback(this, function _writeEOFCb(err) {
+						const writeEOFCb = doodad.Callback(this, function _writeEOFCb(err) {
 							if (err) {
 								if (callback) {
 									callback(err);
@@ -455,7 +468,7 @@ module.exports = {
 								};
 							};
 						} else {
-							const writeChunkCb = new doodad.Callback(this, function _writeChunkCb(err) {
+							const writeChunkCb = doodad.Callback(this, function _writeChunkCb(err) {
 								if (err) {
 									if (callback) {
 										callback(err);

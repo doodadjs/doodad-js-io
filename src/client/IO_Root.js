@@ -77,37 +77,37 @@ module.exports = {
 						this._super();
 					}),
 
-					__consumeData: doodad.PUBLIC(function __consumeData(data) {
-						if (!types.get(data, 'consumed', false)) {
-							data.consumed = true;
-
-							// Consumed
-							var callback = types.get(data.options, 'callback');
-							if (callback) {
-								callback();
-							};
-
-							if (data.raw === io.BOF) {
-								this.onBOF(new doodad.Event(data));
-							} else if (data.raw === io.EOF) {
-								this.onEOF(new doodad.Event(data));
-
-								this.unpipe();
-							};
-						};
-					}),
-
 					__pushInternal: doodad.PROTECTED(function(data, /*optional*/options) {
-						this.__consumeData(data);
+						var noEvents = types.get(options, 'noEvents', false);
+						if (!noEvents) {
+							this.__consumeData(data);
+						};
 					}),
 					
 					push: doodad.OVERRIDE(function push(data, /*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(data));
 
 						var prevent = false;
+
 						var noEvents = (this._implements(ioMixIns.Listener) && !this.isListening()) || types.get(options, 'noEvents', false);
 						if (!noEvents) {
 							prevent = this.__emitPushEvent(data);
+						};
+
+						var callback = types.get(options, 'callback');
+						if (callback) {
+							if (!data.options) {
+								data.options = {};
+							};
+							var dataCb = types.get(data.options, 'callback');
+							if (dataCb) {
+								data.options.callback = function() {
+									dataCb();
+									callback();
+								};
+							} else {
+								data.options.callback = callback;
+							};
 						};
 
 						if (prevent) {
@@ -129,9 +129,27 @@ module.exports = {
 					__pullInternal: doodad.PROTECTED(doodad.MUST_OVERRIDE()), // function(/*optional*/options) 
 					
 					pull: doodad.OVERRIDE(function(/*optional*/options) {
+						var callback = types.get(options, 'callback');
+
 						var data = this.__pullInternal(options);
 
 						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(data));
+
+						if (!data.options) {
+							data.options = {};
+						};
+						if (callback) {
+							var dataCb = !data.consumed && types.get(data.options, 'callback');
+							if (dataCb) {
+								data.options.callback = function() {
+									dataCb();
+									callback();
+								};
+							} else {
+								data.options.callback = callback;
+							};
+						};
+						data.consumed = false;
 
 						return data;
 					}),
@@ -154,25 +172,31 @@ module.exports = {
 						ev.preventDefault();
 						data.consumed = true; // Will be consumed later
 
-						var consumeCallback = new doodad.Callback(this, function consume() {
+						var eof = (data.raw === io.EOF);
+
+						var __consuyme = function consume() {
 							data.consumed = false;
 							this.__consumeData(data);
-						});
+						};
 
-						if (data.raw === io.EOF) {
+						if (eof) {
 							if (end) {
-								stream.write(io.EOF, {callback: consumeCallback});
+								stream.write(io.EOF, {callback: doodad.AsyncCallback(this, __consume)});
 							} else {
-								consumeCallback();
+								__consume.call(this);
 							};
+						} else if (data.raw instanceof io.Signal) {
+							__consume.call(this);
 						} else {
-							stream.write(data.valueOf(), types.extend({}, data.options, {callback: consumeCallback}));
+							stream.write(data.valueOf(), types.extend({}, data.options, {callback: doodad.AsyncCallback(this, __consume)}));
 						};
 					}),
 					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
 						var stream = ev.handlerData[0];
-						stream.flush(ev.data.options);
+						if (!stream.isDestroyed()) {
+							stream.flush(ev.data.options);
+						};
 					}),
 						
 					__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
@@ -304,7 +328,7 @@ module.exports = {
 						return this.__buffer.length;
 					}),
 
-					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
+					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {
 						var next = types.get(options, 'next', false),
 							buffer = this.__buffer;
 
@@ -318,16 +342,16 @@ module.exports = {
 							buffer.push(data);
 						};
 
-						this.__consumeData(data);
+						this._super(data, options);
 					}),
 					
 					__pullInternal: doodad.OVERRIDE(function __pullInternal(/*optional*/options) {
-						if (this.getCount() <= 0) {
-							throw new types.BufferOverflow();
-						};
-
 						var next = types.get(options, 'next', false),
 							buffer = this.__buffer;
+
+						if (buffer.length <= 0) {
+							throw new types.BufferOverflow();
+						};
 
 						var data;
 
@@ -376,7 +400,7 @@ module.exports = {
 					$TYPE_NAME: 'OutputStream',
 
 					canWrite: doodad.OVERRIDE(function canWrite() {
-						return (this.getCount() < this.options.bufferSize);
+						return this._super() && (this.getCount() < this.options.bufferSize);
 					}),
 
 					write: doodad.OVERRIDE(function write(raw, /*optional*/options) {
@@ -388,13 +412,7 @@ module.exports = {
 						if (ev.prevent) {
 							this.__consumeData(data);
 						} else {
-							if ((data.raw === io.EOF) && !this.canWrite()) {
-								this.onFlush.attachOnce(this, function() {
-									this.push(data);
-								});
-							} else {
-								this.push(data);
-							};
+							this.push(data);
 						};
 					}),
 				})));

@@ -74,29 +74,50 @@ module.exports = {
 					
 					__listening: doodad.PROTECTED(false),
 					__ended: doodad.PROTECTED(false),
-					
-					streamOnReadable: doodad.NODE_EVENT('readable', function streamOnReadable(context) {
-						if (this.stream.isPaused()) {
-							let chunk;
-							while (chunk = this.stream.read()) {
-								const data = this.transform({raw: chunk});
-								this.push(data);
-							};
-						};
-					}),
+					__waiting: doodad.PROTECTED(false),
 					
 					streamOnData: doodad.NODE_EVENT('data', function streamOnData(context, chunk) {
-						if (this.stream.isPaused()) {
-							return;
+						if (this.__waiting) {
+							throw new types.BufferOverflow();
 						};
 						const data = this.transform({raw: chunk});
-						this.push(data);
+						this.stream.pause();
+						this.__waiting = true;
+
+						const __endCb = doodad.AsyncCallback(this, function endCb() {
+							this.stopListening();
+						});
+
+						const __pushCb = doodad.AsyncCallback(this, function pushCb() {
+							const chunk = this.stream.read();
+							if (chunk) {
+								const data = this.transform({raw: chunk});
+								this.push(data, {callback: __pushCb});
+							} else if (this.__ended) {
+								this.__waiting = false;
+								const data = this.transform({raw: io.EOF});
+								this.push(data, {callback: __endCb});
+							} else {
+								this.__waiting = false;
+								this.stream.resume();
+							};
+						})
+
+						this.push(data, {callback: __pushCb});
 					}),
 					
 					streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
 						this.__ended = true;
-						const data = this.transform({raw: io.EOF});
-						this.push(data);
+						if (!this.__waiting) {
+							const __endCb = doodad.AsyncCallback(this, function endCb() {
+								if (this.getCount() === 0) {
+									this.stopListening();
+								};
+							});
+
+							const data = this.transform({raw: io.EOF});
+							this.push(data, {callback: __endCb});
+						};
 					}),
 
 					streamOnClose: doodad.NODE_EVENT('close', function streamOnClose(context) {
@@ -123,6 +144,13 @@ module.exports = {
 						_shared.setAttribute(this, 'stream', stream);
 					}),
 					
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
+
+						this.__ended = false;
+						this.__waiting = false;
+					}),
+
 					_read: doodad.REPLACE(nodejsIOInterfaces.IReadable, function _read(/*optional*/size) {
 						const host = this[doodad.HostSymbol];
 						return host.stream._read(size);
@@ -153,7 +181,6 @@ module.exports = {
 							
 							const stream = this.stream;
 							
-							this.streamOnReadable.attach(stream);
 							this.streamOnData.attach(stream);
 							this.streamOnEnd.attach(stream);
 							this.streamOnClose.attach(stream);
@@ -169,7 +196,6 @@ module.exports = {
 						if (this.__listening) {
 							this.__listening = false;
 							
-							this.streamOnReadable.clear();
 							this.streamOnData.clear();
 							this.streamOnEnd.clear();
 							this.streamOnClose.clear();
@@ -179,27 +205,6 @@ module.exports = {
 
 							this.onStopListening(new doodad.Event());
 						};
-					}),
-					
-					read: doodad.OVERRIDE(function read(/*optional*/options) {
-						const stream = this.stream;
-						
-						if (stream.isPaused()) {
-							// NOTE: According to the doc, Node.js Stream object should be in 'pause' mode before calling 'read'
-							// NOTE: When not in pause mode, event "data" is raised 
-							const size = types.get(options, 'size', undefined);
-							let raw = null;
-							if (types.isNothing(size)) {
-								raw = stream.read();
-							} else {
-								raw = stream.read(size);
-							};
-							if (!types.isNothing(raw)) {
-								this.push(raw, options);
-							};
-						};
-						
-						return this._super(options);
 					}),
 				}));
 				
@@ -277,8 +282,8 @@ module.exports = {
 						this.__lastWriteOk = true;
 					}),
 					
-					canWrite: doodad.REPLACE(function canWrite() {
-						return this.__lastWriteOk;
+					canWrite: doodad.OVERRIDE(function canWrite() {
+						return this._super() && this.__lastWriteOk;
 					}),
 
 					__writeToStream: doodad.PROTECTED(function __writeToStream(raw, /*optional*/callback) {
@@ -294,7 +299,7 @@ module.exports = {
 						ev.preventDefault();
 						data.consumed = true; // Will be consumed later
 
-						const consumeCallback = new doodad.Callback(this, function consume() {
+						const consumeCallback = doodad.Callback(this, function consume() {
 							data.consumed = false;
 							this.__consumeData(data);
 						});
@@ -368,7 +373,6 @@ module.exports = {
 					}),
 					
 					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-						//options = types.nullObject(options);
 						if (!this.__listening) {
 							this.__listening = true;
 							this.onListen(new doodad.Event());
@@ -382,18 +386,18 @@ module.exports = {
 						};
 					}),
 
-					onWrite: doodad.OVERRIDE(function onWrite(ev) {
-						const retval = this._super(ev);
-
-						ev.preventDefault();
-
-						let data = ev.data;
-
-						data = this.transform(data);
-						this.push(data);
-
-						return retval;
-					}),
+					//onWrite: doodad.OVERRIDE(function onWrite(ev) {
+					//	const retval = this._super(ev);
+					//
+					//	ev.preventDefault();
+					//
+					//	let data = ev.data;
+					//
+					//	data = this.transform({raw: (data.raw instanceof io.Signal ? data.raw : data.valueOf())});
+					//	this.push(data);
+					//
+					//	return retval;
+					//}),
 				}));
 
 
@@ -448,10 +452,12 @@ module.exports = {
 					onWrite: doodad.OVERRIDE(function onWrite(ev) {
 						const retval = this._super(ev);
 
-						ev.preventDefault();
-
 						const data = ev.data;
 
+						ev.preventDefault();
+						data.consumed = true;   // Will be consumed later
+
+						const eof = (data.raw === io.EOF);
 						const type = types.getType(this);
 						const Modes = type.$Modes;
 						const encoding = this.options.encoding;
@@ -462,52 +468,70 @@ module.exports = {
 							return value;
 						};
 
-						const url = this.__remaining + ((data.raw === io.EOF) ? '' : data.valueOf());
+						const url = this.__remaining + (eof ? '' : data.valueOf());
 						if (url.length > this.options.maxStringLength) {
 							throw new types.BufferOverflow("URL buffer exceeded maximum permitted length.");
 						};
+
+
 						const delimiters = /\=|\&/g;
+
 						let last = 0,
 							result;
 						while (result = delimiters.exec(url)) {
 							const chr = result[0];
 							if ((this.__mode === Modes.Value) && (chr === '=')) {
-								continue;
-							};
-							let value = url.slice(last, result.index);
-							value = decode(value);
-							this.push({
-								mode: this.__mode, 
-								Modes: Modes, 
-								text: value, 
-								valueOf: function() {
-									return this.text;
-								}
-							});
-							if (this.__mode === Modes.Key) {
-								this.__mode = Modes.Value;
+								// Character "=" in the value
 							} else {
-								this.__mode = Modes.Key;
-							};
-							last = result.index + chr.length;
-						};
-
-						if (data.raw === io.EOF) {
-							let value = url.slice(last);
-							if (value) {
-								value = decode(value);
-								this.push({
-									mode: this.__mode, 
+								const value = decode(url.slice(last, result.index));
+								const mode = this.__mode;
+								if (mode === Modes.Key) {
+									this.__mode = Modes.Value;
+								} else {
+									this.__mode = Modes.Key;
+								};
+								const section = {
+									mode: mode, 
 									Modes: Modes, 
 									text: value, 
 									valueOf: function() {
 										return this.text;
-									}
-								});
+									},
+								};
+								section.raw = section;
+								this.push(section, {noEvents: true});
+
+								last = delimiters.lastIndex;
 							};
-							this.push(data);
+						};
+
+						const remaining = url.slice(last);
+						if (remaining) {
+							const section = {
+								mode: this.__mode, 
+								Modes: Modes, 
+								text: decode(remaining), 
+								valueOf: function() {
+									return this.text;
+								},
+							};
+							section.raw = section;
+							this.push(section, {noEvents: true});
+						};
+
+						if (eof) {
+							const dta = this.transform({raw: io.EOF});
+							this.push(dta, {noEvents: true});
+						};
+
+						if (this.options.autoFlush) {
+							this.flush({callback: doodad.Callback(this, function() {
+								data.consumed = false;
+								this.__consumeData(data);
+							})});
 						} else {
-							this.__remaining = url.slice(last);
+							data.consumed = false;
+							this.__consumeData(data);
 						};
 
 						return retval;
@@ -522,15 +546,13 @@ module.exports = {
 					$TYPE_NAME: 'Base64DecoderStream',
 
 					__listening: doodad.PROTECTED(false),
-					__buffer: doodad.PROTECTED(null),
-					__bufferLength: doodad.PROTECTED(0),
-					__decoder: doodad.PROTECTED(null),
+					__remaining: doodad.PROTECTED(null),
 
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 
 						this.__listening = false;
-						this.__buffer = '';
+						this.__remaining = '';
 					}),
 
 					isListening: doodad.OVERRIDE(function isListening() {
@@ -538,7 +560,6 @@ module.exports = {
 					}),
 					
 					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-						//options = types.nullObject(options);
 						if (!this.__listening) {
 							this.__listening = true;
 							this.onListen(new doodad.Event());
@@ -561,8 +582,8 @@ module.exports = {
 							
 						const eof = (data.raw === io.EOF);
 
-						const buf = this.__buffer + (eof ? '' : data.valueOf().toString('ascii').replace(/\n|\r/gm, ''));
-						this.__buffer = '';
+						const buf = this.__remaining + (eof ? '' : data.valueOf().toString('ascii').replace(/\n|\r/gm, ''));
+						this.__remaining = '';
 
 						const bufLen = buf.length;
 						const chunkLen = (eof ? bufLen : (bufLen >> 2) << 2); // Math.floor(bufLen / 4) * 4
@@ -570,18 +591,19 @@ module.exports = {
 						if (chunkLen) {
 							const chunk = _shared.Natives.globalBuffer.from(buf.slice(0, chunkLen), 'base64');
 							if (chunkLen !== bufLen) {
-								this.__buffer = buf.slice(chunkLen);
+								this.__remaining = buf.slice(chunkLen);
 							};
 							this.push({
 								raw: chunk,
 								valueOf: function() {
 									return this.raw;
 								},
-							});
+							}, {noEvents: true});
 						};
 
 						if (eof) {
-							this.push(data);
+							const dta = this.transform({raw: io.EOF});
+							this.push(dta, {noEvents: true});
 						};
 
 						return retval;
@@ -600,6 +622,7 @@ module.exports = {
 					__headers: doodad.PROTECTED(null),
 					__inPart: doodad.PROTECTED(false),
 					__remaining: doodad.PROTECTED(null),
+					__parsing: doodad.PROTECTED(false),
 
 					__boundary: doodad.PROTECTED(null),
 
@@ -621,6 +644,7 @@ module.exports = {
 						this.__headersCompiled = false;
 						this.__inPart = false;
 						this.__remaining = null;
+						this.__parsing = false;
 					}),
 
 					isListening: doodad.OVERRIDE(function isListening() {
@@ -628,7 +652,6 @@ module.exports = {
 					}),
 					
 					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-						//options = types.nullObject(options);
 						if (!this.__listening) {
 							this.__listening = true;
 							this.onListen(new doodad.Event());
@@ -642,15 +665,23 @@ module.exports = {
 						};
 					}),
 
+					canWrite: doodad.OVERRIDE(function canWrite() {
+						return this._super() && !this.__parsing;
+					}),
+
 					onWrite: doodad.OVERRIDE(function onWrite(ev) {
 						const retval = this._super(ev);
 
-						ev.preventDefault();
+						if (this.__parsing) {
+							throw new types.BufferOverflow();
+						};
 
 						const data = ev.data;
-						const eof = (data.raw === io.EOF);
-						const result = this.__result;
 
+						ev.preventDefault();
+						data.consumed = true;  // Will be consumed later
+
+						const eof = (data.raw === io.EOF);
 						let buf = !eof && data.valueOf();
 						const remaining = this.__remaining;
 						if (remaining) {
@@ -663,88 +694,104 @@ module.exports = {
 							};
 						};
 
-						const parse = function parse(buf, start, /*optional*/end) {
-							if (types.isNothing(end)) {
-								end = buf.length;
-							};
-
-							if (!this.__headersCompiled) {
-								let index;
-								while ((start < end) && ((index = buf.indexOf(0x0A, start)) >= 0)) { // "\n"
-									if (index === start + 1) {
-										this.__headersCompiled = true;
-										this.push({raw: io.BOF, headers: this.__headers, valueOf: function() {this.raw;}});
-										start = index + 1;
-										break;
-									};
-									const str = buf.slice(start, index).toString('utf-8');  // Doing like Node.js (UTF-8). Normally it should be ASCII 7 bits.
-									const header = tools.split(str, ':', 2);
-									const name = tools.trim(header[0] || '');
-									const value = tools.trim(header[1] || '');
-									if (name) {
-										this.__headers[name] = value;
-									};
-									start = index + 1;
-								};
-							};
-
-							if ((start < end) && this.__headersCompiled) {
-								if ((start > 0) || (end < buf.length)) {
-									buf = buf.slice(start, end);
-								};
-								this.push({raw: buf, valueOf: function() {return this.raw}});
-								start = end;
-							};
-
-							return start;
-						};
-
 						if (buf) {
-							let pos = 0;
+							const __parseHeaders = function parseHeaders(buf, start, /*optional*/end) {
+								if (types.isNothing(end)) {
+									end = buf.length;
+								};
 
-							while (buf && (pos < buf.length)) {
+								if (!this.__headersCompiled) {
+									let index;
+									while ((start < end) && ((index = buf.indexOf(0x0A, start)) >= 0)) { // "\n"
+										if (index === start + 1) {
+											this.__headersCompiled = true;
+											start = index + 1;
+											const dta = this.transform({raw: io.BOF, headers: this.__headers});
+											this.push(dta, {noEvents: true});
+											break;
+										};
+										const str = buf.slice(start, index).toString('utf-8');  // Doing like Node.js (UTF-8). Normally it should be ASCII 7 bits.
+										const header = tools.split(str, ':', 2);
+										const name = tools.trim(header[0] || '');
+										const value = tools.trim(header[1] || '');
+										if (name) {
+											this.__headers[name] = value;
+										};
+										start = index + 1;
+									};
+								};
+
+								if ((start < end) && this.__headersCompiled) {
+									if ((start > 0) || (end < buf.length)) {
+										buf = buf.slice(start, end);
+									};
+									start = end;
+									const dta = this.transform({raw: buf});
+									this.push(dta, {noEvents: true});
+								};
+
+								return start;
+							};
+
+							let pos = 0;
+							while (pos < buf.length) {
 								const index = buf.indexOf(this.__boundary, pos);
 								if (index >= 0) {
 									if ((index + this.__boundary.length + 2) < buf.length) {
-										if (this.__inPart) {
-											const newPos = parse.call(this, buf, pos, index);
-											if (!this.__headersCompiled || (newPos < index)) {
-												break;
-											};
-											this.push({raw: io.EOF, valueOf: function() {return this.raw}});
-										};
+										let start = pos;
 										pos = index + this.__boundary.length;
-										if ((buf[pos] !== 0x0D) && (buf[pos + 1] !== 0x0A)) { // "\r\n"
-											// Latest boundary
-											pos += 2;
-											this.__inPart = false;
-											break;
-										};
+										const cr = buf[pos];
+										const lf = buf[pos + 1];
 										pos += 2;
-										this.__headers = {};
-										this.__headersCompiled = false;
-										this.__inPart = true;
+										if (this.__inPart) {
+											start = __parseHeaders.call(this, buf, start, index);
+											if (this.__headersCompiled && (start >= index)) {
+												const dta = this.transform({raw: io.EOF});
+												this.push(dta, {noEvents: true, callback: doodad.Callback(this, function() {
+													this.stopListening();
+												})});
+												this.__headers = types.nullObject();
+												this.__headersCompiled = false;
+												if ((cr !== 0x0D) && (lf !== 0x0A)) { // "\r\n"
+													// Latest boundary
+													this.__inPart = false;
+													break;
+												};
+											};
+										} else {
+											this.__inPart = true;
+										};
 									} else {
 										// Missing end of boundary data
 										break;
 									};
 								} else {
 									if (this.__inPart) {
-										pos = parse.call(this, buf, pos);
-									} else {
-										pos = buf.length;
+										__parseHeaders.call(this, buf, pos, null);
 									};
+									pos = buf.length;
 									break;
 								};
 							};
 
-							if (!eof && (pos < buf.length)) {
+							if (pos < buf.length) {
 								this.__remaining = (pos > 0 ? buf.slice(pos) : buf);
 							};
 						};
 
 						if (eof) {
-							this.push(data);
+							const dta = this.transform({raw: io.EOF});
+							this.push(dta, {noEvents: true});
+						};
+
+						if (this.options.autoFlush) {
+							this.flush(types.extend({}, this.options.autoFlushOptions, {callback: doodad.Callback(this, function() {
+								data.consumed = false;
+								this.__consumeData(data);
+							})}));
+						} else {
+							data.consumed = false;
+							this.__consumeData(data);
 						};
 
 						return retval;
