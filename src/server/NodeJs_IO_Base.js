@@ -130,8 +130,7 @@ module.exports = {
 						const eof = (data.raw === io.EOF);
 
 						if (destinations.length) {
-							// Will be consumed later
-							data.consumed = true;
+							data.delayed = true;	// Will be consumed later
 
 							const self = this;
 							const createWriteCb = function _createWriteCb(state) {
@@ -143,7 +142,6 @@ module.exports = {
 										this.__pipeWriting--;
 										if (this.__pipeWriting <= 0) {
 											this.__pipeWriting = 0;
-											data.consumed = false;
 											host.__consumeData(data);
 
 											if (eof) {
@@ -331,13 +329,16 @@ module.exports = {
 					
 					push: doodad.PUBLIC(function push(chunk, /*optional*/encoding) {
 						const host = this[doodad.HostSymbol];
-						host.push(chunk, {noEvents: true, encoding: encoding});
-						return true; // TODO: Return 'false' when buffer is full, before it raises an error
+						const data = host.transform({raw: chunk});
+						host.push(data, {encoding: encoding});
+						return (host.getCount() < host.options.bufferSize);
 					}),
 					
 					unshift: doodad.PUBLIC(function unshift(chunk) {
 						const host = this[doodad.HostSymbol];
-						return host.push(chunk, {next: true, noEvents: true});
+						const data = host.transform({raw: chunk});
+						host.push(data, {next: true});
+						return (host.getCount() < host.options.bufferSize);
 					}),
 					
 					wrap: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function wrap(stream)

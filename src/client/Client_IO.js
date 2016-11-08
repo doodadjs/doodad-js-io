@@ -146,44 +146,21 @@ module.exports = {
 							};
 							return data.text;
 						};
-						return data;
 					}),
 
 					onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(ev) {
-						try {
-							// Shows virtual keyboard on mobile phones and tablets.
-							if (this.element.focus) {
-								this.element.focus();
-							};
-						} catch(ex) {
-							if (ex instanceof types.ScriptInterruptedError) {
-								throw ex;
-							};
-							if (root.getOptions().debug) {
-								debugger;
-							};
-							this.onError(new doodad.ErrorEvent(ex));
+						// Shows virtual keyboard on mobile phones and tablets.
+						if (this.element.focus) {
+							this.element.focus();
 						};
 					})),
 					
 					onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT(['keydown', 'keypress'], function onJsKeyDown(ev) {
-						var prevent = false;
-						try {
-							if (this.__listening) {
-								var data = this.transform({raw: ev});
-								prevent = !this.push(data);
-							};
-							
-						} catch(ex) {
-							if (ex instanceof types.ScriptInterruptedError) {
-								throw ex;
-							};
-							if (root.getOptions().debug) {
-								debugger;
-							};
-							this.onError(new doodad.ErrorEvent(ex));
-						} finally {
-							if (prevent) {
+						if (this.__listening) {
+							var data = this.transform({raw: ev});
+							this.push(data);
+
+							if (data.consumed || data.delayed) {
 								ev.preventDefault();
 								return false;
 							};
@@ -419,6 +396,7 @@ module.exports = {
 				}));
 
 
+				// TODO : Test and debug
 				clientIO.REGISTER(io.InputStream.$extend(
 										mixIns.JsEvents,
 				{
@@ -433,7 +411,7 @@ module.exports = {
 
 					create: doodad.OVERRIDE(function create(file, /*optional*/options) {
 						if (!__Internal__.streamsSupported) {
-							throw new types.NotSupported("Streams are not supported.");
+							throw new types.NotSupported("Browser streams are not supported.");
 						};
 
 						if (root.DD_ASSERT) {
@@ -466,7 +444,8 @@ module.exports = {
 							this.onError(new doodad.ErrorEvent(this.__fileReader.error));
 							
 						} else {
-							this.push(this.__fileReader.result);
+							var data = this.transform({raw: this.__fileReader.result});
+							this.push(data);
 							
 							var encoding = types.get(this.options, 'encoding', null);
 
@@ -484,7 +463,8 @@ module.exports = {
 								};
 								
 							} else {
-								this.push(io.EOF);
+								var data = this.transform({raw: io.EOF});
+								this.push(data);
 							};
 						};
 					})),
@@ -502,15 +482,15 @@ module.exports = {
 							this.onJsLoadEnd.attach(this.__fileReader);
 							if (this.options.chunkSize >= this.__file.size) {
 								if (encoding) {
-									this.__fileReader.readAsText(this.__file, encoding)
+									this.__fileReader.readAsText(this.__file, encoding);
 								} else {
-									this.__fileReader.readAsArrayBuffer(this.__file)
+									this.__fileReader.readAsArrayBuffer(this.__file);
 								};
 							} else {
 								if (encoding) {
-									this.__fileReader.readAsText(this.__file.slice(0, this.options.chunkSize), encoding)
+									this.__fileReader.readAsText(this.__file.slice(0, this.options.chunkSize), encoding);
 								} else {
-									this.__fileReader.readAsArrayBuffer(this.__file.slice(0, this.options.chunkSize))
+									this.__fileReader.readAsArrayBuffer(this.__file.slice(0, this.options.chunkSize));
 								};
 							};
 							this.onListen(new doodad.Event());

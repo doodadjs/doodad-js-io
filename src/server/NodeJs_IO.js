@@ -80,30 +80,41 @@ module.exports = {
 						if (this.__waiting) {
 							throw new types.BufferOverflow();
 						};
-						const data = this.transform({raw: chunk});
-						this.stream.pause();
-						this.__waiting = true;
 
 						const __endCb = doodad.AsyncCallback(this, function endCb() {
 							this.stopListening();
 						});
 
-						const __pushCb = doodad.AsyncCallback(this, function pushCb() {
-							const chunk = this.stream.read();
-							if (chunk) {
-								const data = this.transform({raw: chunk});
-								this.push(data, {callback: __pushCb});
-							} else if (this.__ended) {
-								this.__waiting = false;
-								const data = this.transform({raw: io.EOF});
-								this.push(data, {callback: __endCb});
+						const __pushCb = doodad.Callback(this, function pushCb() {
+							if (this.__listening) {
+								const chunk = this.stream.read();
+								if (chunk) {
+									const data = this.transform({raw: chunk});
+									this.push(data, {callback: __pushCb});
+								} else {
+									this.__waiting = false;
+									if (this.__ended) {
+										const data = this.transform({raw: io.EOF}, {callback: __endCb});
+										this.push(data);
+									} else {
+										this.stream.resume();
+										this.streamOnData.attach(this.stream);
+									};
+								};
 							} else {
+								// Fully apply stopListening
 								this.__waiting = false;
-								this.stream.resume();
+								this.__listening = true;
+								this.stopListening();
 							};
 						})
 
-						this.push(data, {callback: __pushCb});
+						this.__waiting = true;
+						this.stream.pause();
+						this.streamOnData.clear();
+
+						const data = this.transform({raw: chunk}, {callback: __pushCb});
+						this.push(data);
 					}),
 					
 					streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
@@ -179,16 +190,18 @@ module.exports = {
 						if (!this.__listening) {
 							this.__listening = true;
 							
-							const stream = this.stream;
+							if (!this.__waiting) {
+								const stream = this.stream;
 							
-							this.streamOnData.attach(stream);
-							this.streamOnEnd.attach(stream);
-							this.streamOnClose.attach(stream);
-							this.streamOnError.attach(stream);
+								this.streamOnData.attach(stream);
+								this.streamOnEnd.attach(stream);
+								this.streamOnClose.attach(stream);
+								this.streamOnError.attach(stream);
 							
-							stream.resume();
+								stream.resume();
 
-							this.onListen(new doodad.Event());
+								this.onListen(new doodad.Event());
+							};
 						};
 					}),
 
@@ -196,14 +209,16 @@ module.exports = {
 						if (this.__listening) {
 							this.__listening = false;
 							
-							this.streamOnData.clear();
-							this.streamOnEnd.clear();
-							this.streamOnClose.clear();
-							this.streamOnError.clear();
+							if (!this.__waiting) {
+								this.streamOnData.clear();
+								this.streamOnEnd.clear();
+								this.streamOnClose.clear();
+								this.streamOnError.clear();
 							
-							this.stream.pause();
+								this.stream.pause();
 
-							this.onStopListening(new doodad.Event());
+								this.onStopListening(new doodad.Event());
+							};
 						};
 					}),
 				}));
@@ -297,10 +312,11 @@ module.exports = {
 						const hasCallback = !!types.get(data.options, 'callback');
 
 						ev.preventDefault();
-						data.consumed = true; // Will be consumed later
+						data.delayed = true; // Will be consumed later
 
 						const consumeCallback = doodad.Callback(this, function consume() {
-							data.consumed = false;
+							this.__emitFlushEvent(data);
+
 							this.__consumeData(data);
 						});
 
@@ -385,19 +401,6 @@ module.exports = {
 							this.onStopListening(new doodad.Event());
 						};
 					}),
-
-					//onWrite: doodad.OVERRIDE(function onWrite(ev) {
-					//	const retval = this._super(ev);
-					//
-					//	ev.preventDefault();
-					//
-					//	let data = ev.data;
-					//
-					//	data = this.transform({raw: (data.raw instanceof io.Signal ? data.raw : data.valueOf())});
-					//	this.push(data);
-					//
-					//	return retval;
-					//}),
 				}));
 
 
@@ -455,7 +458,6 @@ module.exports = {
 						const data = ev.data;
 
 						ev.preventDefault();
-						data.consumed = true;   // Will be consumed later
 
 						const eof = (data.raw === io.EOF);
 						const type = types.getType(this);
@@ -490,6 +492,7 @@ module.exports = {
 								} else {
 									this.__mode = Modes.Key;
 								};
+								// TODO: Transform
 								const section = {
 									mode: mode, 
 									Modes: Modes, 
@@ -499,7 +502,7 @@ module.exports = {
 									},
 								};
 								section.raw = section;
-								this.push(section, {noEvents: true});
+								this.push(section);
 
 								last = delimiters.lastIndex;
 							};
@@ -507,6 +510,7 @@ module.exports = {
 
 						const remaining = url.slice(last);
 						if (remaining) {
+							// TODO: Transform
 							const section = {
 								mode: this.__mode, 
 								Modes: Modes, 
@@ -516,22 +520,16 @@ module.exports = {
 								},
 							};
 							section.raw = section;
-							this.push(section, {noEvents: true});
+							this.push(section);
 						};
 
 						if (eof) {
 							const dta = this.transform({raw: io.EOF});
-							this.push(dta, {noEvents: true});
+							this.push(dta);
 						};
 
-						if (this.options.autoFlush) {
-							this.flush({callback: doodad.Callback(this, function() {
-								data.consumed = false;
-								this.__consumeData(data);
-							})});
-						} else {
-							data.consumed = false;
-							this.__consumeData(data);
+						if (this.options.flushMode === 'half') {
+							this.flush(this.options.autoFlushOptions);
 						};
 
 						return retval;
@@ -593,17 +591,17 @@ module.exports = {
 							if (chunkLen !== bufLen) {
 								this.__remaining = buf.slice(chunkLen);
 							};
-							this.push({
-								raw: chunk,
-								valueOf: function() {
-									return this.raw;
-								},
-							}, {noEvents: true});
+							const dta = this.transform({raw: chunk});
+							this.push(dta);
 						};
 
 						if (eof) {
 							const dta = this.transform({raw: io.EOF});
-							this.push(dta, {noEvents: true});
+							this.push(dta);
+						};
+
+						if (this.options.flushMode === 'half') {
+							this.flush(this.options.autoFlushOptions);
 						};
 
 						return retval;
@@ -679,7 +677,6 @@ module.exports = {
 						const data = ev.data;
 
 						ev.preventDefault();
-						data.consumed = true;  // Will be consumed later
 
 						const eof = (data.raw === io.EOF);
 						let buf = !eof && data.valueOf();
@@ -707,7 +704,7 @@ module.exports = {
 											this.__headersCompiled = true;
 											start = index + 1;
 											const dta = this.transform({raw: io.BOF, headers: this.__headers});
-											this.push(dta, {noEvents: true});
+											this.push(dta);
 											break;
 										};
 										const str = buf.slice(start, index).toString('utf-8');  // Doing like Node.js (UTF-8). Normally it should be ASCII 7 bits.
@@ -727,7 +724,7 @@ module.exports = {
 									};
 									start = end;
 									const dta = this.transform({raw: buf});
-									this.push(dta, {noEvents: true});
+									this.push(dta);
 								};
 
 								return start;
@@ -747,9 +744,7 @@ module.exports = {
 											start = __parseHeaders.call(this, buf, start, index);
 											if (this.__headersCompiled && (start >= index)) {
 												const dta = this.transform({raw: io.EOF});
-												this.push(dta, {noEvents: true, callback: doodad.Callback(this, function() {
-													this.stopListening();
-												})});
+												this.push(dta);
 												this.__headers = types.nullObject();
 												this.__headersCompiled = false;
 												if ((cr !== 0x0D) && (lf !== 0x0A)) { // "\r\n"
@@ -781,17 +776,11 @@ module.exports = {
 
 						if (eof) {
 							const dta = this.transform({raw: io.EOF});
-							this.push(dta, {noEvents: true});
+							this.push(dta);
 						};
 
-						if (this.options.autoFlush) {
-							this.flush(types.extend({}, this.options.autoFlushOptions, {callback: doodad.Callback(this, function() {
-								data.consumed = false;
-								this.__consumeData(data);
-							})}));
-						} else {
-							data.consumed = false;
-							this.__consumeData(data);
+						if (this.options.flushMode === 'half') {
+							this.flush(this.options.autoFlushOptions);
 						};
 
 						return retval;

@@ -59,14 +59,14 @@ module.exports = {
 				// Basic implementations
 				//=====================================================
 				
-				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
+				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.BufferedStream.$extend(
 				{
 					$TYPE_NAME: 'Stream',
 
 					__pipes: doodad.PROTECTED(null),
 
-					create: doodad.OVERRIDE(function create(/*optional*/options) {
-						this._super(options);
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
 
 						this.__pipes = [];
 					}),
@@ -77,89 +77,18 @@ module.exports = {
 						this._super();
 					}),
 
-					__pushInternal: doodad.PROTECTED(function(data, /*optional*/options) {
-						var noEvents = types.get(options, 'noEvents', false);
-						if (!noEvents) {
-							this.__consumeData(data);
-						};
-					}),
-					
-					push: doodad.OVERRIDE(function push(data, /*optional*/options) {
-						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(data));
-
-						var prevent = false;
-
-						var noEvents = (this._implements(ioMixIns.Listener) && !this.isListening()) || types.get(options, 'noEvents', false);
-						if (!noEvents) {
-							prevent = this.__emitPushEvent(data);
-						};
-
-						var callback = types.get(options, 'callback');
-						if (callback) {
-							if (!data.options) {
-								data.options = {};
-							};
-							var dataCb = types.get(data.options, 'callback');
-							if (dataCb) {
-								data.options.callback = function() {
-									dataCb();
-									callback();
-								};
-							} else {
-								data.options.callback = callback;
-							};
-						};
-
-						if (prevent) {
-							this.__consumeData(data);
-						} else {
-							if (this.options.autoFlush) {
-								if (this.getCount() + 1 >= this.options.bufferSize) {
-									this.__pushInternal(data, options);
-									this.flush(this.options.autoFlushOptions);
-								} else {
-									this.__pushInternal(data, options);
-								};
-							} else {
-								this.__pushInternal(data, options);
-							};
-						};
-					}),
-					
-					__pullInternal: doodad.PROTECTED(doodad.MUST_OVERRIDE()), // function(/*optional*/options) 
-					
-					pull: doodad.OVERRIDE(function(/*optional*/options) {
-						var callback = types.get(options, 'callback');
-
-						var data = this.__pullInternal(options);
-
-						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(data));
-
-						if (!data.options) {
-							data.options = {};
-						};
-						if (callback) {
-							var dataCb = !data.consumed && types.get(data.options, 'callback');
-							if (dataCb) {
-								data.options.callback = function() {
-									dataCb();
-									callback();
-								};
-							} else {
-								data.options.callback = callback;
-							};
-						};
-						data.consumed = false;
-
-						return data;
-					}),
-
 					__pipeOnReady: doodad.PROTECTED(function __pipeOnReady(ev) {
 						var stream = ev.handlerData[0],
 							transform = ev.handlerData[1],
-							end = ev.handlerData[2],
-							data = ev.data;
-							
+							end = ev.handlerData[2];
+
+						if (stream.isDestroyed()) {
+							this.unpipe(stream);
+							return;
+						};
+
+						var data = ev.data;
+
 						if (transform) {
 							var retval = transform(data);
 							if (retval !== undefined) {
@@ -170,32 +99,37 @@ module.exports = {
 						var hasCallback = !!types.get(data.options, 'callback');
 
 						ev.preventDefault();
-						data.consumed = true; // Will be consumed later
+						data.delayed = true; // Will be consumed later
 
 						var eof = (data.raw === io.EOF);
 
-						var __consuyme = function consume() {
-							data.consumed = false;
+						var __consume = function consume() {
 							this.__consumeData(data);
 						};
 
+
 						if (eof) {
 							if (end) {
-								stream.write(io.EOF, {callback: doodad.AsyncCallback(this, __consume)});
+								var consumeCb = doodad.AsyncCallback(this, __consume);
+								stream.write(io.EOF, {callback: consumeCb});
 							} else {
 								__consume.call(this);
 							};
+
 						} else if (data.raw instanceof io.Signal) {
 							__consume.call(this);
 						} else {
-							stream.write(data.valueOf(), types.extend({}, data.options, {callback: doodad.AsyncCallback(this, __consume)}));
+							var consumeCb = doodad.AsyncCallback(this, __consume);
+							stream.write(data.valueOf(), types.extend({}, data.options, {callback: consumeCb}));
 						};
 					}),
 					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
 						var stream = ev.handlerData[0];
 						if (!stream.isDestroyed()) {
-							stream.flush(ev.data.options);
+							if (stream.options.flushMode !== 'manual') {
+								stream.flush(stream.options.autoFlushOptions);
+							};
 						};
 					}),
 						
@@ -302,90 +236,21 @@ module.exports = {
 				}))));
 
 
-				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.Stream.$extend(
-				{
-					$TYPE_NAME: 'BufferedStream',
-
-					__buffer: doodad.PROTECTED(null),
-
-					clearBuffer: doodad.PUBLIC(function clearBuffer() {
-						this.__buffer = [];
-					}),
-
-					reset: doodad.OVERRIDE(function reset() {
-						this._super();
-						
-						this.clearBuffer();
-					}),
-					
-					clear: doodad.OVERRIDE(function clear() {
-						this._super();
-
-						this.clearBuffer();
-					}),
-					
-					getCount: doodad.OVERRIDE(function getCount() {
-						return this.__buffer.length;
-					}),
-
-					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {
-						var next = types.get(options, 'next', false),
-							buffer = this.__buffer;
-
-						if (buffer.length >= this.options.bufferSize) {
-							throw new types.BufferOverflow();
-						};
-
-						if (next) {
-							buffer.unshift(data);
-						} else {
-							buffer.push(data);
-						};
-
-						this._super(data, options);
-					}),
-					
-					__pullInternal: doodad.OVERRIDE(function __pullInternal(/*optional*/options) {
-						var next = types.get(options, 'next', false),
-							buffer = this.__buffer;
-
-						if (buffer.length <= 0) {
-							throw new types.BufferOverflow();
-						};
-
-						var data;
-
-						if (next) {
-							data = buffer.pop();
-						} else {
-							data = buffer.shift();
-						};
-
-						return data;
-					}),
-				}))));
-
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
 									ioMixIns.InputStreamBase,
 				{
 					$TYPE_NAME: 'InputStream',
 
-					__emitPushEvent: doodad.OVERRIDE(function __emitPushEvent(data) {
-						var prevent = this._super(data);
+					__emitFlushEvent: doodad.OVERRIDE(function __emitFlushEvent(data) {
+						var ev = new doodad.Event(data);
 
-						if (!prevent) {
-							var ev = new doodad.Event(data);
+						this.onReady(ev);
 
-							this.onReady(ev);
-
-							prevent = ev.prevent;
-						};
-
-						return prevent;
+						return this._super(data) || ev.prevent;
 					}),
 
 					read: doodad.OVERRIDE(function read(/*optional*/options) {
-						if (this.getCount(options) > 0) {
+						if (this.getCount() > 0) {
 							return this.pull(options);
 						} else {
 							return null;
@@ -400,21 +265,28 @@ module.exports = {
 					$TYPE_NAME: 'OutputStream',
 
 					canWrite: doodad.OVERRIDE(function canWrite() {
-						return this._super() && (this.getCount() < this.options.bufferSize);
+						return !this.__flushing && (this.getCount() < this.options.bufferSize);
 					}),
 
 					write: doodad.OVERRIDE(function write(raw, /*optional*/options) {
 						var data = this.transform({raw: raw}, options);
-						
+
 						var ev = new doodad.Event(data);
 						this.onWrite(ev);
 
 						if (ev.prevent) {
-							this.__consumeData(data);
+							if (!data.delayed) {
+								this.__consumeData(data);
+							};
 						} else {
 							this.push(data);
+
+							if (this.options.flushMode === 'half') {
+								this.flush(this.options.autoFlushOptions);
+							};
 						};
 					}),
+
 				})));
 
 				
@@ -424,7 +296,6 @@ module.exports = {
 
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextTransformableBase.$extend(
 											ioMixIns.Stream,
-											mixIns.Creatable,
 				{
 					$TYPE_NAME: 'TextTransformable',
 					
@@ -454,8 +325,8 @@ module.exports = {
 						};
 					}),
 
-					create: doodad.OVERRIDE(function create(/*paramarray*/) {
-						this._super.apply(this, arguments);
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						this._super(options);
 						
 						types.getDefault(this.options, 'encoding', 'utf-8');
 
@@ -465,7 +336,7 @@ module.exports = {
 					}),
 					
 					transform: doodad.REPLACE(function transform(data, /*optional*/options) {
-						var encoding = types.get(options, 'encoding', this.options.encoding);
+						var encoding = types.getDefault(options, 'encoding', this.options.encoding);
 						if (encoding && _shared.Natives.windowTextDecoder && types.isTypedArray(data.raw)) {
 							var text = '';
 							if ((data.raw !== io.EOF) && (!this.__decoder || (this.__decoderEncoding !== encoding))) {
@@ -486,12 +357,12 @@ module.exports = {
 						};
 						
 						data.valueOf = function valueOf() {
-							return this.text;
+							if (this.raw instanceof io.Signal) {
+								return null;
+							} else {
+								return this.text;
+							};
 						};
-						
-						data.options = options;
-
-						return data;
 					}),
 					
 					clear: doodad.OVERRIDE(function clear() {

@@ -76,6 +76,7 @@ module.exports = {
 					
 					// Non-formatted text
 					readText: doodad.OVERRIDE(function readText(/*optional*/options) {
+						// TODO: Test
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
 						var text = null;
@@ -95,6 +96,7 @@ module.exports = {
 					
 					// Non-formatted text + newline
 					readLine: doodad.OVERRIDE(function readLine(/*optional*/options) {
+						// TODO: Test
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
 						var line = null;
@@ -116,7 +118,10 @@ module.exports = {
 									var remaining = line.slice(index + this.options.newLine.length);
 									line = line.slice(0, index);
 
-									remaining && this.push({raw: remaining, valueOf: function() {return this.raw;}}, {next: true, noEvents: true});
+									if (remaining) {
+										var dta = this.transform({raw: remaining});
+										this.push(dta, {next: true});
+									};
 
 									ok = true;	
 									break;
@@ -124,8 +129,11 @@ module.exports = {
 							};
 							
 							if (!ok) {
-								line && this.push({raw: line, valueOf: function() {return this.raw;}}, {next: true, noEvents: true});
-								line = null;
+								if (line) {
+									var dta = this.transform({raw: line});
+									this.push(dta, {next: true});
+									line = null;
+								};
 							};
 						};
 						
@@ -187,7 +195,7 @@ module.exports = {
 				//=====================================================
 				
 				io.REGISTER(doodad.BASE(doodad.Object.$extend(
-									ioMixIns.BufferedStream,
+									ioMixIns.Stream,
 				{
 					$TYPE_NAME: 'Stream',
 				})));
@@ -248,10 +256,12 @@ module.exports = {
 					
 					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {
 						var next = types.get(options, 'next', false),
-							buffer = this.__buffer,
-							value = data.valueOf();
+							buffer = this.__buffer;
 
-						if ((data.raw !== io.EOF) && types.isString(value)) {
+						var value = (data.raw !== io.EOF) && data.valueOf();
+						var newData = null;
+
+						if (types.isString(value)) {
 							var cls = types.getType(this),
 								bufferTypes = cls.$__bufferTypes;
 							
@@ -260,27 +270,29 @@ module.exports = {
 									itemValue = firstItem && firstItem.valueOf();
 									
 								if (!firstItem || (itemValue[0] !== bufferTypes.Html)) {
-									data = {raw: [bufferTypes.Html, value, false], valueOf: function() {return this.raw}};
+									newData = {raw: [bufferTypes.Html, value, false], options: data.options, valueOf: function() {return this.raw}};
 								} else {
 									itemValue[1] = value + firstItem[1];
-									data = null;
 								};
 							} else {
 								var lastItem = buffer[buffer.length - 1],
 									itemValue = lastItem && lastItem.valueOf();
 									
 								if (!lastItem || (itemValue[0] !== bufferTypes.Html)) {
-									data = {raw: [bufferTypes.Html, value, false], valueOf: function() {return this.raw}};
+									newData = {raw: [bufferTypes.Html, value, false], options: data.options, valueOf: function() {return this.raw}};
 								} else {
 									itemValue[1] += value;
-									data = null;
 								};
 							};
+						} else {
+							newData = data;
 						};
 
-						if (data) {
-							this._super(data, options);
+						if (newData) {
+							this._super(newData, options);
 						} else {
+							this.__consumeData(data);
+
 							this.overrideSuper();
 						};
 					}),
@@ -444,6 +456,8 @@ module.exports = {
 								callback();
 							};
 							
+							this.onFlush();
+
 							this.overrideSuper();
 							
 						} else {
@@ -484,11 +498,14 @@ module.exports = {
 							
 						var noOpenClose = types.get(options, 'noOpenClose', false);
 						
+						// TODO: Transform
 						!noOpenClose && this.push({raw: [bufferTypes.Open, tag, attrs], valueOf: function() {return this.raw;}});
 
+						// TODO: Transform
 						var streamData = {raw: [bufferTypes.Stream, stream], valueOf: function() {return this.raw;}};
 						this.push(streamData, pushOpts); // <--- Will get replaced on flush
 
+						// TODO: Transform
 						!noOpenClose && this.push({raw: [bufferTypes.Close, tag], valueOf: function() {return this.raw;}});
 						
 						stream.onWrite.attach(this, this.__streamOnWrite, 50, [streamData]);
@@ -514,6 +531,7 @@ module.exports = {
 						var cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
+						// TODO: Transform
 						this.push({raw: [bufferTypes.Open, tag, attrs], valueOf: function() {return this.raw;}});
 					}),
 					
@@ -525,6 +543,7 @@ module.exports = {
 						var cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
+						// TODO: Transform
 						this.push({raw: [bufferTypes.Close, tags.pop()[0]], valueOf: function() {return this.raw;}});
 					}),
 					
