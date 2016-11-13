@@ -135,14 +135,19 @@ module.exports = {
 							const self = this;
 							const createWriteCb = function _createWriteCb(state) {
 								return doodad.AsyncCallback(self, function _writeCb(err) { // async
+									this.__pipeWriting--;
 									if (err) {
 										state.ok = false;
-										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
+										if (!host.isDestroyed()) {
+											_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
+										};
 									} else if (state.ok) {
-										this.__pipeWriting--;
 										if (this.__pipeWriting <= 0) {
 											this.__pipeWriting = 0;
-											host.__consumeData(data);
+											
+											if (!host.isDestroyed()) {
+												host.__consumeData(data);
+											};
 
 											if (eof) {
 												this.emit('end');

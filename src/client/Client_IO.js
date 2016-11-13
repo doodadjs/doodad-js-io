@@ -158,11 +158,16 @@ module.exports = {
 					onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT(['keydown', 'keypress'], function onJsKeyDown(ev) {
 						if (this.__listening) {
 							var data = this.transform({raw: ev});
-							this.push(data);
 
-							if (data.consumed || data.delayed) {
+							var ev = new doodad.Event(data);
+							this.onKey(ev);
+
+							if (ev.prevent) {
+								//ev.getUnified().preventDefault();
 								ev.preventDefault();
 								return false;
+							} else {
+								this.push(data);
 							};
 						};
 					})),
@@ -328,6 +333,15 @@ module.exports = {
 						
 						return html;
 					}),
+
+					onReady: doodad.OVERRIDE(function onReady(ev) {
+						var retval = this._super(ev);
+
+						ev.preventDefault();
+
+						return retval;
+					}),
+
 					flush: doodad.OVERRIDE(function flush(/*optional*/options) {
 						this._super(options);
 

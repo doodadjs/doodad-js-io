@@ -181,6 +181,8 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextInput.$extend(
 				{
 					$TYPE_NAME: 'KeyboardInput',
+
+					onKey: doodad.EVENT(false),
 				})));
 
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.OutputStream.$extend(
@@ -363,7 +365,7 @@ module.exports = {
 							var stream = data[1];
 							state.idented = stream.options.identLines;
 							stream.flush();
-							stream.onWrite.detach(this);
+							stream.onData.detach(this);
 							html = this.handleBufferData(data, state);
 						} else if (type === state.bufferTypes.Flush) {
 							state.ignoreClose = true;
@@ -465,7 +467,7 @@ module.exports = {
 						};
 					}),
 					
-					__streamOnWrite: doodad.PROTECTED(function __streamOnWrite(ev) {
+					__streamOnData: doodad.PROTECTED(function __streamOnData(ev) {
 						if (!ev.data.options.flushElement) {
 							var cls = types.getType(this),
 								bufferTypes = cls.$__bufferTypes,
@@ -508,7 +510,7 @@ module.exports = {
 						// TODO: Transform
 						!noOpenClose && this.push({raw: [bufferTypes.Close, tag], valueOf: function() {return this.raw;}});
 						
-						stream.onWrite.attach(this, this.__streamOnWrite, 50, [streamData]);
+						stream.onData.attach(this, this.__streamOnData, 50, [streamData]);
 
 						return stream;
 					}),
@@ -579,7 +581,7 @@ module.exports = {
 						};
 					}),
 					
-					onWrite: doodad.OVERRIDE(function onWrite(ev) {
+					onData: doodad.OVERRIDE(function onData(ev) {
 						var retval = this._super(ev);
 
 						ev.preventDefault();
@@ -668,7 +670,7 @@ module.exports = {
 				{
 					$TYPE_NAME: 'NullOutputStream',
 					
-					onWrite: doodad.OVERRIDE(function onWrite(ev) {
+					onData: doodad.OVERRIDE(function onData(ev) {
 						ev.preventDefault();
 						return this._super(ev);
 					}),

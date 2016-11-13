@@ -162,7 +162,7 @@ module.exports = {
 							if (this._implements(ioMixIns.InputStreamBase)) {
 								this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
 							} else if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
+								this.onData.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
 							};
 							if (this._implements(ioMixIns.OutputStreamBase)) {
 								this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
@@ -198,7 +198,7 @@ module.exports = {
 								if (this._implements(ioMixIns.InputStreamBase)) {
 									this.onReady.detach(this, this.__pipeOnReady, [stream]);
 								} else if (this._implements(ioMixIns.OutputStreamBase)) {
-									this.onWrite.detach(this, this.__pipeOnReady, [stream]);
+									this.onData.detach(this, this.__pipeOnReady, [stream]);
 								};
 								if (this._implements(ioMixIns.OutputStreamBase)) {
 									this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
@@ -214,7 +214,7 @@ module.exports = {
 								this.onReady.detach(this, this.__pipeOnReady);
 							};
 							if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onWrite.detach(this, this.__pipeOnReady);
+								this.onData.detach(this, this.__pipeOnReady);
 								this.onFlush.detach(this, this.__pipeOnFlush);
 							};
 							tools.forEach(this.__pipes, function(stream) {
@@ -240,14 +240,6 @@ module.exports = {
 									ioMixIns.InputStreamBase,
 				{
 					$TYPE_NAME: 'InputStream',
-
-					__emitFlushEvent: doodad.OVERRIDE(function __emitFlushEvent(data) {
-						var ev = new doodad.Event(data);
-
-						this.onReady(ev);
-
-						return this._super(data) || ev.prevent;
-					}),
 
 					read: doodad.OVERRIDE(function read(/*optional*/options) {
 						if (this.getCount() > 0) {

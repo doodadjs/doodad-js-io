@@ -305,7 +305,7 @@ module.exports = {
 						return this.stream.write(raw, null, callback);
 					}),
 
-					onWrite: doodad.OVERRIDE(function onWrite(ev) {
+					onData: doodad.OVERRIDE(function onData(ev) {
 						const retval = this._super(ev);
 
 						const data = ev.data;
@@ -315,8 +315,6 @@ module.exports = {
 						data.delayed = true; // Will be consumed later
 
 						const consumeCallback = doodad.Callback(this, function consume() {
-							this.__emitFlushEvent(data);
-
 							this.__consumeData(data);
 						});
 

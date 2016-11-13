@@ -265,7 +265,7 @@ module.exports = {
 							if (this._implements(ioMixIns.InputStreamBase)) {
 								this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end, false]);
 							} else if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform, end, false]);
+								this.onData.attach(this, this.__pipeOnReady, null, [stream, transform, end, false]);
 							};
 							if (this._implements(ioMixIns.OutputStreamBase)) {
 								this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
@@ -283,7 +283,7 @@ module.exports = {
 								const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 								ireadable.pipe(stream);
 							} else if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onWrite.attach(this, this.__pipeOnReady, null, [stream, transform, end, true]);
+								this.onData.attach(this, this.__pipeOnReady, null, [stream, transform, end, true]);
 								this.__pipeNodeStreamOnError.attachOnce(stream);
 							} else {
 								throw new types.TypeError("'this' must implement 'Doodad.NodeJs.IO.Interfaces.IReadable' or 'ioMixIns.OutputStreamBase'.");
@@ -314,7 +314,7 @@ module.exports = {
 								if (this._implements(ioMixIns.InputStreamBase)) {
 									this.onReady.detach(this, this.__pipeOnReady, [stream]);
 								} else if (this._implements(ioMixIns.OutputStreamBase)) {
-									this.onWrite.detach(this, this.__pipeOnReady, [stream]);
+									this.onData.detach(this, this.__pipeOnReady, [stream]);
 								};
 								if (this._implements(ioMixIns.OutputStreamBase)) {
 									this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
@@ -329,7 +329,7 @@ module.exports = {
 									const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 									ireadable.unpipe(stream);
 								} else if (this._implements(ioMixIns.OutputStreamBase)) {
-									this.onWrite.detach(this, this.__pipeOnReady, [stream]);
+									this.onData.detach(this, this.__pipeOnReady, [stream]);
 								};
 								this.__pipeNodeStreamOnError.detach(stream);
 								this.__pipeNodeStreamOnDrain.detach(stream);
@@ -339,7 +339,7 @@ module.exports = {
 								this.onReady.detach(this, this.__pipeOnReady);
 							};
 							if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onWrite.detach(this, this.__pipeOnReady);
+								this.onData.detach(this, this.__pipeOnReady);
 								this.onFlush.detach(this, this.__pipeOnFlush);
 							};
 							if (this._implements(nodejsIOInterfaces.IReadable)) {
