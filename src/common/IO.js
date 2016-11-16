@@ -181,8 +181,6 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextInput.$extend(
 				{
 					$TYPE_NAME: 'KeyboardInput',
-
-					onKey: doodad.EVENT(false),
 				})));
 
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.OutputStream.$extend(

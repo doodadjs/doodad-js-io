@@ -73,6 +73,8 @@ module.exports = {
 				{
 					$TYPE_NAME: 'KeyboardInputStream',
 					
+					onKey: doodad.EVENT(false),
+
 					element: doodad.READ_ONLY(null),
 					
 					__listening: doodad.PROTECTED(false),
@@ -162,12 +164,12 @@ module.exports = {
 							var ev = new doodad.Event(data);
 							this.onKey(ev);
 
+							this.push(data);
+
 							if (ev.prevent) {
-								//ev.getUnified().preventDefault();
+								//ev.getUnified().preventDefault();  IE < 11
 								ev.preventDefault();
 								return false;
-							} else {
-								this.push(data);
 							};
 						};
 					})),

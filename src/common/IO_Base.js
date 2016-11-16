@@ -124,15 +124,15 @@ module.exports = {
 				})));
 				
 
-				io.KeyboardFunctionKeys = types.freezeObject({
+				io.KeyboardFunctionKeys = types.freezeObject(types.nullObject({
 					Shift: 1,
 					Ctrl: 2,
 					Alt: 4,
 					Meta: 8,
-				});
+				}));
 				
 				// Source: http://www.cambiaresearch.com/articles/15/javascript-char-codes-key-codes
-				io.KeyboardScanCodes = types.freezeObject({
+				io.KeyboardScanCodes = types.freezeObject(types.nullObject({
 					Backspace: 8,
 					Tab: 9,
 					Enter: 13,
@@ -231,7 +231,7 @@ module.exports = {
 					BackSlash: 220,
 					CloseBraket: 221,
 					SingleQuote: 222,
-				});
+				}));
 				
 				ioInterfaces.REGISTER(doodad.ISOLATED(doodad.INTERFACE(doodad.Class.$extend(
 				{
