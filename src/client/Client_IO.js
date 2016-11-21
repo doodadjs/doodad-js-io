@@ -525,7 +525,7 @@ module.exports = {
 					}),
 				}));
 				
-				files.openFile = function openFile(url, /*optional*/options) {
+				files.ADD('openFile', function openFile(url, /*optional*/options) {
 					if (!__Internal__.streamsSupported) {
 						throw new types.NotSupported("Streams are not supported.");
 					};
@@ -564,7 +564,7 @@ module.exports = {
 							};
 						});
 					});
-				};
+				});
 
 
 				//===================================

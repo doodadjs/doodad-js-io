@@ -676,7 +676,7 @@ module.exports = {
 				
 				
 				
-				io.setStds = function setStds(stds) {
+				io.ADD('setStds', function setStds(stds) {
 					if (types.has(stds, 'stdin')) {
 						doodad.ASSERT && doodad.ASSERT(types._implements(stds.stdin, ioMixIns.InputStream), "");
 						__Internal__.stdin = stds.stdin;
@@ -694,7 +694,7 @@ module.exports = {
 						io.stdout = __Internal__.stdout;
 						io.stderr = __Internal__.stderr;
 					};
-				};
+				});
 
 				if (types.hasDefinePropertyEnabled()) {
 					types.defineProperty(io, 'stdin', {
