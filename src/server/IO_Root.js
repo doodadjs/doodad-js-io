@@ -463,7 +463,8 @@ module.exports = {
 					}),
 					
 					canWrite: doodad.OVERRIDE(function canWrite() {
-						return !this.__flushing && (this.getCount() < this.options.bufferSize);
+						//return !this.__flushing && (this.getCount() < this.options.bufferSize);
+						return (this.getCount() < this.options.bufferSize);
 					}),
 
 					write: doodad.OVERRIDE(function write(raw, /*optional*/options) {
