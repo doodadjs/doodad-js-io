@@ -305,7 +305,7 @@ module.exports = {
 						return this.stream.write(raw, null, callback);
 					}),
 
-					onData: doodad.OVERRIDE(function onData(ev) {
+					onReady: doodad.OVERRIDE(function onReady(ev) {
 						const retval = this._super(ev);
 
 						const data = ev.data;
@@ -326,13 +326,10 @@ module.exports = {
 								this.stream.end(consumeCallback); // async
 							//};
 						} else if (this.__lastWriteOk || hasCallback) {
-							let ok = false;
-							this.__lastWriteOk = ok = this.__writeToStream(data.valueOf(), function(ex) {
-								if (ok) {
-									consumeCallback();
-								};
-							});
-							if (!ok) {
+							const ok = this.__lastWriteOk = this.__writeToStream(data.valueOf());
+							if (ok) {
+								consumeCallback();
+							} else {
 								this.streamOnDrain.attachOnce(this.stream, {callback: consumeCallback}); // async
 							};
 						} else {
@@ -823,7 +820,7 @@ module.exports = {
 							stdin: new nodejsIO.TextInputStream({nodeStream: process.stdin}),
 						});
 					};
-					const stdout = new nodejsIO.TextOutputStream({nodeStream: process.stdout});
+					const stdout = new nodejsIO.TextOutputStream({nodeStream: process.stdout, flushMode: 'half', bufferSize: 1024});
 					io.setStds({
 						stdout: stdout,
 						stderr: ((process.stderr === process.stdout) ? stdout : new nodejsIO.TextOutputStream({nodeStream: process.stderr})),

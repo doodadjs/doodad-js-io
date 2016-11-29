@@ -731,8 +731,8 @@ module.exports = {
 				return function init(/*optional*/options) {
 					// NOTE: Every "std" must be a stream.
 					io.setStds({
-						stdout: (new io.ConsoleOutputStream({name: 'log'})),
-						stderr: (new io.ConsoleOutputStream({name: 'error'})),
+						stdout: (new io.ConsoleOutputStream({name: 'log', flushMode: 'half', bufferSize: 1024})),
+						stderr: (new io.ConsoleOutputStream({name: 'error', flushMode: 'half', bufferSize: 1024})),
 					});
 					
 					_shared.consoleHook = function consoleHook(level, message) {

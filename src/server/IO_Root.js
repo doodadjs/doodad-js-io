@@ -262,11 +262,7 @@ module.exports = {
 						const end = types.get(options, 'end', true);
 						const autoListen = types.get(options, 'autoListen', true);
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-							if (this._implements(ioMixIns.InputStreamBase)) {
-								this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end, false]);
-							} else if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onData.attach(this, this.__pipeOnReady, null, [stream, transform, end, false]);
-							};
+							this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end, false]);
 							if (this._implements(ioMixIns.OutputStreamBase)) {
 								this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
 							};
@@ -311,11 +307,7 @@ module.exports = {
 						};
 						if (stream) {
 							if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-								if (this._implements(ioMixIns.InputStreamBase)) {
-									this.onReady.detach(this, this.__pipeOnReady, [stream]);
-								} else if (this._implements(ioMixIns.OutputStreamBase)) {
-									this.onData.detach(this, this.__pipeOnReady, [stream]);
-								};
+								this.onReady.detach(this, this.__pipeOnReady, [stream]);
 								if (this._implements(ioMixIns.OutputStreamBase)) {
 									this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
 								};

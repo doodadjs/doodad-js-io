@@ -159,11 +159,7 @@ module.exports = {
 						var end = types.get(options, 'end', true);
 						var autoListen = types.get(options, 'autoListen', true);
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-							if (this._implements(ioMixIns.InputStreamBase)) {
-								this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
-							} else if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onData.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
-							};
+							this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
 							if (this._implements(ioMixIns.OutputStreamBase)) {
 								this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
 							};
@@ -194,15 +190,9 @@ module.exports = {
 							this.stopListening();
 						};
 						if (stream) {
-							if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-								if (this._implements(ioMixIns.InputStreamBase)) {
-									this.onReady.detach(this, this.__pipeOnReady, [stream]);
-								} else if (this._implements(ioMixIns.OutputStreamBase)) {
-									this.onData.detach(this, this.__pipeOnReady, [stream]);
-								};
-								if (this._implements(ioMixIns.OutputStreamBase)) {
-									this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
-								};
+							this.onReady.detach(this, this.__pipeOnReady, [stream]);
+							if (this._implements(ioMixIns.OutputStreamBase)) {
+								this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
 							};
 							stream.onError.detach(this, this.__pipeStreamOnError);
 							if (stream._implements(ioMixIns.Listener)) {
@@ -210,17 +200,12 @@ module.exports = {
 								stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
 							};
 						} else {
-							if (this._implements(ioMixIns.InputStreamBase)) {
-								this.onReady.detach(this, this.__pipeOnReady);
-							};
+							this.onReady.detach(this, this.__pipeOnReady);
 							if (this._implements(ioMixIns.OutputStreamBase)) {
-								this.onData.detach(this, this.__pipeOnReady);
 								this.onFlush.detach(this, this.__pipeOnFlush);
 							};
 							tools.forEach(this.__pipes, function(stream) {
-								if (types._implements(stream, ioMixIns.OutputStreamBase)) {
-									stream.onError.detach(this, this.__pipeStreamOnError);
-								};
+								stream.onError.detach(this, this.__pipeStreamOnError);
 								if (types._implements(stream, ioMixIns.Listener)) {
 									stream.onListen.detach(this, this.__pipeStreamOnListen);
 									stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);

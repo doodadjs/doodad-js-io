@@ -396,7 +396,7 @@ module.exports = {
 						const options = {
 							callback: doodad.Callback(this, function() {
 								callback && callback();
-								if (!state.ok) {
+								if (!state.ok && (host.getCount() === 0)) {
 									this.emit('drain');
 								};
 							}),

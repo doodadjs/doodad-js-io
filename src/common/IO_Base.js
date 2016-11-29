@@ -704,7 +704,7 @@ module.exports = {
 										this.onReady(ev);
 
 										if (ev.prevent) {
-											if (data.delayed) {
+											if (!data.consumed && data.delayed) {
 												state.delayed = true;
 												break;
 											} else {
