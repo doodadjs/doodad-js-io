@@ -457,9 +457,11 @@ module.exports = {
 						
 						if (types.isNothing(chunk)) {
 							try {
-								host.write(io.EOF, {
-									callback: writeEOFCb,
-								});
+								host.flush({callback: function() {
+									host.write(io.EOF, {
+										callback: writeEOFCb,
+									});
+								}});
 							} catch(ex) {
 								if (ex.critical) {
 									throw ex;
@@ -482,9 +484,11 @@ module.exports = {
 										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 									};
 								} else {
-									host.write(io.EOF, {
-										callback: writeEOFCb,
-									});
+									host.flush({callback: function() {
+										host.write(io.EOF, {
+											callback: writeEOFCb,
+										});
+									}});
 								};
 							});
 							try {
