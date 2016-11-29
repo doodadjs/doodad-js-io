@@ -315,6 +315,7 @@ module.exports = {
 						data.delayed = true; // Will be consumed later
 
 						const consumeCallback = doodad.Callback(this, function consume() {
+							this.__lastWriteOk = true;
 							this.__consumeData(data);
 						});
 
