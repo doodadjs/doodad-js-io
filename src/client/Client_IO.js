@@ -218,7 +218,7 @@ module.exports = {
 				clientIO.REGISTER(io.HtmlOutputStream.$extend(
 				{
 					$TYPE_NAME: 'DocumentOutputStream',
-					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('DocumentOutputStream')), true) */,
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('DocumentOutputStream')), true) * /,
 					
 					document: doodad.READ_ONLY(null),
 					
