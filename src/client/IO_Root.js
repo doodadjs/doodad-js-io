@@ -62,6 +62,7 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.BufferedStream.$extend(
 				{
 					$TYPE_NAME: 'Stream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamMixInBase')), true) */,
 
 					__pipes: doodad.PROTECTED(null),
 
@@ -225,6 +226,7 @@ module.exports = {
 									ioMixIns.InputStreamBase,
 				{
 					$TYPE_NAME: 'InputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputStreamMixIn')), true) */,
 
 					read: doodad.OVERRIDE(function read(/*optional*/options) {
 						if (this.getCount() > 0) {
@@ -240,6 +242,7 @@ module.exports = {
 									ioMixIns.OutputStreamBase,
 				{
 					$TYPE_NAME: 'OutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamMixIn')), true) */,
 
 					canWrite: doodad.OVERRIDE(function canWrite() {
 						//return !this.__flushing && (this.getCount() < this.options.bufferSize);
@@ -276,6 +279,7 @@ module.exports = {
 											ioMixIns.Stream,
 				{
 					$TYPE_NAME: 'TextTransformable',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableMixIn')), true) */,
 					
 					__decoder: doodad.PROTECTED( null ),
 					__decoderEncoding: doodad.PROTECTED( null ),

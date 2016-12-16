@@ -52,6 +52,7 @@ module.exports = {
 				io.REGISTER(doodad.Class.$extend(
 				{
 					$TYPE_NAME: 'Signal',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('Signal')), true) */,
 
 					toString: doodad.REPLACE(function toString() {
 						return '';
@@ -62,12 +63,14 @@ module.exports = {
 				io.REGISTER(types.SINGLETON(io.Signal.$extend(
 				{
 					$TYPE_NAME: 'BOF',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BOFSingleton')), true) */,
 				})));
 				
 					
 				io.REGISTER(types.SINGLETON(io.Signal.$extend(
 				{
 					$TYPE_NAME: 'EOF',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('EOFSingleton')), true) */,
 				})));
 				
 					
@@ -78,6 +81,7 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.MIX_IN(doodad.Class.$extend(
 				{
 					$TYPE_NAME: 'Transformable',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TransformableMixIn')), true) */,
 					
 					transform: doodad.PUBLIC(doodad.CALL_FIRST(doodad.RETURNS(types.isJsObject, function transform(data, /*optional*/options) {
 						root.ASSERT && root.ASSERT(types.isJsObject(data));
@@ -105,6 +109,7 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.Transformable.$extend(
 				{
 					$TYPE_NAME: 'TextTransformableBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableBaseMixInBase')), true) */,
 					
 					$isValidEncoding: doodad.PUBLIC(doodad.TYPE(doodad.MUST_OVERRIDE())),
 				}))));
@@ -114,6 +119,7 @@ module.exports = {
 									mixIns.Events,
 				{
 					$TYPE_NAME: 'Listener',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ListenerMixIn')), true) */,
 					
 					onListen: doodad.EVENT(), // function(ev)
 					onStopListening: doodad.EVENT(), // function(ev)
@@ -236,6 +242,7 @@ module.exports = {
 				ioInterfaces.REGISTER(doodad.ISOLATED(doodad.INTERFACE(doodad.Class.$extend(
 				{
 					$TYPE_NAME: 'IConsole',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('IConsoleIsolated')), true) */,
 					
 					info: doodad.PUBLIC(doodad.METHOD()), //function info(raw, /*optional*/options)
 					warn: doodad.PUBLIC(doodad.METHOD()), //function warn(raw, /*optional*/options)
@@ -251,6 +258,7 @@ module.exports = {
 									ioMixIns.Transformable,
 				{
 					$TYPE_NAME: 'StreamBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamBaseMixIn')), true) */,
 
 					options: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
@@ -290,6 +298,7 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 				{
 					$TYPE_NAME: 'BufferedStreamBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedStreamBaseMixIn')), true) */,
 
 					onFlush: doodad.EVENT(false), // function(ev)
 
@@ -353,6 +362,7 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 				{
 					$TYPE_NAME: 'TextStreamBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextStreamBaseMixIn')), true) */,
 					
 					setOptions: doodad.OVERRIDE(function setOptions(options) {
 						this._super(options);
@@ -367,6 +377,7 @@ module.exports = {
 									ioMixIns.Listener,
 				{
 					$TYPE_NAME: 'InputStreamBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputStreamBaseMixIn')), true) */,
 
 					read: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					
@@ -389,6 +400,7 @@ module.exports = {
 									ioMixIns.TextStreamBase,
 				{
 					$TYPE_NAME: 'TextInputStreamBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamBaseMixIn')), true) */,
 					
 					// Non-formatted text
 					readText: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
@@ -427,6 +439,7 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 				{
 					$TYPE_NAME: 'OutputStreamBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamBaseMixIn')), true) */,
 
 					onWrite: doodad.EVENT(false),
 
@@ -464,6 +477,7 @@ module.exports = {
 									ioMixIns.TextStreamBase,
 				{
 					$TYPE_NAME: 'TextOutputStreamBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamBaseMixIn')), true) */,
 					
 					// Non-formatted text
 					writeText: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(text, /*optional*/options)
@@ -550,6 +564,7 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.BufferedStreamBase.$extend(
 				{
 					$TYPE_NAME: 'BufferedStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedStreamMixIn')), true) */,
 
 					onReady: doodad.EVENT(false), // function(ev)
 

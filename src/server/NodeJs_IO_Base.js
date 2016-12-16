@@ -59,6 +59,7 @@ module.exports = {
 				nodejsIOInterfaces.REGISTER(doodad.ISOLATED(doodad.MIX_IN(nodejsInterfaces.IEmitter.$extend(
 				{
 					$TYPE_NAME: 'IStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('IStreamIsolatedMixInNodeJs')), true) */,
 					
 					onclose: doodad.RAW_EVENT(),
 					onerror: doodad.RAW_EVENT(),
@@ -88,6 +89,7 @@ module.exports = {
 				nodejsIOInterfaces.REGISTER(doodad.ISOLATED(doodad.MIX_IN(nodejsIOInterfaces.IStream.$extend(
 				{
 					$TYPE_NAME: 'IReadable',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('IReadableIsolatedMixInNodeJs')), true) */,
 					
 					ondata: doodad.RAW_EVENT(),
 					onpause: doodad.RAW_EVENT(),
@@ -353,6 +355,7 @@ module.exports = {
 				nodejsIOInterfaces.REGISTER(doodad.ISOLATED(doodad.MIX_IN(nodejsIOInterfaces.IStream.$extend(
 				{
 					$TYPE_NAME: 'IWritable',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('IWritableIsolatedMixInNodeJs')), true) */,
 					
 					__defaultEncoding: doodad.PROTECTED(null),
 
@@ -515,12 +518,14 @@ module.exports = {
 									nodejsIOInterfaces.IWritable,
 				{
 					$TYPE_NAME: 'IDuplex',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('IDuplexIsolatedMixInNodeJs')), true) */,
 				}))));
 
 
 				nodejsIOInterfaces.REGISTER(doodad.ISOLATED(doodad.MIX_IN(nodejsIOInterfaces.IDuplex.$extend(
 				{
 					$TYPE_NAME: 'ITransform',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ITransformIsolatedMixInNodeJs')), true) */,
 					
 					// ????
 				}))));

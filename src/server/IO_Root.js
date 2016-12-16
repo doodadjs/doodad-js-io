@@ -71,6 +71,7 @@ module.exports = {
 								mixIns.NodeEvents,
 				{
 					$TYPE_NAME: 'Stream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamMixInBase')), true) */,
 
 					__pipes: doodad.PROTECTED(null),
 
@@ -364,6 +365,7 @@ module.exports = {
 									ioMixIns.InputStreamBase,
 				{
 					$TYPE_NAME: 'InputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputStreamMixIn')), true) */,
 
 					onReady: doodad.OVERRIDE(function onReady(ev) {
 						const retval = this._super(ev);
@@ -436,6 +438,7 @@ module.exports = {
 									ioMixIns.OutputStreamBase,
 				{
 					$TYPE_NAME: 'OutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamMixIn')), true) */,
 
 					//onWrite: doodad.OVERRIDE(function onWrite(ev) {
 					onEOF: doodad.OVERRIDE(function onEOF(ev) {
@@ -497,6 +500,7 @@ module.exports = {
 											ioMixIns.Stream,
 				{
 					$TYPE_NAME: 'TextTransformable',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableMixIn')), true) */,
 					
 					__transformEncoding: doodad.PROTECTED(  null  ),
 					__transformDecoder: doodad.PROTECTED(  null  ),

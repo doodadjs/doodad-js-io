@@ -69,6 +69,7 @@ module.exports = {
 										mixIns.NodeEvents,
 				{
 					$TYPE_NAME: 'BinaryInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryInputStreamNodeJs')), true) */,
 					
 					stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
@@ -229,6 +230,7 @@ module.exports = {
 									ioMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamNodeJs')), true) */,
 				}));
 				
 				
@@ -236,6 +238,7 @@ module.exports = {
 									mixIns.NodeEvents,
 				{
 					$TYPE_NAME: 'BinaryOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryOutputStreamNodeJs')), true) */,
 					
 					stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
@@ -358,6 +361,7 @@ module.exports = {
 									ioMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamNodeJs')), true) */,
 
 					__writeToStream: doodad.REPLACE(function __writeToStream(raw, /*optional*/callback) {
 						return this.stream.write(raw, this.options.encoding, callback);
@@ -371,6 +375,7 @@ module.exports = {
 									ioMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextDecoderStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextDecoderStreamNodeJs')), true) */,
 
 					__listening: doodad.PROTECTED(false),
 
@@ -405,6 +410,7 @@ module.exports = {
 									io.TextOutputStream,
 				{
 					$TYPE_NAME: 'UrlDecoderStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('UrlDecoderStreamNodeJs')), true) */,
 
 					__listening: doodad.PROTECTED(false),
 					__remaining: doodad.PROTECTED(null),
@@ -538,6 +544,7 @@ module.exports = {
 									io.OutputStream,
 				{
 					$TYPE_NAME: 'Base64DecoderStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('Base64DecoderStreamNodeJs')), true) */,
 
 					__listening: doodad.PROTECTED(false),
 					__remaining: doodad.PROTECTED(null),
@@ -610,6 +617,7 @@ module.exports = {
 									io.OutputStream,
 				{
 					$TYPE_NAME: 'FormMultipartDecoderStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('FormMultipartDecoderStreamNodeJs')), true) */,
 
 					__listening: doodad.PROTECTED(false),
 					__headersCompiled: doodad.PROTECTED(false),

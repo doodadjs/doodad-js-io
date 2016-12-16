@@ -61,6 +61,7 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
 				{
 					$TYPE_NAME: 'NestedStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('NestedStreamMixIn')), true) */,
 
 					openStream: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function openStream(/*optional*/options)
 				})));
@@ -73,6 +74,7 @@ module.exports = {
 									ioMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamMixIn')), true) */,
 					
 					// Non-formatted text
 					readText: doodad.OVERRIDE(function readText(/*optional*/options) {
@@ -146,6 +148,7 @@ module.exports = {
 									ioMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamMixInBase')), true) */,
 					
 					// Non-formatted text
 					writeText: doodad.OVERRIDE(function writeText(text, /*optional*/options) {
@@ -176,17 +179,20 @@ module.exports = {
 									ioMixIns.TextInputStream,
 				{
 					$TYPE_NAME: 'TextInput',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputMixIn')), true) */,
 				})));
 				
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextInput.$extend(
 				{
 					$TYPE_NAME: 'KeyboardInput',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('KeyboardInputMixIn')), true) */,
 				})));
 
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.OutputStream.$extend(
 									ioMixIns.TextOutputStream,
 				{
 					$TYPE_NAME: 'TextOutput',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputMixIn')), true) */,
 				})));
 				
 
@@ -198,36 +204,42 @@ module.exports = {
 									ioMixIns.Stream,
 				{
 					$TYPE_NAME: 'Stream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamBase')), true) */,
 				})));
 
 				io.REGISTER(doodad.BASE(io.Stream.$extend(
 									ioMixIns.InputStream,
 				{
 					$TYPE_NAME: 'InputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputStreamBase')), true) */,
 				})));
 				
 				io.REGISTER(doodad.BASE(io.Stream.$extend(
 									ioMixIns.OutputStream,
 				{
 					$TYPE_NAME: 'OutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamBase')), true) */,
 				})));
 				
 				io.REGISTER(doodad.BASE(io.InputStream.$extend(
 									ioMixIns.TextInput,
 				{
 					$TYPE_NAME: 'TextInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamBase')), true) */,
 				})));
 
 				io.REGISTER(io.OutputStream.$extend(
 									ioMixIns.TextOutput,
 				{
 					$TYPE_NAME: 'TextOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStream')), true) */,
 				}));
 				
 				io.REGISTER(io.TextOutputStream.$extend(
 									ioMixIns.NestedStream,
 				{
 					$TYPE_NAME: 'HtmlOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('HtmlOutputStream')), true) */,
 					
 					__tags: doodad.PROTECTED(null),
 					
@@ -558,6 +570,7 @@ module.exports = {
 									ioInterfaces.IConsole,
 				{
 					$TYPE_NAME: 'ConsoleOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ConsoleOutputStream')), true) */,
 					
 					__fn: doodad.PROTECTED(null),
 					
@@ -667,6 +680,7 @@ module.exports = {
 				io.REGISTER(io.OutputStream.$extend(
 				{
 					$TYPE_NAME: 'NullOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('NullOutputStream')), true) */,
 					
 					onData: doodad.OVERRIDE(function onData(ev) {
 						ev.preventDefault();

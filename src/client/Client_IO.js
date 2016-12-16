@@ -72,6 +72,7 @@ module.exports = {
 										mixIns.JsEvents,
 				{
 					$TYPE_NAME: 'KeyboardInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('KeyboardInputStream')), true) */,
 					
 					onKey: doodad.EVENT(false),
 
@@ -217,6 +218,7 @@ module.exports = {
 				clientIO.REGISTER(io.HtmlOutputStream.$extend(
 				{
 					$TYPE_NAME: 'DocumentOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('DocumentOutputStream')), true) */,
 					
 					document: doodad.READ_ONLY(null),
 					
@@ -263,6 +265,7 @@ module.exports = {
 				clientIO.REGISTER(io.HtmlOutputStream.$extend(
 				{
 					$TYPE_NAME: 'DomOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('DomOutputStream')), true) */,
 					
 					element: doodad.READ_ONLY(null),
 
@@ -417,6 +420,7 @@ module.exports = {
 										mixIns.JsEvents,
 				{
 					$TYPE_NAME: 'FileInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('FileInputStream')), true) */,
 					
 					__listening: doodad.PROTECTED(false),
 					__file: doodad.PROTECTED(null),
