@@ -421,10 +421,10 @@ module.exports = {
 						Value: 1,
 					}))),
 
-					create: doodad.OVERRIDE(function create(/*optional*/options) {
-						this._super(options);
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'maxStringLength', types.getIn(this.options, 'maxStringLength', 1024 * 1024 * 1));
 
-						types.getDefault(options, 'maxStringLength', 1024 * 1024 * 1);
+						this._super(options);
 					}),
 
 					reset: doodad.OVERRIDE(function reset() {
@@ -628,7 +628,7 @@ module.exports = {
 
 					__boundary: doodad.PROTECTED(null),
 
-					create: doodad.OVERRIDE(function create(/*optional*/options) {
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
 						this._super(options);
 					
 						if (!this.options.boundary) {

@@ -255,15 +255,19 @@ module.exports = {
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super(options);
 						
-						var printTag = types.getDefault(this.options, 'printTag', 'div'),
-							identStr = types.getDefault(this.options, 'identStr', '\t');
-						
-						if (root.DD_ASSERT) {
-							root.DD_ASSERT(types.isNothing(printTag) || types.isString(printTag), "Invalid print tag name.");
-							root.DD_ASSERT(types.isNothing(identStr) || types.isString(identStr), "Invalid print tag name.");
-						};
-						
 						this.__tags = [];
+					}),
+					
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'printTag', types.getIn(this.options, 'printTag', 'div')),
+						types.getDefault(options, 'identStr', types.getIn(this.options, 'identStr', '\t'));
+						
+						this._super(options);
+
+						if (root.DD_ASSERT) {
+							root.DD_ASSERT(types.isNothing(this.options.printTag) || types.isString(this.options.printTag), "Invalid print tag name.");
+							root.DD_ASSERT(types.isNothing(this.options.identStr) || types.isString(this.options.identStr), "Invalid indentation string.");
+						};
 					}),
 					
 					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {

@@ -175,17 +175,18 @@ module.exports = {
 						};
 					})),
 					
-					create: doodad.OVERRIDE(function create(/*optional*/options) {
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'element', types.getIn(this.options, 'element', global.document));
+
 						this._super(options);
-						
-						var element = types.get(this.options, 'element', global.document);
 
 						if (root.DD_ASSERT) {
-							root.DD_ASSERT(types.isNothing(element) || client.isElement(element) || client.isDocument(element), "Invalid element.");
+							root.DD_ASSERT(types.isNothing(this.options.element) || client.isElement(this.options.element) || client.isDocument(this.options.element), "Invalid element.");
 						};
 
-						_shared.setAttribute(this, 'element', element);
+						_shared.setAttribute(this, 'element', this.options.element);
 					}),
+
 					destroy: doodad.OVERRIDE(function destroy() {
 						this.stopListening();
 						
@@ -222,27 +223,28 @@ module.exports = {
 					
 					document: doodad.READ_ONLY(null),
 					
-					create: doodad.OVERRIDE(function create(/ *optional* /options) {
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'document', types.getIn(this.options, 'document', global.document)),
+						types.getDefault(options, 'mimeType', types.getIn(this.options, 'mimeType', 'text/html')),
+						types.getDefault(options, 'openNew', types.getIn(this.options, 'openNew', false)),
+						types.getDefault(options, 'replace', types.getIn(this.options, 'replace', false));
+						
 						this._super(options);
+
+						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(this.options.mimeType) || types.isString(this.options.mimeType), "Invalid mime type.");
+						root.DD_ASSERT && root.DD_ASSERT(client.isDocument(this.options.document), "Invalid document.");
 						
-						var _document = types.getDefault(this.options, 'document', global.document),
-							mimeType = types.getDefault(this.options, 'mimeType', 'text/html'),
-							openNew = types.getDefault(this.options, 'openNew', false),
-							replace = types.getDefault(this.options, 'replace', false);
-						
-						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(mimeType) || types.isString(mimeType), "Invalid mime type.");
-						root.DD_ASSERT && root.DD_ASSERT(client.isDocument(_document), "Invalid document.");
-						
-						if (openNew) {
-							if (replace) {
-								_document.open(mimeType, 'replace');
+						if (this.options.openNew) {
+							if (this.options.replace) {
+								this.options.document.open(this.options.mimeType, 'replace');
 							} else {
-								_document.open(mimeType);
+								this.options.document.open(this.options.mimeType);
 							};
 						};
 
-						_shared.setAttribute(this, 'document', _document);
+						_shared.setAttribute(this, 'document', this.options.document);
 					}),
+
 					destroy: doodad.OVERRIDE(function destroy() {
 						if (this.options.openNew) {
 							this.document.close();
@@ -271,16 +273,16 @@ module.exports = {
 
 					__div: doodad.PROTECTED(null),
 					
-					create: doodad.OVERRIDE(function create(/*optional*/options) {
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'element', types.getIn(this.options, 'element', global.document && global.document.body));
+						
 						this._super(options);
+
+						root.DD_ASSERT && root.DD_ASSERT(client.isElement(this.options.element), "Invalid element.");
 						
-						var element = types.getDefault(this.options, 'element', global.document && global.document.body);
+						this.__div = this.options.element.ownerDocument.createElement('div');
 						
-						root.DD_ASSERT && root.DD_ASSERT(client.isElement(element), "Invalid element.");
-						
-						this.__div = element.ownerDocument.createElement('div');
-						
-						_shared.setAttribute(this, 'element', element);
+						_shared.setAttribute(this, 'element', this.options.element);
 					}),
 					
 					prepareFlushState: doodad.OVERRIDE(function prepareFlushState(options) {
@@ -440,12 +442,15 @@ module.exports = {
 						
 						this._super(options);
 
-						var chunkSize = types.getDefault(this.options, 'chunkSize', 4096)
-						if (root.DD_ASSERT) {
-							root.DD_ASSERT(types.isInteger(chunkSize), "Invalid chunk size.");
-						};
-
 						this.__file = file;
+					}),
+
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'chunkSize', types.getIn(this.options, 'chunkSize', 4096));
+
+						this._super(options);
+
+						root.DD_ASSERT && root.DD_ASSERT(types.isInteger(this.options.chunkSize), "Invalid chunk size.");
 					}),
 					
 					destroy: doodad.OVERRIDE(function destroy() {
