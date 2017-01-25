@@ -308,10 +308,10 @@ module.exports = {
 					}),
 
 					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'encoding', types.getIn(this.options, 'encoding', 'utf-8'));
+
 						this._super(options);
 						
-						types.getDefault(this.options, 'encoding', 'utf-8');
-
 						if (!types.getType(this).$isValidEncoding(this.options.encoding)) {
 							throw new types.Error("Invalid encoding : '~0~'.", [this.options.encoding]);
 						};

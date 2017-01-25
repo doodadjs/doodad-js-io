@@ -272,8 +272,6 @@ module.exports = {
 						
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isJsObject(options), "Invalid options.");
 						
-						_shared.setAttribute(this, 'options', types.nullObject());
-						
 						if (types.isNothing(options)) {
 							this.setOptions({});
 						} else {
@@ -286,7 +284,7 @@ module.exports = {
 					setOptions: doodad.PUBLIC(function setOptions(options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(options), "Invalid options.");
 
-						types.extend(this.options, options);
+						_shared.setAttribute(this, 'options', types.freezeObject(types.nullObject({}, this.options, options)));
 					}),
 					
 					reset: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
@@ -305,12 +303,12 @@ module.exports = {
 					setOptions: doodad.OVERRIDE(function setOptions(options) {
 						types.getDefault(options, 'flushMode', types.getIn(this.options, 'flushMode', 'auto')); // 'auto', 'manual', 'half'
 						if (options.flushMode === 'auto') {
-							types.getDefault(options, 'bufferSize', 1);
+							types.getDefault(options, 'bufferSize', types.getIn(this.options, 'bufferSize', 1));
 						} else {
-							types.getDefault(options, 'bufferSize', 1024);
+							types.getDefault(options, 'bufferSize', types.getIn(this.options, 'bufferSize', 1024));
 						};
 
-						types.getDefault(options, 'autoFlushOptions', null);
+						types.getDefault(options, 'autoFlushOptions', types.getIn(this.options, 'autoFlushOptions', null));
 
 						this._super(options);
 					}),
@@ -365,11 +363,11 @@ module.exports = {
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextStreamBaseMixIn')), true) */,
 					
 					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'newLine', types.getIn(this.options, 'newLine', tools.getOS().newLine));
+
 						this._super(options);
 
-						var newLine = types.getDefault(this.options, 'newLine', tools.getOS().newLine);
-						
-						root.DD_ASSERT && root.DD_ASSERT(types.isString(newLine), "Invalid new line string.");
+						root.DD_ASSERT && root.DD_ASSERT(types.isString(this.options.newLine), "Invalid new line string.");
 					}),
 				})));
 				
