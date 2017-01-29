@@ -129,7 +129,7 @@ module.exports = {
 						if (this._implements(nodejsIOInterfaces.IStream)) {
 							const istream = this.getInterface(nodejsIOInterfaces.IStream);
 							_shared.setAttribute(istream, doodad.HostSymbol, null);
-							istream.destroy();
+							types.DESTROY(istream);
 						};
 
 						this._super();

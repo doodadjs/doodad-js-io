@@ -80,7 +80,7 @@ module.exports = {
 							this.destroyed = true;
 							this.close();
 							const host = this[doodad.HostSymbol];
-							host && host.destroy();
+							types.DESTROY(host);
 							tools.callAsync(this.emit, -1, this, ['destroy'], null, _shared.SECRET); // function must return before event
 						};
 					}),
