@@ -140,14 +140,14 @@ module.exports = {
 									this.__pipeWriting--;
 									if (err) {
 										state.ok = false;
-										if (!host.isDestroyed()) {
+										if (types.isInitialized(host)) {
 											_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 										};
 									} else if (state.ok) {
 										if (this.__pipeWriting <= 0) {
 											this.__pipeWriting = 0;
 											
-											if (!host.isDestroyed()) {
+											if (types.isInitialized(host)) {
 												host.__consumeData(data);
 											};
 
@@ -248,7 +248,9 @@ module.exports = {
 
 							state.errorCb = doodad.Callback(this, function _errorCb(err) {
 								this.unpipe(destination);
-								_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
+								if (types.isInitialized(host)) {
+									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
+								};
 							});
 							destination.once('error', state.errorCb);
 
@@ -449,10 +451,10 @@ module.exports = {
 							if (err) {
 								if (callback) {
 									callback(err);
-								} else {
+								} else if (types.isInitialized(host)) {
 									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 								};
-							} else if (!host.isDestroyed()) {
+							} else { //if (types.isInitialized(host)) {
 								callback && callback();
 								this.emit('finish');
 							};
@@ -483,15 +485,17 @@ module.exports = {
 								if (err) {
 									if (callback) {
 										callback(err);
-									} else {
+									} else if (types.isInitialized(host)) {
 										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
 									};
-								} else {
+								} else if (types.isInitialized(host)) {
 									host.flush({callback: function() {
 										host.write(io.EOF, {
 											callback: writeEOFCb,
 										});
 									}});
+								} else if (callback) {
+									callback(new types.NotAvailable("Object is destroyed."));
 								};
 							});
 							try {
