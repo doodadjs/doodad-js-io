@@ -437,6 +437,8 @@ module.exports = {
 						};
 
 						let remaining = this.__remaining;
+						this.__remaining = '';
+
 						const value = (eof ? '' : data.valueOf());
 						if ((remaining.length + value.length) > this.options.maxStringLength) {
 							throw new types.BufferOverflow("URL buffer exceeded maximum permitted length.");
@@ -495,7 +497,7 @@ module.exports = {
 							};
 							const dta = this.transform({raw: io.EOF});
 							this.push(dta);
-						} else {
+						} else if (remaining) {
 							this.__remaining = remaining;
 						};
 
@@ -763,7 +765,7 @@ module.exports = {
 
 
 				files.ADD('openFile', function openFile(path, /*optional*/options) {
-					path = _shared.urlParser(path, types.get(options, 'parseOptions'));
+					path = _shared.pathParser(path, types.get(options, 'parseOptions'));
 					
 					root.DD_ASSERT && root.DD_ASSERT((path instanceof files.Path) || ((path instanceof files.Url) && (path.protocol === 'file')), "Invalid path.")
 					
