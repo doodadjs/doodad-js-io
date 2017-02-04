@@ -370,42 +370,6 @@ module.exports = {
 				
 				
 				io.REGISTER(io.Stream.$extend(
-									io.InputStream,
-									io.OutputStream,
-									ioMixIns.TextTransformable,
-				{
-					$TYPE_NAME: 'TextDecoderStream',
-					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextDecoderStreamNodeJs')), true) */,
-
-					__listening: doodad.PROTECTED(false),
-
-					reset: doodad.OVERRIDE(function reset() {
-						this._super();
-
-						this.__listening = false;
-					}),
-
-					isListening: doodad.OVERRIDE(function isListening() {
-						return this.__listening;
-					}),
-					
-					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-						if (!this.__listening) {
-							this.__listening = true;
-							this.onListen(new doodad.Event());
-						};
-					}),
-					
-					stopListening: doodad.OVERRIDE(function stopListening() {
-						if (this.__listening) {
-							this.__listening = false;
-							this.onStopListening(new doodad.Event());
-						};
-					}),
-				}));
-
-
-				io.REGISTER(io.Stream.$extend(
 									io.TextInputStream,
 									io.TextOutputStream,
 				{
@@ -472,11 +436,13 @@ module.exports = {
 							return value;
 						};
 
-						const url = this.__remaining + (eof ? '' : data.valueOf());
-						if (url.length > this.options.maxStringLength) {
+						let remaining = this.__remaining;
+						const value = (eof ? '' : data.valueOf());
+						if ((remaining.length + value.length) > this.options.maxStringLength) {
 							throw new types.BufferOverflow("URL buffer exceeded maximum permitted length.");
 						};
 
+						const url = remaining + value;
 
 						const delimiters = /\=|\&/g;
 
@@ -489,11 +455,7 @@ module.exports = {
 							} else {
 								const value = decode(url.slice(last, result.index));
 								const mode = this.__mode;
-								if (mode === Modes.Key) {
-									this.__mode = Modes.Value;
-								} else {
-									this.__mode = Modes.Key;
-								};
+
 								// TODO: Transform
 								const section = {
 									mode: mode, 
@@ -506,28 +468,35 @@ module.exports = {
 								section.raw = section;
 								this.push(section);
 
+								if (mode === Modes.Key) {
+									this.__mode = Modes.Value;
+								} else {
+									this.__mode = Modes.Key;
+								};
+
 								last = delimiters.lastIndex;
 							};
 						};
 
-						const remaining = url.slice(last);
-						if (remaining) {
-							// TODO: Transform
-							const section = {
-								mode: this.__mode, 
-								Modes: Modes, 
-								text: decode(remaining), 
-								valueOf: function() {
-									return this.text;
-								},
-							};
-							section.raw = section;
-							this.push(section);
-						};
-
+						remaining = url.slice(last);
 						if (eof) {
+							if (remaining) {
+								// TODO: Transform
+								const section = {
+									mode: this.__mode, 
+									Modes: Modes, 
+									text: decode(remaining), 
+									valueOf: function() {
+										return this.text;
+									},
+								};
+								section.raw = section;
+								this.push(section);
+							};
 							const dta = this.transform({raw: io.EOF});
 							this.push(dta);
+						} else {
+							this.__remaining = remaining;
 						};
 
 						if (this.options.flushMode === 'half') {

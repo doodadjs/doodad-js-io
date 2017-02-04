@@ -691,8 +691,45 @@ module.exports = {
 						return this._super(ev);
 					}),
 				}));
+
 				
 				
+				io.REGISTER(io.Stream.$extend(
+									io.InputStream,
+									io.OutputStream,
+									ioMixIns.TextTransformable,
+				{
+					$TYPE_NAME: 'TextDecoderStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextDecoderStreamNodeJs')), true) */,
+
+					__listening: doodad.PROTECTED(false),
+
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
+
+						this.__listening = false;
+					}),
+
+					isListening: doodad.OVERRIDE(function isListening() {
+						return this.__listening;
+					}),
+					
+					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
+						if (!this.__listening) {
+							this.__listening = true;
+							this.onListen(new doodad.Event());
+						};
+					}),
+					
+					stopListening: doodad.OVERRIDE(function stopListening() {
+						if (this.__listening) {
+							this.__listening = false;
+							this.onStopListening(new doodad.Event());
+						};
+					}),
+				}));
+
+
 				
 				io.ADD('setStds', function setStds(stds) {
 					if (types.has(stds, 'stdin')) {
