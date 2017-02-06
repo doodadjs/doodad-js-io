@@ -154,7 +154,7 @@ module.exports = {
 					pipe: doodad.OVERRIDE(function pipe(stream, /*optional*/options) {
 						if (tools.indexOf(this.__pipes, stream) >= 0) {
 							// Stream already piped
-							return;
+							return stream;
 						};
 						var transform = types.get(options, 'transform');
 						var end = types.get(options, 'end', true);
@@ -176,6 +176,7 @@ module.exports = {
 							this.listen();
 						};
 						this.__pipes[this.__pipes.length] = stream;
+						return stream;
 					}),
 					
 					unpipe: doodad.OVERRIDE(function unpipe(/*optional*/stream) {
@@ -184,7 +185,7 @@ module.exports = {
 							pos = tools.indexOf(this.__pipes, stream);
 							if (pos < 0) {
 								// Stream not piped
-								return;
+								return this;
 							};
 						};
 						if (this._implements(ioMixIns.Listener)) {
@@ -218,6 +219,7 @@ module.exports = {
 						} else {
 							this.__pipes = [];
 						};
+						return this;
 					}),
 				}))));
 
