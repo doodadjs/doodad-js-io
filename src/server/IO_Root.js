@@ -164,8 +164,6 @@ module.exports = {
 							};
 						};
 
-						const hasCallback = !!types.get(data.options, 'callback');
-
 						ev.preventDefault();
 						data.delayed = true; // Will be consumed later
 
