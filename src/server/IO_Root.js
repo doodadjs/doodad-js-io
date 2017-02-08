@@ -175,18 +175,38 @@ module.exports = {
 
 
 						if (eof) {
-							if (end) {
-								if (isNodeJsStream) {
+							const value = data.valueOf();
+							if (isNodeJsStream) {
+								if (end) {
 									const consumeCb = doodad.Callback(this, __consume);
-									stream.end(consumeCb);
+									if (types.isNothing(value)) {
+										stream.end(consumeCb);
+									} else {
+										stream.end(value, consumeCb);
+									};
+								} else if (types.isNothing(value)) {
+									__consume.call(this);
 								} else {
-									const consumeCb = doodad.AsyncCallback(this, __consume);
-									stream.write(io.EOF, {callback: consumeCb});
+									const consumeCb = doodad.Callback(this, __consume);
+									stream.write(value, consumeCb);
 								};
 							} else {
-								__consume.call(this);
+								if (end) {
+									const consumeCb = doodad.AsyncCallback(this, __consume);
+									if (types.isNothing(value)) {
+										stream.write(io.EOF, {callback: consumeCb});
+									} else {
+										stream.write(value, {callback: doodad.Callback(this, function() {
+											stream.write(io.EOF, {callback: consumeCb});
+										})});
+									};
+								} else if (types.isNothing(value)) {
+									__consume.call(this);
+								} else {
+									const consumeCb = doodad.AsyncCallback(this, __consume);
+									stream.write(value, {callback: consumeCb});
+								};
 							};
-
 						} else if (data.raw instanceof io.Signal) {
 							__consume.call(this);
 						} else {
@@ -375,7 +395,11 @@ module.exports = {
 						if (ireadable) {
 							if (ev.data.raw === io.EOF) {
 								if (!ireadable.isPaused()) {
-									emitted = ireadable.emit('end');
+									const value = ev.data.valueOf();
+									if (!types.isNothing(value)) {
+										emitted = ireadable.emit('data', value) && !ireadable.isPaused();
+									};
+									emitted = ireadable.emit('end') || emitted;
 								};
 							} else {
 								emitted = ireadable.emit('data', ev.data.valueOf()) && !ireadable.isPaused();
@@ -542,60 +566,42 @@ module.exports = {
 						let encoding = types.getDefault(options, 'encoding', this.options.encoding);
 						let text = '';
 
-						if (nodeIConv) {
-							// iconv-lite
-							if (encoding && (this.__transformEncoding !== encoding)) {
-								if (this.__transformDecoder) {
-									text += this.__transformDecoder.end();
-									this.__transformDecoder = null;
-								};
-								this.__transformDecoder = nodeIConv.getDecoder(encoding);
-								this.__transformEncoding = encoding;
+						if (this.__transformEncoding !== encoding) {
+							if (this.__transformDecoder) {
+								text = this.__transformDecoder.end();
+								this.__transformDecoder = null;
 							};
-							if (data.raw === io.EOF) {
-								if (this.__transformDecoder) {
-									text += this.__transformDecoder.end();
-									this.__transformDecoder = null;
-								};
-							} else {
-								if (this.__transformDecoder && (types.isTypedArray(data.raw) || types.isBuffer(data.raw))) {
-									text += this.__transformDecoder.write(data.raw);
+							if (encoding) {
+								if (nodeIConv) {
+									// iconv-lite
+									this.__transformDecoder = nodeIConv.getDecoder(encoding);
+									this.__transformEncoding = encoding;
 								} else {
-									text += types.toString(data.raw);
-								};
-							};
-						} else {
-							// StringDecoder
-							if (encoding && (this.__transformEncoding !== encoding)) {
-								if (this.__transformDecoder) {
-									text = this.__transformDecoder.end();
-									this.__transformDecoder = null;
-								};
-								this.__transformDecoder = new nodeStringDecoder(encoding);
-								this.__transformEncoding = encoding;
-							};
-							if (data.raw === io.EOF) {
-								if (this.__transformDecoder) {
-									text += this.__transformDecoder.end();
-									this.__transformDecoder = null;
-								};
-							} else {
-								if (this.__transformDecoder && (types.isTypedArray(data.raw) || types.isBuffer(data.raw))) {
-									text += this.__transformDecoder.write(data.raw);
-								} else {
-									text += types.toString(data.raw);
+									// StringDecoder
+									this.__transformDecoder = new nodeStringDecoder(encoding);
+									this.__transformEncoding = encoding;
 								};
 							};
 						};
 
-						data.text = text;
+						if (data.raw === io.EOF) {
+							if (this.__transformDecoder) {
+								text += this.__transformDecoder.end();
+								this.__transformDecoder = null;
+							};
+							data.text = text;
+						} else if (!(data.raw instanceof io.Signal)) {
+							if (this.__transformDecoder && (types.isTypedArray(data.raw) || types.isBuffer(data.raw))) {
+								text += this.__transformDecoder.write(data.raw);
+							} else {
+								text += types.toString(data.raw);
+							};
+							data.text = text;
+						};
+
 
 						data.valueOf = function valueOf() {
-							if (this.raw instanceof io.Signal) {
-								return null;
-							} else {
-								return this.text;
-							};
+							return this.text || null;
 						};
 					}),
 					

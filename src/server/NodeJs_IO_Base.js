@@ -106,6 +106,7 @@ module.exports = {
 					readable: doodad.PUBLIC(true),
 					_readableState: doodad.PUBLIC({
 						flowing: true,
+						ended: false,
 					}),
 
 					close: doodad.OVERRIDE(function close() {
@@ -152,12 +153,24 @@ module.exports = {
 											};
 
 											if (eof) {
-												this.emit('end');
+												if (!this._readableState.ended) {
+													this.emit('end');
+													this._readableState.ended = true;
+												};
 											};
 										};
 									};
 								});
 							};
+
+							let encoding = null;
+							if (this._implements(ioMixIns.TextTransformable)) {
+								encoding = this.options.encoding;
+							} else {
+								encoding = this.__encoding;
+							};
+
+							const value = data.valueOf();
 
 							if (eof) {
 								// End
@@ -165,41 +178,41 @@ module.exports = {
 									this.__pipeWriting++;
 									state.ok = true;
 									if (state.endDestination) {
-										state.destination.end(createWriteCb(state));
-									} else {
+										if (types.isNothing(value)) {
+											state.destination.end(createWriteCb(state));
+										} else {
+											state.destination.end(value, createWriteCb(state));
+										};
+									} else if (types.isNothing(value)) {
 										createWriteCb(state)();
 									};
 								}, this);
+							};
 
-							} else if (!(data.raw instanceof io.Signal)) {
-								let encoding = null;
-								if (this._implements(ioMixIns.TextTransformable)) {
-									encoding = this.options.encoding;
-								} else {
-									encoding = this.__encoding;
-								};
-
+							if (!types.isNothing(value)) {
 								const globalState = {drainCount: 0};
 								tools.forEach(destinations, function(state) {
-									this.__pipeWriting++;
-									state.ok = state.destination.write(data.valueOf(), encoding, createWriteCb(state));
-									if (!state.ok) {
-										if (globalState.drainCount === 0) {
-											this.pause();
-										};
-										if (!state.drainCb) {
-											const drainFn = createWriteCb(state);
-											state.drainCb = doodad.Callback(this, function _drainCb() {
-												globalState.drainCount--;
-												state.ok = true;
-												state.drainCb = null;
-												drainFn();
-												if (globalState.drainCount <= 0) {
-													this.resume();
-												};
-											});
-											globalState.drainCount++;
-											state.destination.once('drain', state.drainCb);
+									if (!eof || !state.endDestination) {
+										this.__pipeWriting++;
+										state.ok = state.destination.write(value, encoding, createWriteCb(state));
+										if (!state.ok) {
+											if (globalState.drainCount === 0) {
+												this.pause();
+											};
+											if (!state.drainCb) {
+												const drainFn = createWriteCb(state);
+												state.drainCb = doodad.Callback(this, function _drainCb() {
+													globalState.drainCount--;
+													state.ok = true;
+													state.drainCb = null;
+													drainFn();
+													if (globalState.drainCount <= 0) {
+														this.resume();
+													};
+												});
+												globalState.drainCount++;
+												state.destination.once('drain', state.drainCb);
+											};
 										};
 									};
 								}, this);
@@ -278,15 +291,20 @@ module.exports = {
 						};
 						const host = this[doodad.HostSymbol];
 						const data = host.read();
-						if (data && (data.raw !== io.EOF)) {
-							return data.valueOf();
-						} else {
-							if (this.isPaused() && (data.raw === io.EOF)) {
-								// Must be Async (function must return before the event)
-								tools.callAsync(this.emit, -1, this, ['end'], null, _shared.SECRET);
+						if (data) {
+							const value = data.valueOf();
+							if (!types.isNothing(value)) {
+								return value;
 							};
-							return null;
 						};
+						if (this.isPaused()) {
+							// Must be Async (function must return before the event)
+							if (!this._readableState.ended) {
+								tools.callAsync(this.emit, -1, this, ['end'], null, _shared.SECRET);
+								this._readableState.ended = true;
+							};
+						};
+						return null;
 					}),
 					
 					resume: doodad.PUBLIC(function resume() {

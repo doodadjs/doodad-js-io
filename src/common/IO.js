@@ -81,19 +81,23 @@ module.exports = {
 						// TODO: Test
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
-						var text = null;
+						var text = '';
 						
 						var data;
 						
 						while (data = this.read(options)) {
+							var value = data.valueOf()
+
+							if (!types.isNothing(value)) {
+								text += value;
+							};
+
 							if (data.raw === io.EOF) {
 								break;
 							};
-							
-							text = (text || '') + data.valueOf();
 						};
 						
-						return text;
+						return text || null;
 					}),
 					
 					// Non-formatted text + newline
@@ -101,20 +105,24 @@ module.exports = {
 						// TODO: Test
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
-						var line = null;
+						var line = '';
 						
 						if (this.options.newLine) {
 							var ok = false,
 								data;
 							
 							while (data = this.read(options)) {
+								var value = data.valueOf();
+
+								if (!types.isNothing(value)) {
+									line += value;
+								};
+								
 								if (data.raw === io.EOF) {
 									ok = true;
 									break;
 								};
-								
-								line = (line || '') + data.valueOf();
-								
+
 								var index = tools.search(line, this.options.newLine);
 								if (index >= 0) {
 									var remaining = line.slice(index + this.options.newLine.length);
@@ -139,7 +147,7 @@ module.exports = {
 							};
 						};
 						
-						return line;
+						return line || null;
 					}),
 				})));
 
@@ -274,7 +282,7 @@ module.exports = {
 						var next = types.get(options, 'next', false),
 							buffer = this.__buffer;
 
-						var value = (data.raw !== io.EOF) && data.valueOf();
+						var value = data.valueOf();
 						var newData = null;
 
 						if (types.isString(value)) {
@@ -485,12 +493,13 @@ module.exports = {
 						if (!ev.data.options.flushElement) {
 							var cls = types.getType(this),
 								bufferTypes = cls.$__bufferTypes,
-								streamData = ev.handlerData[0];
+								streamData = ev.handlerData[0],
+								value = ev.data.valueOf();
 								
 							if (streamData.raw[0] === bufferTypes.Stream) {
-								streamData.raw = [bufferTypes.Html, (ev.data.raw === io.EOF ? '' : ev.data.valueOf()), ev.obj.options.identLines];
+								streamData.raw = [bufferTypes.Html, (types.isNothing(value) ? '' : value), ev.obj.options.identLines];
 							} else {
-								streamData.raw[1] += (ev.data.raw === io.EOF ? '' : ev.data.valueOf());
+								streamData.raw[1] += (types.isNothing(value) ? '' : value);
 							};
 						};
 					}),
@@ -601,9 +610,9 @@ module.exports = {
 
 						ev.preventDefault();
 
-						var data = ev.data;
-						if (data.raw !== io.EOF) {
-							global.console[this.__fn](data.valueOf());
+						var value = ev.data.valueOf();
+						if (!types.isNothing(value)) {
+							global.console[this.__fn](value);
 						};
 
 						return retval;

@@ -110,13 +110,22 @@ module.exports = {
 
 
 						if (eof) {
+							var value = data.valueOf();
 							if (end) {
 								var consumeCb = doodad.AsyncCallback(this, __consume);
-								stream.write(io.EOF, {callback: consumeCb});
-							} else {
+								if (types.isNothing(value)) {
+									stream.write(io.EOF, {callback: consumeCb});
+								} else {
+									stream.write(value, {callback: doodad.Callback(this, function() {
+										stream.write(io.EOF, {callback: consumeCb});
+									})});
+								};
+							} else if (types.isNothing(value)) {
 								__consume.call(this);
+							} else {
+								var consumeCb = doodad.AsyncCallback(this, __consume);
+								stream.write(value, {callback: consumeCb});
 							};
-
 						} else if (data.raw instanceof io.Signal) {
 							__consume.call(this);
 						} else {
@@ -323,29 +332,27 @@ module.exports = {
 						var encoding = types.getDefault(options, 'encoding', this.options.encoding);
 						if (encoding && _shared.Natives.windowTextDecoder && types.isTypedArray(data.raw)) {
 							var text = '';
-							if ((data.raw !== io.EOF) && (!this.__decoder || (this.__decoderEncoding !== encoding))) {
+							if (!(data.raw instanceof io.Signal) && (!this.__decoder || (this.__decoderEncoding !== encoding))) {
 								if (this.__decoder) {
 									text = this.__decoder.decode(null, {stream: false});
 								};
 								this.__decoder = new _shared.Natives.windowTextDecoder(encoding);
 								this.__decoderEncoding = encoding;
 							};
-							if ((data.raw === io.EOF) && this.__decoder) {
-								text += this.__decoder.decode(null, {stream: false});
-							} else {
-								text += this.__decoder.decode(data.raw, {stream: true});
+							if (this.__decoder) {
+								if (data.raw === io.EOF) {
+									text += this.__decoder.decode(null, {stream: false});
+								} else if (!(data.raw instanceof io.Signal)) {
+									text += this.__decoder.decode(data.raw, {stream: true});
+								};
 							};
 							data.text = text;
-						} else {
+						} else if (!(data.raw instanceof io.Signal)) {
 							data.text = types.toString(data.raw);
 						};
 						
 						data.valueOf = function valueOf() {
-							if (this.raw instanceof io.Signal) {
-								return null;
-							} else {
-								return this.text;
-							};
+							return this.text || null;
 						};
 					}),
 					

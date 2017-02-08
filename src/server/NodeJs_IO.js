@@ -323,11 +323,20 @@ module.exports = {
 						});
 
 						if (data.raw === io.EOF) {
+							const value = data.valueOf();
 							//if (this.stream.autoClose) {
 							//	this.stream.once('close', consumeCallback);
-							//	this.stream.end();
+							//	if (types.isNothing(value)) {
+							//		this.stream.end();
+							//	} else {
+							//		this.stream.end(value);
+							//	}
 							//} else {
-								this.stream.end(consumeCallback); // async
+								if (types.isNothing(value)) {
+									this.stream.end(consumeCallback); // async
+								} else {
+									this.stream.end(value, consumeCallback); // async
+								};
 							//};
 						} else if (this.__lastWriteOk || hasCallback) {
 							const ok = this.__lastWriteOk = this.__writeToStream(data.valueOf());
@@ -439,7 +448,7 @@ module.exports = {
 						let remaining = this.__remaining;
 						this.__remaining = '';
 
-						const value = (eof ? '' : data.valueOf());
+						const value = data.valueOf() || '';
 						if ((remaining.length + value.length) > this.options.maxStringLength) {
 							throw new types.BufferOverflow("URL buffer exceeded maximum permitted length.");
 						};
@@ -554,7 +563,8 @@ module.exports = {
 							
 						const eof = (data.raw === io.EOF);
 
-						const buf = this.__remaining + (eof ? '' : data.valueOf().toString('ascii').replace(/\n|\r/gm, ''));
+						const value = data.valueOf();
+						const buf = this.__remaining + (types.isNothing(value) ? '' : value.toString('ascii').replace(/\n|\r/gm, ''));
 						this.__remaining = '';
 
 						const bufLen = buf.length;
@@ -654,7 +664,7 @@ module.exports = {
 						ev.preventDefault();
 
 						const eof = (data.raw === io.EOF);
-						let buf = !eof && data.valueOf();
+						let buf = data.valueOf();
 						const remaining = this.__remaining;
 						if (remaining) {
 							this.__remaining = null;
