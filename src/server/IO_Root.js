@@ -101,7 +101,10 @@ module.exports = {
 						const retval = this._super(ev);
 						const istream = this.getInterface(nodejsIOInterfaces.IStream);
 						if (istream) {
-							istream.emit('error', ev.error);
+							const emitted = istream.emit('error', ev.error);
+							if (emitted) {
+								ev.error.trapped = true;
+							};
 						};
 						return retval;
 					}),
