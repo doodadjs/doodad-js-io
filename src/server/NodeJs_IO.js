@@ -114,8 +114,8 @@ module.exports = {
 						this.stream.pause();
 						this.streamOnData.clear();
 
-						const data = this.transform({raw: chunk}, {callback: __pushCb});
-						this.push(data);
+						const data = this.transform({raw: chunk});
+						this.push(data, {callback: __pushCb});
 					}),
 					
 					streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
@@ -434,6 +434,15 @@ module.exports = {
 
 						ev.preventDefault();
 
+						data.delayed = true;
+						const state = {count: 0};
+						const consumeCallback = doodad.AsyncCallback(this, function consume() {
+							state.count--;
+							if (state.count <= 0) {
+								this.__consumeData(data);
+							};
+						});
+
 						const eof = (data.raw === io.EOF);
 						const type = types.getType(this);
 						const Modes = type.$Modes;
@@ -477,7 +486,8 @@ module.exports = {
 									},
 								};
 								section.raw = section;
-								this.push(section);
+								state.count++;
+								this.push(section, {callback: consumeCallback});
 
 								if (mode === Modes.Key) {
 									this.__mode = Modes.Value;
@@ -502,10 +512,12 @@ module.exports = {
 									},
 								};
 								section.raw = section;
-								this.push(section);
+								state.count++;
+								this.push(section, {callback: consumeCallback});
 							};
 							const dta = this.transform({raw: io.EOF});
-							this.push(dta);
+							state.count++;
+							this.push(dta, {callback: consumeCallback});
 						} else if (remaining) {
 							this.__remaining = remaining;
 						};
@@ -560,6 +572,15 @@ module.exports = {
 						ev.preventDefault();
 
 						const data = ev.data;
+
+						data.delayed = true;
+						const state = {count: 0};
+						const consumeCallback = doodad.AsyncCallback(this, function consume() {
+							state.count--;
+							if (state.count <= 0) {
+								this.__consumeData(data);
+							};
+						});
 							
 						const eof = (data.raw === io.EOF);
 
@@ -576,12 +597,14 @@ module.exports = {
 								this.__remaining = buf.slice(chunkLen);
 							};
 							const dta = this.transform({raw: chunk});
-							this.push(dta);
+							state.count++;
+							this.push(dta, {callback: consumeCallback});
 						};
 
 						if (eof) {
 							const dta = this.transform({raw: io.EOF});
-							this.push(dta);
+							state.count++;
+							this.push(dta, {callback: consumeCallback});
 						};
 
 						if (this.options.flushMode === 'half') {
@@ -663,6 +686,15 @@ module.exports = {
 
 						ev.preventDefault();
 
+						data.delayed = true;
+						const state = {count: 0};
+						const consumeCallback = doodad.AsyncCallback(this, function consume() {
+							state.count--;
+							if (state.count <= 0) {
+								this.__consumeData(data);
+							};
+						});
+
 						const eof = (data.raw === io.EOF);
 						let buf = data.valueOf();
 						const remaining = this.__remaining;
@@ -689,7 +721,8 @@ module.exports = {
 											this.__headersCompiled = true;
 											start = index + 1;
 											const dta = this.transform({raw: io.BOF, headers: this.__headers});
-											this.push(dta);
+											state.count++;
+											this.push(dta, {callback: consumeCallback});
 											break;
 										};
 										const str = buf.slice(start, index).toString('utf-8');  // Doing like Node.js (UTF-8). Normally it should be ASCII 7 bits.
@@ -709,7 +742,8 @@ module.exports = {
 									};
 									start = end;
 									const dta = this.transform({raw: buf});
-									this.push(dta);
+									state.count++;
+									this.push(dta, {callback: consumeCallback});
 								};
 
 								return start;
@@ -729,7 +763,8 @@ module.exports = {
 											start = __parseHeaders.call(this, buf, start, index);
 											if (this.__headersCompiled && (start >= index)) {
 												const dta = this.transform({raw: io.EOF});
-												this.push(dta);
+												state.count++;
+												this.push(dta, {callback: consumeCallback});
 												this.__headers = types.nullObject();
 												this.__headersCompiled = false;
 												if ((cr !== 0x0D) && (lf !== 0x0A)) { // "\r\n"
@@ -761,7 +796,8 @@ module.exports = {
 
 						if (eof) {
 							const dta = this.transform({raw: io.EOF});
-							this.push(dta);
+							state.count++;
+							this.push(dta, {callback: consumeCallback});
 						};
 
 						if (this.options.flushMode === 'half') {
