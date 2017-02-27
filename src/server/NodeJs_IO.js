@@ -95,8 +95,8 @@ module.exports = {
 								} else {
 									this.__waiting = false;
 									if (this.__ended) {
-										const data = this.transform({raw: io.EOF}, {callback: __endCb});
-										this.push(data);
+										const data = this.transform({raw: io.EOF});
+										this.push(data, {callback: __endCb});
 									} else {
 										this.stream.resume();
 										this.streamOnData.attach(this.stream);
