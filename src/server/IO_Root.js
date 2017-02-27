@@ -103,7 +103,7 @@ module.exports = {
 						if (istream) {
 							const emitted = istream.emit('error', ev.error);
 							if (emitted) {
-								ev.error.trapped = true;
+								ev.preventDefault();
 							};
 						};
 						return retval;
