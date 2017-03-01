@@ -589,13 +589,13 @@ module.exports = {
 
 						if (data.raw === io.EOF) {
 							if (this.__transformDecoder) {
-								text += this.__transformDecoder.end();
+								text += this.__transformDecoder.end() || '';
 								this.__transformDecoder = null;
 							};
 							data.text = text;
 						} else if (!(data.raw instanceof io.Signal)) {
 							if (this.__transformDecoder && (types.isTypedArray(data.raw) || types.isBuffer(data.raw))) {
-								text += this.__transformDecoder.write(data.raw);
+								text += this.__transformDecoder.write(data.raw) || '';
 							} else {
 								text += types.toString(data.raw);
 							};
