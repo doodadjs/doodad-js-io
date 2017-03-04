@@ -745,7 +745,7 @@ module.exports = {
 									if (finished) {
 										this.__flushing = false;
 										callback && callback();
-										this.onFlush();
+										tools.callAsync(this.onFlush, -1, this);
 									} else {
 										// After each X data objects, we continue on another tick
 										__flushCbAsync();
@@ -762,7 +762,7 @@ module.exports = {
 						} else {
 							callback && callback();
 
-							this.onFlush(new doodad.Event());
+							tools.callAsync(this.onFlush, -1, this);
 						};
 					}),
 
