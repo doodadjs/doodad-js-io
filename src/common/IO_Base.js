@@ -686,69 +686,79 @@ module.exports = {
 
 						if (this.__flushing) {
 							 if (callback) {
-								this.onFlush.attachOnce(null, callback);
+								 this.onFlush.attachOnce(null, function(ev) {
+									 callback(null);
+								 });
 							};
 						} else if (listening && (count > 0)) {
-							var state = {count: 0, delayed: false};
+							var state = {count: 0, delayed: false, error: null};
 							var __flushCbSync, __flushCbAsync;
 							var __flush = function flush() {
 								var finished = false;
-								for (var i = 0; i < MAX_LOOP_COUNT; i++) {
-									if ((state.count++ < count) && (this.getCount() > 0)) {
-										var data = this.pull();
+								try {
+									for (var i = 0; i < MAX_LOOP_COUNT; i++) {
+										if ((state.count++ < count) && (this.getCount() > 0)) {
+											var data = this.pull();
 
-										var dataCb = types.get(data.options, 'callback');
+											var dataCb = types.get(data.options, 'callback');
 
-										if (state.count < count) {
-											if (!types.get(data, 'options')) {
-												data.options = {};
-											};
-											data.options.callback = function() {
-												dataCb && dataCb();
-												if (state.delayed) {
-													state.delayed = false;
-													__flushCbSync();
+											if (state.count < count) {
+												if (!types.get(data, 'options')) {
+													data.options = {};
+												};
+												data.options.callback = function () {
+													dataCb && dataCb();
+													if (state.delayed) {
+														state.delayed = false;
+														__flushCbSync();
+													};
 												};
 											};
-										};
 
-										var ev = new doodad.Event(data);
+											var ev = new doodad.Event(data);
 
-										this.onReady(ev);
+											this.onReady(ev);
 
-										if (ev.prevent) {
-											if (!data.consumed && data.delayed) {
-												state.delayed = true;
+											if (ev.prevent) {
+												if (!data.consumed && data.delayed) {
+													state.delayed = true;
+													break;
+												} else {
+													this.__consumeData(data);
+												};
+											} else {
+												if (!data.delayed && !data.consumed) {
+													data.options.callback = dataCb;
+													this.__pushInternal(data, { next: true });
+												} else {
+													// A consumed data object was about to be pushed back in the buffer ! Did you forget to call 'ev.preventDefault' ?
+													debugger;
+												};
+												finished = true;
 												break;
-											} else {
-												this.__consumeData(data);
 											};
+
 										} else {
-											if (!data.delayed && !data.consumed) {
-												data.options.callback = dataCb;
-												this.__pushInternal(data, {next: true});
-											} else {
-												// A consumed data object was about to be pushed back in the buffer ! Did you forget to call 'ev.preventDefault' ?
-												debugger;
-											};
 											finished = true;
 											break;
 										};
-
-									} else {
-										finished = true;
-										break;
 									};
-								};
 
-								if (!state.delayed) {
-									if (finished) {
-										this.__flushing = false;
-										callback && callback();
-										tools.callAsync(this.onFlush, -1, this);
-									} else {
+									if (!finished && !state.delayed) {
 										// After each X data objects, we continue on another tick
 										__flushCbAsync();
+									};
+								} catch (ex) {
+									state.error = ex;
+									finished = true;
+									throw ex;
+								} finally {
+									if (finished) {
+										this.__flushing = false;
+										callback && callback(state.error);
+										if (!state.error) {
+											tools.callAsync(this.onFlush, -1, this);
+										};
 									};
 								};
 							};
