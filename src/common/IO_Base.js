@@ -706,7 +706,7 @@ module.exports = {
 												if (!types.get(data, 'options')) {
 													data.options = {};
 												};
-												data.options.callback = function () {
+												data.options.callback = function continueFlush() {
 													dataCb && dataCb();
 													if (state.delayed) {
 														state.delayed = false;
@@ -755,7 +755,9 @@ module.exports = {
 								} finally {
 									if (finished) {
 										this.__flushing = false;
+
 										callback && callback(state.error);
+
 										if (!state.error) {
 											tools.callAsync(this.onFlush, -1, this);
 										};
@@ -763,10 +765,13 @@ module.exports = {
 								};
 							};
 
-							__flushCbSync = doodad.Callback(this, __flush);
-							__flushCbAsync = doodad.AsyncCallback(this, __flush);
+							__flushCbSync = doodad.Callback(this, __flush, true);
+							__flushCbAsync = doodad.AsyncCallback(this, __flush, function errorHandler(ex) {
+								this.onError(ex);
+							});
 
 							this.__flushing = true;
+
 							__flush.call(this);
 
 						} else {

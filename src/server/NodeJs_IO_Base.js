@@ -51,7 +51,8 @@ module.exports = {
 					nodejsIO = nodejs.IO,
 					nodejsIOMixIns = nodejsIO.MixIns,
 					nodejsIOInterfaces = nodejsIO.Interfaces;
-				
+
+
 				//=====================================================
 				// Interfaces (continued)
 				//=====================================================
@@ -62,7 +63,27 @@ module.exports = {
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('IStreamIsolatedMixInNodeJs')), true) */,
 					
 					onclose: doodad.RAW_EVENT(),
-					onerror: doodad.RAW_EVENT(),
+
+					onerror: doodad.RAW_ERROR_EVENT(function onerror(err) {
+						const host = this[doodad.HostSymbol];
+
+						let emitted = this._super(err);
+
+						if (emitted) {
+							err.trapped = true;
+						};
+
+						if (types.isInitialized(host) && types.isEntrant(host, 'onError')) {
+							const ev = new doodad.ErrorEvent(err);
+
+							_shared.invoke(host, 'onError', [ev], _shared.SECRET);
+
+							emitted = ev.error.trapped;
+						};
+
+						return !!emitted;
+					}),
+
 					ondestroy: doodad.RAW_EVENT(),
 
 					closed: doodad.PUBLIC(false),
@@ -135,19 +156,16 @@ module.exports = {
 						if (destinations.length) {
 							data.delayed = true;	// Will be consumed later
 
-							const self = this;
 							const createWriteCb = function _createWriteCb(state) {
-								return doodad.AsyncCallback(self, function _writeCb(err) { // async
+								return doodad.AsyncCallback(this, function _writeCb(err) { // async
 									this.__pipeWriting--;
 									if (err) {
 										state.ok = false;
-										if (types.isInitialized(host)) {
-											_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
-										};
+										this.emit('error', err);
 									} else if (state.ok) {
 										if (this.__pipeWriting <= 0) {
 											this.__pipeWriting = 0;
-											
+
 											if (types.isInitialized(host)) {
 												host.__consumeData(data);
 											};
@@ -160,6 +178,8 @@ module.exports = {
 											};
 										};
 									};
+								}, function errorHandler(err) {
+									this.emit('error', err);
 								});
 							};
 
@@ -179,28 +199,28 @@ module.exports = {
 									state.ok = true;
 									if (state.endDestination) {
 										if (types.isNothing(value)) {
-											state.destination.end(createWriteCb(state));
+											state.destination.end(createWriteCb.call(this, state));
 										} else {
-											state.destination.end(value, createWriteCb(state));
+											state.destination.end(value, createWriteCb.call(this, state));
 										};
 									} else if (types.isNothing(value)) {
-										createWriteCb(state)();
+										createWriteCb.call(this, state)();
 									};
 								}, this);
 							};
 
 							if (!types.isNothing(value)) {
 								const globalState = {drainCount: 0};
-								tools.forEach(destinations, function(state) {
+								tools.forEach(destinations, function forEachDestination(state) {
 									if (!eof || !state.endDestination) {
 										this.__pipeWriting++;
-										state.ok = state.destination.write(value, encoding, createWriteCb(state));
+										state.ok = state.destination.write(value, encoding, createWriteCb.call(this, state));
 										if (!state.ok) {
 											if (globalState.drainCount === 0) {
 												this.pause();
 											};
 											if (!state.drainCb) {
-												const drainFn = createWriteCb(state);
+												const drainFn = createWriteCb.call(this, state);
 												state.drainCb = doodad.Callback(this, function _drainCb() {
 													globalState.drainCount--;
 													state.ok = true;
@@ -260,9 +280,12 @@ module.exports = {
 							host.onReady.attach(this, this.__pipeOnReady);
 
 							state.errorCb = doodad.Callback(this, function _errorCb(err) {
-								this.unpipe(destination);
-								if (types.isInitialized(host)) {
-									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
+								try {
+									this.emit('error', err);
+								} catch (ex) {
+									throw ex;
+								} finally {
+									this.unpipe(destination);
 								};
 							});
 							destination.once('error', state.errorCb);
@@ -426,22 +449,7 @@ module.exports = {
 							encoding: encoding,
 						};
 						
-						try {
-							host.write(chunk, options);
-						} catch(ex) {
-							if (ex.critical) {
-								throw ex;
-							} else {
-								if (!ex.bubble) {
-									if (callback) {
-										callback(ex);
-									} else {
-										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(ex)], _shared.SECRET);
-									};
-								};
-								return false;
-							};
-						};
+						host.write(chunk, options);
 						
 						state.ok = host.canWrite();
 
@@ -469,8 +477,8 @@ module.exports = {
 							if (err) {
 								if (callback) {
 									callback(err);
-								} else if (types.isInitialized(host)) {
-									_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
+								} else {
+									this.emit('error', err);
 								};
 							} else { //if (types.isInitialized(host)) {
 								callback && callback();
@@ -479,32 +487,18 @@ module.exports = {
 						});
 						
 						if (types.isNothing(chunk)) {
-							try {
-								host.flush({callback: function() {
-									host.write(io.EOF, {
-										callback: writeEOFCb,
-									});
-								}});
-							} catch(ex) {
-								if (ex.critical) {
-									throw ex;
-								} else if (ex.bubble) {
-									// Do nothing
-								} else {
-									if (callback) {
-										callback(ex);
-									} else {
-										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(ex)], _shared.SECRET);
-									};
-								};
-							};
+							host.flush({callback: function() {
+								host.write(io.EOF, {
+									callback: writeEOFCb,
+								});
+							}});
 						} else {
 							const writeChunkCb = doodad.Callback(this, function _writeChunkCb(err) {
 								if (err) {
 									if (callback) {
 										callback(err);
-									} else if (types.isInitialized(host)) {
-										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
+									} else {
+										this.emit('error', err);
 									};
 								} else if (types.isInitialized(host)) {
 									host.flush({callback: function() {
@@ -516,21 +510,7 @@ module.exports = {
 									callback(new types.NotAvailable("Object is destroyed."));
 								};
 							});
-							try {
-								host.write(chunk, {encoding: encoding, callback: writeChunkCb});
-							} catch(ex) {
-								if (ex.critical) {
-									throw ex;
-								} else if (ex.bubble) {
-									// Do nothing
-								} else {
-									if (callback) {
-										callback(ex);
-									} else {
-										_shared.invoke(host, host.onError, [new doodad.ErrorEvent(err)], _shared.SECRET);
-									};
-								};
-							};
+							host.write(chunk, {encoding: encoding, callback: writeChunkCb});
 						};
 					}),
 				}))));

@@ -76,7 +76,21 @@ module.exports = {
 					__listening: doodad.PROTECTED(false),
 					__ended: doodad.PROTECTED(false),
 					__waiting: doodad.PROTECTED(false),
-					
+					__streamError: doodad.PROTECTED(false),
+
+					onError: doodad.OVERRIDE(function onError(ev) {
+						if (!this.__streamError) {
+							const emitted = this.stream.emit('error', ev.error);
+							if (emitted) {
+								ev.preventDefault();
+							}
+						};
+
+						const cancelled = this._super(ev);
+
+						return cancelled;
+					}),
+
 					streamOnData: doodad.NODE_EVENT('data', function streamOnData(context, chunk) {
 						if (this.__waiting) {
 							throw new types.BufferOverflow();
@@ -143,7 +157,16 @@ module.exports = {
 					}),
 					
 					streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
-						this.onError(new doodad.ErrorEvent(ex));
+						if (types.isEntrant(this, 'onError')) {
+							this.__streamError = true;
+							try {
+								this.onError(new doodad.ErrorEvent(ex));
+							} catch (ex) {
+								throw ex;
+							} finally {
+								this.__streamError = false;
+							};
+						};
 					}),
 					
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
@@ -161,6 +184,7 @@ module.exports = {
 
 						this.__ended = false;
 						this.__waiting = false;
+						this.__streamError = false;
 					}),
 
 					_read: doodad.REPLACE(nodejsIOInterfaces.IReadable, function _read(/*optional*/size) {
@@ -243,14 +267,37 @@ module.exports = {
 					stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
 					__lastWriteOk: doodad.PROTECTED(true),
+					__streamError: doodad.PROTECTED(false),
 					
+					onError: doodad.OVERRIDE(function onError(ev) {
+						if (!this.__streamError) {
+							const emitted = this.stream.emit('error', ev.error);
+							if (emitted) {
+								ev.preventDefault();
+							}
+						};
+
+						const cancelled = this._super(ev);
+
+						return cancelled;
+					}),
+
 					streamOnFinish: doodad.NODE_EVENT('finish', function streamOnFinish(context) {
 						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
 						iwritable.emit('finish');
 					}),
 					
 					streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
-						this.onError(new doodad.ErrorEvent(ex));
+						if (types.isEntrant(this, 'onError')) {
+							this.__streamError = true;
+							try {
+								this.onError(new doodad.ErrorEvent(ex));
+							} catch (ex) {
+								throw ex;
+							} finally {
+								this.__streamError = false;
+							};
+						};
 					}),
 					
 					streamOnDrain: doodad.NODE_EVENT('drain', function streamOnDrain(context, ex) {

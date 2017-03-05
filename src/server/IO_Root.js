@@ -99,13 +99,16 @@ module.exports = {
 
 					onError: doodad.OVERRIDE(function onError(ev) {
 						const retval = this._super(ev);
+
 						const istream = this.getInterface(nodejsIOInterfaces.IStream);
-						if (istream) {
-							const emitted = istream.emit('error', ev.error);
-							if (emitted) {
+						if (istream && types.isEntrant(istream, 'onerror')) {
+							const err = ev.error;
+							const emitted = istream.emit('error', err);
+							if (emitted || err.trapped) {
 								ev.preventDefault();
 							};
 						};
+
 						return retval;
 					}),
 
@@ -249,8 +252,13 @@ module.exports = {
 					}),
 						
 					__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
-						this.unpipe(ev.obj);
-						this.onError(ev);
+						try {
+							this.onError(ev);
+						} catch (ex) {
+							throw ex;
+						} finally {
+							this.unpipe(ev.obj);
+						};
 					}),
 
 					__pipeStreamOnListen: doodad.PROTECTED(function __pipeStreamOnListen(ev) {
