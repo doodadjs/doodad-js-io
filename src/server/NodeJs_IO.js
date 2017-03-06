@@ -80,10 +80,10 @@ module.exports = {
 
 					onError: doodad.OVERRIDE(function onError(ev) {
 						if (!this.__streamError) {
-							const emitted = this.stream.emit('error', ev.error);
+							const emitted = (this.stream.listenerCount('error') > 0) && this.stream.emit('error', ev.error);
 							if (emitted) {
 								ev.preventDefault();
-							}
+							};
 						};
 
 						const cancelled = this._super(ev);
@@ -271,7 +271,7 @@ module.exports = {
 					
 					onError: doodad.OVERRIDE(function onError(ev) {
 						if (!this.__streamError) {
-							const emitted = this.stream.emit('error', ev.error);
+							const emitted = (this.stream.listenerCount('error') > 0) && this.stream.emit('error', ev.error);
 							if (emitted) {
 								ev.preventDefault();
 							}
