@@ -97,21 +97,6 @@ module.exports = {
 						return this._super.apply(this, args);
 					}),
 
-					onError: doodad.OVERRIDE(function onError(ev) {
-						const retval = this._super(ev);
-
-						const istream = this.getInterface(nodejsIOInterfaces.IStream);
-						if (istream && types.isEntrant(istream, 'onerror')) {
-							const err = ev.error;
-							const emitted = istream.emit('error', err);
-							if (emitted || err.trapped) {
-								ev.preventDefault();
-							};
-						};
-
-						return retval;
-					}),
-
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 
