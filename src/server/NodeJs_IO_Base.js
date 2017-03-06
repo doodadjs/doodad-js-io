@@ -78,7 +78,9 @@ module.exports = {
 
 							_shared.invoke(host, 'onError', [ev], _shared.SECRET);
 
-							emitted = ev.error.trapped;
+							if (ev.error.trapped) {
+								emitted = true;
+							};
 						};
 
 						return !!emitted;
@@ -282,7 +284,7 @@ module.exports = {
 							state.errorCb = doodad.Callback(this, function _errorCb(err) {
 								try {
 									this.emit('error', err);
-								} catch (ex) {
+								} catch(ex) {
 									throw ex;
 								} finally {
 									this.unpipe(destination);
