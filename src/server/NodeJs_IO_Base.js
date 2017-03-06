@@ -73,13 +73,15 @@ module.exports = {
 							err.trapped = true;
 						};
 
-						if (types.isInitialized(host) && types.isEntrant(host, 'onError')) {
-							const ev = new doodad.ErrorEvent(err);
+						if (types.isInitialized(host)) {
+							if (types.isEntrant(host, 'onError') && (host.onError.getCount() > 0)) {
+								const ev = new doodad.ErrorEvent(err);
 
-							_shared.invoke(host, 'onError', [ev], _shared.SECRET);
+								_shared.invoke(host, 'onError', [ev], _shared.SECRET);
 
-							if (ev.error.trapped) {
-								emitted = true;
+								if (ev.error.trapped) {
+									emitted = true;
+								};
 							};
 						};
 
