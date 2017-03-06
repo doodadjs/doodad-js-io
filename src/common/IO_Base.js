@@ -262,6 +262,7 @@ module.exports = {
 
 					options: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
+					onDestroy: doodad.EVENT(false), // function(ev)
 					onError: doodad.ERROR_EVENT(), // function onError(ev)
 					onData: doodad.EVENT(false), // function(ev)
 					onBOF: doodad.EVENT(false), // function(ev)
@@ -279,6 +280,12 @@ module.exports = {
 						};
 
 						this.reset();
+					}),
+
+					destroy: doodad.OVERRIDE(function destroy(/*optional*/options) {
+						this.onDestroy();
+
+						this._super();
 					}),
 
 					setOptions: doodad.PUBLIC(function setOptions(options) {
@@ -339,17 +346,24 @@ module.exports = {
 						var Promise = types.getPromise();
 						var callback = types.get(options, 'callback');
 						return Promise.create(function flushAsyncPromise(resolve, reject) {
-							function errorHandler(ev) {
-								detach.call(this);
+							var errorHandler, destroyHandler;
+							var cleanup = function cleanup() {
+								this.onError.detach(this, errorHandler);
+								this.onDestroy.detach(this, destroyHandler);
+							};
+							errorHandler = function errorHandler(ev) {
+								cleanup.call(this);
 								ev.preventDefault();
 								reject(ev.error);
 							};
-							function detach() {
-								this.onError.detach(this, errorHandler);
+							destroyHandler = function destroyHandler(ev) {
+								cleanup.call(this);
+								reject(new types.Error("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
+							this.onDestroy.attachOnce(this, destroyHandler);
 							this.flush(types.extend({}, options, {callback: doodad.Callback(this, function() {
-								detach.call(this);
+								cleanup.call(this);
 								callback && callback();
 								resolve(this);
 							})}));
@@ -448,17 +462,24 @@ module.exports = {
 					writeAsync: doodad.PUBLIC(doodad.ASYNC(function writeAsync(raw, /*optional*/options) {
 						var Promise = types.getPromise();
 						return Promise.create(function writeAsyncPromise(resolve, reject) {
-							function errorHandler(ev) {
-								detach.call(this);
+							var errorHandler, destroyHandler;
+							var cleanup = function cleanup() {
+								this.onError.detach(this, errorHandler);
+								this.onDestroy.detach(this, destroyHandler);
+							};
+							errorHandler = function errorHandler(ev) {
+								cleanup.call(this);
 								ev.preventDefault();
 								reject(ev.error);
 							};
-							function detach() {
-								this.onError.detach(this, errorHandler);
+							destroyHandler = function destroyHandler(ev) {
+								cleanup.call(this);
+								reject(new types.Error("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
+							this.onDestroy.attachOnce(this, destroyHandler);
 							this.write(raw, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
-								detach.call(this);
+								cleanup.call(this);
 								if (err) {
 									reject(err);
 								} else {
@@ -489,17 +510,24 @@ module.exports = {
 					writeTextAsync: doodad.PUBLIC(doodad.ASYNC(function writeTextAsync(text, /*optional*/options) {
 						var Promise = types.getPromise();
 						return Promise.create(function writeTextAsyncPromise(resolve, reject) {
-							function errorHandler(ev) {
-								detach.call(this);
+							var errorHandler, destroyHandler;
+							var cleanup = function cleanup() {
+								this.onError.detach(this, errorHandler);
+								this.onDestroy.detach(this, destroyHandler);
+							};
+							errorHandler = function errorHandler(ev) {
+								cleanup.call(this);
 								ev.preventDefault();
 								reject(ev.error);
 							};
-							function detach() {
-								this.onError.detach(this, errorHandler);
+							destroyHandler = function destroyHandler(ev) {
+								cleanup.call(this);
+								reject(new types.Error("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
+							this.onDestroy.attachOnce(this, destroyHandler);
 							this.writeText(text, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
-								detach.call(this);
+								cleanup.call(this);
 								if (err) {
 									reject(err);
 								} else {
@@ -512,17 +540,24 @@ module.exports = {
 					writeLineAsync: doodad.PUBLIC(doodad.ASYNC(function writeLineAsync(text, /*optional*/options) {
 						var Promise = types.getPromise();
 						return Promise.create(function writeLineAsyncPromise(resolve, reject) {
-							function errorHandler(ev) {
-								detach.call(this);
+							var errorHandler, destroyHandler;
+							var cleanup = function cleanup() {
+								this.onError.detach(this, errorHandler);
+								this.onDestroy.detach(this, destroyHandler);
+							};
+							errorHandler = function errorHandler(ev) {
+								cleanup.call(this);
 								ev.preventDefault();
 								reject(ev.error);
 							};
-							function detach() {
-								this.onError.detach(this, errorHandler);
+							destroyHandler = function destroyHandler(ev) {
+								cleanup.call(this);
+								reject(new types.Error("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
+							this.onDestroy.attachOnce(this, destroyHandler);
 							this.writeLine(text, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
-								detach.call(this);
+								cleanup.call(this);
 								if (err) {
 									reject(err);
 								} else {
@@ -535,17 +570,24 @@ module.exports = {
 					printAsync: doodad.PUBLIC(doodad.ASYNC(function printAsync(text, /*optional*/options) {
 						var Promise = types.getPromise();
 						return Promise.create(function printAsyncPromise(resolve, reject) {
-							function errorHandler(ev) {
-								detach.call(this);
+							var errorHandler, destroyHandler;
+							var cleanup = function cleanup() {
+								this.onError.detach(this, errorHandler);
+								this.onDestroy.detach(this, destroyHandler);
+							};
+							errorHandler = function errorHandler(ev) {
+								cleanup.call(this);
 								ev.preventDefault();
 								reject(ev.error);
 							};
-							function detach() {
-								this.onError.detach(this, errorHandler);
+							destroyHandler = function destroyHandler(ev) {
+								cleanup.call(this);
+								reject(new types.Error("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
+							this.onDestroy.attachOnce(this, destroyHandler);
 							this.print(text, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
-								detach.call(this);
+								cleanup.call(this);
 								if (err) {
 									reject(err);
 								} else {
