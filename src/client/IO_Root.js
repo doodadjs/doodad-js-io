@@ -162,9 +162,6 @@ module.exports = {
 
 					__pipeStreamOnDestroy: doodad.PROTECTED(function __pipeStreamOnDestroy(ev) {
 						this.unpipe(ev.obj);
-						if (this._implements(ioMixIns.Listener)) {
-							this.stopListening();
-						};
 					}),
 
 					pipe: doodad.OVERRIDE(function pipe(stream, /*optional*/options) {

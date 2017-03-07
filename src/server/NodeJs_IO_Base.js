@@ -293,14 +293,12 @@ module.exports = {
 									throw ex;
 								} finally {
 									this.unpipe(destination);
-									this.pause();
 								};
 							});
 							destination.once('error', state.errorCb);
 
 							state.closeCb = doodad.Callback(this, function _closeCb() {
 								this.unpipe(destination);
-								this.pause();
 							});
 							destination.once('close', state.closeCb);
 							destination.once('destroy', state.closeCb);

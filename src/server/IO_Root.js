@@ -260,9 +260,6 @@ module.exports = {
 
 					__pipeStreamOnDestroy: doodad.PROTECTED(function __pipeStreamOnDestroy(ev) {
 						this.unpipe(ev.obj);
-						if (this._implements(ioMixIns.Listener)) {
-							this.stopListening();
-						};
 					}),
 
 					__pipeNodeStreamOnDrain: doodad.PROTECTED(doodad.NODE_EVENT('drain', function __pipeNodeStreamOnError(context) {
@@ -277,9 +274,6 @@ module.exports = {
 
 					__pipeNodeStreamOnClose: doodad.PROTECTED(doodad.NODE_EVENT(['close', 'destroy'], function __pipeNodeStreamOnClose(context, err) {
 						this.unpipe(context.emitter);
-						if (this._implements(ioMixIns.Listener)) {
-							this.stopListening();
-						};
 					})),
 
 					pipe: doodad.OVERRIDE(function pipe(stream, /*optional*/options) {
