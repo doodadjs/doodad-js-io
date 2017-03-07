@@ -198,7 +198,7 @@ module.exports = {
 									stream.write(value, {callback: consumeCb});
 								};
 							};
-						} else if (data.raw instanceof io.Signal) {
+						} else if (types._instanceof(data.raw, io.Signal)) {
 							__consume.call(this);
 						} else {
 							if (isNodeJsStream) {
@@ -599,7 +599,7 @@ module.exports = {
 								this.__transformDecoder = null;
 							};
 							data.text = text;
-						} else if (!(data.raw instanceof io.Signal)) {
+						} else if (!types._instanceof(data.raw, io.Signal)) {
 							if (this.__transformDecoder && (types.isTypedArray(data.raw) || types.isBuffer(data.raw))) {
 								text += this.__transformDecoder.write(data.raw) || '';
 							} else {

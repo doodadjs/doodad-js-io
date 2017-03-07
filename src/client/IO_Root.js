@@ -126,7 +126,7 @@ module.exports = {
 								var consumeCb = doodad.AsyncCallback(this, __consume);
 								stream.write(value, {callback: consumeCb});
 							};
-						} else if (data.raw instanceof io.Signal) {
+						} else if (types._instanceof(data.raw, io.Signal)) {
 							__consume.call(this);
 						} else {
 							var consumeCb = doodad.AsyncCallback(this, __consume);
@@ -338,7 +338,7 @@ module.exports = {
 						var encoding = types.getDefault(options, 'encoding', this.options.encoding);
 						if (encoding && _shared.Natives.windowTextDecoder && types.isTypedArray(data.raw)) {
 							var text = '';
-							if (!(data.raw instanceof io.Signal) && (!this.__decoder || (this.__decoderEncoding !== encoding))) {
+							if (!types._instanceof(data.raw, io.Signal) && (!this.__decoder || (this.__decoderEncoding !== encoding))) {
 								if (this.__decoder) {
 									text = this.__decoder.decode(null, {stream: false});
 								};
@@ -348,12 +348,12 @@ module.exports = {
 							if (this.__decoder) {
 								if (data.raw === io.EOF) {
 									text += this.__decoder.decode(null, {stream: false});
-								} else if (!(data.raw instanceof io.Signal)) {
+								} else if (!types._instanceof(data.raw, io.Signal)) {
 									text += this.__decoder.decode(data.raw, {stream: true});
 								};
 							};
 							data.text = text;
-						} else if (!(data.raw instanceof io.Signal)) {
+						} else if (!types._instanceof(data.raw, io.Signal)) {
 							data.text = types.toString(data.raw);
 						};
 						
