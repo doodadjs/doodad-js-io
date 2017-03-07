@@ -258,6 +258,13 @@ module.exports = {
 						};
 					}),
 
+					__pipeStreamOnDestroy: doodad.PROTECTED(function __pipeStreamOnDestroy(ev) {
+						this.unpipe(ev.obj);
+						if (this._implements(ioMixIns.Listener)) {
+							this.stopListening();
+						};
+					}),
+
 					__pipeNodeStreamOnDrain: doodad.PROTECTED(doodad.NODE_EVENT('drain', function __pipeNodeStreamOnError(context) {
 						const callback = types.get(context.data, 'callback');
 						callback && callback();
@@ -266,6 +273,13 @@ module.exports = {
 					__pipeNodeStreamOnError: doodad.PROTECTED(doodad.NODE_EVENT('error', function __pipeNodeStreamOnError(context, err) {
 						this.unpipe(context.emitter);
 						this.onError(new doodad.ErrorEvent(err));
+					})),
+
+					__pipeNodeStreamOnClose: doodad.PROTECTED(doodad.NODE_EVENT(['close', 'destroy'], function __pipeNodeStreamOnClose(context, err) {
+						this.unpipe(context.emitter);
+						if (this._implements(ioMixIns.Listener)) {
+							this.stopListening();
+						};
 					})),
 
 					pipe: doodad.OVERRIDE(function pipe(stream, /*optional*/options) {
@@ -282,6 +296,7 @@ module.exports = {
 								this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
 							};
 							stream.onError.attachOnce(this, this.__pipeStreamOnError);
+							stream.onDestroy.attachOnce(this, this.__pipeStreamOnDestroy);
 							if (stream._implements(ioMixIns.Listener)) {
 								stream.onListen.attach(this, this.__pipeStreamOnListen);
 								stream.onStopListening.attach(this, this.__pipeStreamOnStopListening);
@@ -296,6 +311,7 @@ module.exports = {
 							} else if (this._implements(ioMixIns.OutputStreamBase)) {
 								this.onData.attach(this, this.__pipeOnReady, null, [stream, transform, end, true]);
 								this.__pipeNodeStreamOnError.attachOnce(stream);
+								this.__pipeNodeStreamOnClose.attachOnce(stream);
 							} else {
 								throw new types.TypeError("'this' must implement 'Doodad.NodeJs.IO.Interfaces.IReadable' or 'ioMixIns.OutputStreamBase'.");
 							};
@@ -328,6 +344,7 @@ module.exports = {
 									this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
 								};
 								stream.onError.detach(this, this.__pipeStreamOnError);
+								stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
 								if (stream._implements(ioMixIns.Listener)) {
 									stream.onListen.detach(this, this.__pipeStreamOnListen);
 									stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
@@ -341,6 +358,7 @@ module.exports = {
 								};
 								this.__pipeNodeStreamOnError.detach(stream);
 								this.__pipeNodeStreamOnDrain.detach(stream);
+								this.__pipeNodeStreamOnClose.detach(stream);
 							};
 						} else {
 							if (this._implements(ioMixIns.InputStreamBase)) {
@@ -357,6 +375,7 @@ module.exports = {
 							tools.forEach(this.__pipes, function(stream) {
 								if (types._implements(stream, ioMixIns.OutputStreamBase)) {
 									stream.onError.detach(this, this.__pipeStreamOnError);
+									stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
 								};
 								if (types._implements(stream, ioMixIns.Listener)) {
 									stream.onListen.detach(this, this.__pipeStreamOnListen);
@@ -365,6 +384,7 @@ module.exports = {
 							}, this);
 							this.__pipeNodeStreamOnError.clear();
 							this.__pipeNodeStreamOnDrain.clear();
+							this.__pipeNodeStreamOnClose.clear();
 						};
 						if (pos >= 0) {
 							this.__pipes.splice(pos, 1);

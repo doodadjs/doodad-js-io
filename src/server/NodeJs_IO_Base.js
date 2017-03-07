@@ -267,12 +267,15 @@ module.exports = {
 								endDestination: types.get(options, 'end', true) && (tools.indexOf([io.stdout, io.stderr, process.stdout, process.stderr], destination) < 0),
 								destination: destination,
 								errorCb: null,
+								closeCb: null,
 								finishCb: null,
 								writeCb: null,
 								ok: true,
 								drainCb: null,
 								unpipe: function() {
 									this.destination.removeListener('error', this.errorCb);
+									this.destination.removeListener('close', this.closeCb);
+									this.destination.removeListener('destroy', this.closeCb);
 									if (this.drainCb) {
 										this.destination.removeListener('drain', this.drainCb);
 									};
@@ -290,9 +293,17 @@ module.exports = {
 									throw ex;
 								} finally {
 									this.unpipe(destination);
+									this.pause();
 								};
 							});
 							destination.once('error', state.errorCb);
+
+							state.closeCb = doodad.Callback(this, function _closeCb() {
+								this.unpipe(destination);
+								this.pause();
+							});
+							destination.once('close', state.closeCb);
+							destination.once('destroy', state.closeCb);
 
 							this.__destinations.push(state);
 							

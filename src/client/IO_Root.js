@@ -160,6 +160,13 @@ module.exports = {
 						};
 					}),
 
+					__pipeStreamOnDestroy: doodad.PROTECTED(function __pipeStreamOnDestroy(ev) {
+						this.unpipe(ev.obj);
+						if (this._implements(ioMixIns.Listener)) {
+							this.stopListening();
+						};
+					}),
+
 					pipe: doodad.OVERRIDE(function pipe(stream, /*optional*/options) {
 						if (tools.indexOf(this.__pipes, stream) >= 0) {
 							// Stream already piped
@@ -174,6 +181,7 @@ module.exports = {
 								this.onFlush.attach(this, this.__pipeOnFlush, null, [stream]);
 							};
 							stream.onError.attachOnce(this, this.__pipeStreamOnError);
+							stream.onDestroy.attachOnce(this, this.__pipeStreamOnDestroy);
 							if (stream._implements(ioMixIns.Listener)) {
 								stream.onListen.attach(this, this.__pipeStreamOnListen);
 								stream.onStopListening.attach(this, this.__pipeStreamOnStopListening);
@@ -206,6 +214,7 @@ module.exports = {
 								this.onFlush.detach(this, this.__pipeOnFlush, [stream]);
 							};
 							stream.onError.detach(this, this.__pipeStreamOnError);
+							stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
 							if (stream._implements(ioMixIns.Listener)) {
 								stream.onListen.detach(this, this.__pipeStreamOnListen);
 								stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
@@ -217,6 +226,7 @@ module.exports = {
 							};
 							tools.forEach(this.__pipes, function(stream) {
 								stream.onError.detach(this, this.__pipeStreamOnError);
+								stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
 								if (types._implements(stream, ioMixIns.Listener)) {
 									stream.onListen.detach(this, this.__pipeStreamOnListen);
 									stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
