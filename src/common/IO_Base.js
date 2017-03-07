@@ -358,7 +358,7 @@ module.exports = {
 							};
 							destroyHandler = function destroyHandler(ev) {
 								cleanup.call(this);
-								reject(new types.Error("Target object is about to be destroyed."));
+								reject(new types.NotAvailable("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
@@ -474,7 +474,7 @@ module.exports = {
 							};
 							destroyHandler = function destroyHandler(ev) {
 								cleanup.call(this);
-								reject(new types.Error("Target object is about to be destroyed."));
+								reject(new types.NotAvailable("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
@@ -522,7 +522,7 @@ module.exports = {
 							};
 							destroyHandler = function destroyHandler(ev) {
 								cleanup.call(this);
-								reject(new types.Error("Target object is about to be destroyed."));
+								reject(new types.NotAvailable("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
@@ -552,7 +552,7 @@ module.exports = {
 							};
 							destroyHandler = function destroyHandler(ev) {
 								cleanup.call(this);
-								reject(new types.Error("Target object is about to be destroyed."));
+								reject(new types.NotAvailable("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
@@ -582,7 +582,7 @@ module.exports = {
 							};
 							destroyHandler = function destroyHandler(ev) {
 								cleanup.call(this);
-								reject(new types.Error("Target object is about to be destroyed."));
+								reject(new types.NotAvailable("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
