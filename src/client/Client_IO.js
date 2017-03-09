@@ -40,7 +40,7 @@ module.exports = {
 				// Get namespaces
 				//===================================
 
-				var doodad = root.Doodad,
+				const doodad = root.Doodad,
 					types = doodad.Types,
 					tools = doodad.Tools,
 					files = tools.Files,
@@ -60,7 +60,7 @@ module.exports = {
 				});
 				
 				
-				var __Internal__ = {
+				const __Internal__ = {
 					streamsSupported: (_shared.Natives.windowFile && types.isNativeFunction(_shared.Natives.windowFile.prototype.slice)) && 
 									(_shared.Natives.windowBlob && types.isNativeFunction(_shared.Natives.windowBlob.prototype.slice)) &&
 									(_shared.Natives.windowFetch && _shared.Natives.windowHeaders && _shared.Natives.windowFileReader),
@@ -93,7 +93,7 @@ module.exports = {
 							this.overrideSuper();
 							// NOTE: data.raw is a "keydown" or "keypress" event object
 							if (data.raw.type === 'keypress') {
-								var unifiedEv = data.raw.getUnified();
+								const unifiedEv = data.raw.getUnified();
 								data.text = String.fromCharCode(unifiedEv.which);
 								
 							} else {
@@ -140,7 +140,7 @@ module.exports = {
 								return '';
 							};
 							if (data.functionKeys & io.KeyboardFunctionKeys.Ctrl) {
-								var chr = data.text.toUpperCase();
+								const chr = data.text.toUpperCase();
 								if ((chr >= 'A') && (chr <= 'Z')) {
 									return '^' + chr;
 								} else {
@@ -160,9 +160,9 @@ module.exports = {
 					
 					onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT(['keydown', 'keypress'], function onJsKeyDown(ev) {
 						if (this.__listening) {
-							var data = this.transform({raw: ev});
+							const data = this.transform({raw: ev});
 
-							var ev = new doodad.Event(data);
+							const ev = new doodad.Event(data);
 							this.onKey(ev);
 
 							this.push(data);
@@ -254,7 +254,7 @@ module.exports = {
 					}),
 					
 					onFlushData: doodad.OVERRIDE(function onFlushData(ev) {
-						var retval = this._super(ev);
+						const retval = this._super(ev);
 						if (ev.data.raw !== io.EOF) {
 							this.document.write(ev.data.valueOf());
 						};
@@ -286,9 +286,9 @@ module.exports = {
 					}),
 					
 					prepareFlushState: doodad.OVERRIDE(function prepareFlushState(options) {
-						var state = this._super(options);
+						const state = this._super(options);
 						
-						var element = this.element;
+						const element = this.element;
 						root.DD_ASSERT && root.DD_ASSERT(element);
 						state.parent = element;
 						
@@ -296,7 +296,7 @@ module.exports = {
 					}),
 					
 					handleBufferData: doodad.SUPER(function handleBufferData(data, state) {
-						var html = this._super(data, state);
+						let html = this._super(data, state);
 						
 						data = data.valueOf();
 						
@@ -342,7 +342,7 @@ module.exports = {
 					}),
 
 					onReady: doodad.OVERRIDE(function onReady(ev) {
-						var retval = this._super(ev);
+						const retval = this._super(ev);
 
 						ev.preventDefault();
 
@@ -359,9 +359,10 @@ module.exports = {
 						
 						options = types.extend({}, this.options, options);
 
-						var bufferTypes = types.getType(this).$__bufferTypes,
-							tag = types.get(options, 'tag', null),
-							attrs = types.get(options, 'attrs', null);
+						const bufferTypes = types.getType(this).$__bufferTypes;
+							tag = types.get(options, 'tag', null);
+
+						let attrs = types.get(options, 'attrs', null);
 						
 						if (root.DD_ASSERT) {
 							root.DD_ASSERT(types.isStringAndNotEmptyTrim(tag), "Invalid tag.");
@@ -371,7 +372,7 @@ module.exports = {
 						if (attrs) {
 							attrs = tools.trim(attrs);
 						};
-						var container = this.__div;
+						const container = this.__div;
 						if (attrs && attrs.length) {
 							container.innerHTML = ('<' + tag + ' ' + attrs + '></' + tag + '>' + this.options.newLine);
 						} else {
@@ -387,15 +388,15 @@ module.exports = {
 					openElement: doodad.OVERRIDE(function openElement(/*optional*/options) {
 						this._super(options);
 						
-						var tags = this.__tags;
+						const tags = this.__tags;
 						tags[tags.length - 1][1] = this.element;
 					}),
 					closeElement: doodad.OVERRIDE(function closeElement() {
-						var tags = this.__tags;
+						const tags = this.__tags;
 						
 						root.DD_ASSERT && root.DD_ASSERT((tags.length > 0), "No more elements opened.");
 						
-						var tag = tags[tags.length - 1],
+						const tag = tags[tags.length - 1],
 							element = tag[1];
 
 						this._super();
@@ -469,14 +470,16 @@ module.exports = {
 							this.onError(new doodad.ErrorEvent(this.__fileReader.error));
 							
 						} else {
-							var data = this.transform({raw: this.__fileReader.result});
+							let data;
+
+							data = this.transform({raw: this.__fileReader.result});
 							this.push(data);
 							
-							var encoding = types.get(this.options, 'encoding', null);
+							const encoding = types.get(this.options, 'encoding', null);
 
 							this.__fileOffset += ev.loaded;
 							
-							var remaining = this.__file.size - this.__fileOffset,
+							const remaining = this.__file.size - this.__fileOffset,
 								end = this.__fileOffset + Math.min(this.options.chunkSize, remaining);
 
 							if (remaining > 0) {
@@ -488,7 +491,7 @@ module.exports = {
 								};
 								
 							} else {
-								var data = this.transform({raw: io.EOF});
+								data = this.transform({raw: io.EOF});
 								this.push(data);
 							};
 						};
@@ -501,7 +504,7 @@ module.exports = {
 					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
 						if (!this.__listening) {
 							this.__listening = true;
-							var encoding = types.get(this.options, 'encoding', null);
+							const encoding = types.get(this.options, 'encoding', null);
 							this.__fileReader = new _shared.Natives.windowFileReader();
 							this.__fileOffset = 0;
 							this.onJsLoadEnd.attach(this.__fileReader);
@@ -541,10 +544,10 @@ module.exports = {
 					url = _shared.urlParser(url, types.get(options, 'parseOptions'));
 					root.DD_ASSERT && root.DD_ASSERT(url instanceof files.Url, "Invalid url.");
 					url = url.toString();
-					var encoding = types.get(options, 'encoding', null);
-					var Promise = types.getPromise();
+					const encoding = types.get(options, 'encoding', null);
+					const Promise = types.getPromise();
 					return Promise.create(function openFilePromise(resolve, reject) {
-						var headers = new _shared.Natives.windowHeaders(types.get(options, 'headers'));
+						const headers = new _shared.Natives.windowHeaders(types.get(options, 'headers'));
 						if (!headers.has('Accept')) {
 							if (encoding) {
 								headers.set('Accept', 'text/plain');
@@ -552,7 +555,7 @@ module.exports = {
 								headers.set('Accept', '*/*');
 							};
 						};
-						var init = {
+						const init = {
 							method: 'GET',
 							headers: headers,
 						};

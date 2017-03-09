@@ -34,7 +34,7 @@ module.exports = {
 			create: function create(root, /*optional*/_options, _shared) {
 				"use strict";
 
-				var doodad = root.Doodad,
+				const doodad = root.Doodad,
 					mixIns = doodad.MixIns,
 					types = doodad.Types,
 					tools = doodad.Tools,
@@ -45,7 +45,7 @@ module.exports = {
 
 					
 					
-				var __Internal__ = {
+				const __Internal__ = {
 				};
 					
 
@@ -343,11 +343,11 @@ module.exports = {
 					flush: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 
 					flushAsync: doodad.PUBLIC(doodad.ASYNC(function flushAsync(/*optional*/options) {
-						var Promise = types.getPromise();
-						var callback = types.get(options, 'callback');
+						const Promise = types.getPromise();
+						const callback = types.get(options, 'callback');
 						return Promise.create(function flushAsyncPromise(resolve, reject) {
-							var errorHandler, destroyHandler;
-							var cleanup = function cleanup() {
+							let errorHandler, destroyHandler;
+							const cleanup = function cleanup() {
 								this.onError.detach(this, errorHandler);
 								this.onDestroy.detach(this, destroyHandler);
 							};
@@ -394,8 +394,8 @@ module.exports = {
 					read: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					
 					readAsync: doodad.PUBLIC(doodad.ASYNC(function readAsync(/*optional*/options) {
-						var Promise = types.getPromise();
-						var result = this.read(options);
+						const Promise = types.getPromise();
+						const result = this.read(options);
 						if (!types.isNothing(result)) {
 							return result;
 						} else if (this.isListening()) {
@@ -421,8 +421,8 @@ module.exports = {
 					readLine: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					
 					readTextAsync: doodad.PUBLIC(doodad.ASYNC(function readTextAsync(/*optional*/options) {
-						var Promise = types.getPromise();
-						var result = this.readText(options);
+						const Promise = types.getPromise();
+						const result = this.readText(options);
 						if (!types.isNothing(result)) {
 							return result;
 						} else if (this.isListening()) {
@@ -434,8 +434,8 @@ module.exports = {
 					})),
 						
 					readLineAsync: doodad.PUBLIC(doodad.ASYNC(function readLineAsync(/*optional*/options) {
-						var Promise = types.getPromise();
-						var result = this.readLine(options);
+						const Promise = types.getPromise();
+						const result = this.readLine(options);
 						if (!types.isNothing(result)) {
 							return result;
 						} else if (this.isListening()) {
@@ -460,10 +460,10 @@ module.exports = {
 					write: doodad.PUBLIC(doodad.MUST_OVERRIDE()), //function write(raw, /*optional*/options)
 					
 					writeAsync: doodad.PUBLIC(doodad.ASYNC(function writeAsync(raw, /*optional*/options) {
-						var Promise = types.getPromise();
+						const Promise = types.getPromise();
 						return Promise.create(function writeAsyncPromise(resolve, reject) {
-							var errorHandler, destroyHandler;
-							var cleanup = function cleanup() {
+							let errorHandler, destroyHandler;
+							const cleanup = function cleanup() {
 								this.onError.detach(this, errorHandler);
 								this.onDestroy.detach(this, destroyHandler);
 							};
@@ -508,10 +508,10 @@ module.exports = {
 					print: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(text, /*optional*/options)
 					
 					writeTextAsync: doodad.PUBLIC(doodad.ASYNC(function writeTextAsync(text, /*optional*/options) {
-						var Promise = types.getPromise();
+						const Promise = types.getPromise();
 						return Promise.create(function writeTextAsyncPromise(resolve, reject) {
-							var errorHandler, destroyHandler;
-							var cleanup = function cleanup() {
+							let errorHandler, destroyHandler;
+							const cleanup = function cleanup() {
 								this.onError.detach(this, errorHandler);
 								this.onDestroy.detach(this, destroyHandler);
 							};
@@ -538,10 +538,10 @@ module.exports = {
 					})),
 					
 					writeLineAsync: doodad.PUBLIC(doodad.ASYNC(function writeLineAsync(text, /*optional*/options) {
-						var Promise = types.getPromise();
+						const Promise = types.getPromise();
 						return Promise.create(function writeLineAsyncPromise(resolve, reject) {
-							var errorHandler, destroyHandler;
-							var cleanup = function cleanup() {
+							let errorHandler, destroyHandler;
+							const cleanup = function cleanup() {
 								this.onError.detach(this, errorHandler);
 								this.onDestroy.detach(this, destroyHandler);
 							};
@@ -568,10 +568,10 @@ module.exports = {
 					})),
 					
 					printAsync: doodad.PUBLIC(doodad.ASYNC(function printAsync(text, /*optional*/options) {
-						var Promise = types.getPromise();
+						const Promise = types.getPromise();
 						return Promise.create(function printAsyncPromise(resolve, reject) {
-							var errorHandler, destroyHandler;
-							var cleanup = function cleanup() {
+							let errorHandler, destroyHandler;
+							const cleanup = function cleanup() {
 								this.onError.detach(this, errorHandler);
 								this.onDestroy.detach(this, destroyHandler);
 							};
@@ -630,24 +630,24 @@ module.exports = {
 							data.consumed = true;
 
 							// Consumed
-							var callback = types.get(data.options, 'callback');
+							const callback = types.get(data.options, 'callback');
 							if (callback) {
 								data.options.callback = null; // Free memory
 								callback();
 							};
 
 							if (data.raw === io.BOF) {
-								var ev = new doodad.Event(data);
+								const ev = new doodad.Event(data);
 								this.onBOF(ev);
 							} else if (data.raw === io.EOF) {
-								var ev = new doodad.Event(data);
+								const ev = new doodad.Event(data);
 								this.onEOF(ev);
 							};
 						};
 					}),
 
 					__pushInternal: doodad.PROTECTED(function __pushInternal(data, /*optional*/options) {
-						var next = types.get(options, 'next', false),
+						const next = types.get(options, 'next', false),
 							buffer = this.__buffer;
 
 						if (buffer.length >= this.options.bufferSize) {
@@ -665,9 +665,9 @@ module.exports = {
 						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(data));
 						root.DD_ASSERT && root.DD_ASSERT(!data.consumed);
 
-						var callback = types.get(options, 'callback');
+						const callback = types.get(options, 'callback');
 
-						var ev = new doodad.Event(data);
+						const ev = new doodad.Event(data);
 
 						this.onData(ev);
 
@@ -692,14 +692,14 @@ module.exports = {
 					}),
 					
 					__pullInternal: doodad.PROTECTED(function __pullInternal(/*optional*/options) {
-						var next = types.get(options, 'next', false),
+						const next = types.get(options, 'next', false),
 							buffer = this.__buffer;
 
 						if (buffer.length <= 0) {
 							throw new types.BufferOverflow();
 						};
 
-						var data;
+						let data;
 
 						if (next) {
 							data = buffer.pop();
@@ -711,7 +711,7 @@ module.exports = {
 					}),
 
 					pull: doodad.OVERRIDE(function pull(/*optional*/options) {
-						var data = this.__pullInternal(options);
+						const data = this.__pullInternal(options);
 
 						root.DD_ASSERT && root.DD_ASSERT(types.isJsObject(data));
 						root.DD_ASSERT && root.DD_ASSERT(!data.consumed);
@@ -720,11 +720,12 @@ module.exports = {
 					}),
 
 					flush: doodad.OVERRIDE(function flush(/*optional*/options) {
-						var callback = types.get(options, 'callback');
-						var count = types.get(options, 'count', Infinity);
-						var listening = !this._implements(ioMixIns.Listener) || this.isListening();
+						const callback = types.get(options, 'callback'),
+							count = types.get(options, 'count', Infinity);
 
-						var MAX_LOOP_COUNT = 30;  // TODO: Make it a stream option
+						const listening = !this._implements(ioMixIns.Listener) || this.isListening();
+
+						const MAX_LOOP_COUNT = 30;  // TODO: Make it a stream option
 
 						if (this.__flushing) {
 							 if (callback) {
@@ -733,16 +734,16 @@ module.exports = {
 								 });
 							};
 						} else if (listening && (count > 0)) {
-							var state = {count: 0, delayed: false, error: null};
-							var __flushCbSync, __flushCbAsync;
-							var __flush = function flush() {
-								var finished = false;
+							const state = {count: 0, delayed: false, error: null};
+							let __flushCbSync, __flushCbAsync;
+							const __flush = function flush() {
+								let finished = false;
 								try {
-									for (var i = 0; i < MAX_LOOP_COUNT; i++) {
+									for (let i = 0; i < MAX_LOOP_COUNT; i++) {
 										if ((state.count++ < count) && (this.getCount() > 0)) {
-											var data = this.pull();
+											const data = this.pull();
 
-											var dataCb = types.get(data.options, 'callback');
+											const dataCb = types.get(data.options, 'callback');
 
 											if (state.count < count) {
 												if (!types.get(data, 'options')) {
@@ -757,7 +758,7 @@ module.exports = {
 												};
 											};
 
-											var ev = new doodad.Event(data);
+											const ev = new doodad.Event(data);
 
 											this.onReady(ev);
 

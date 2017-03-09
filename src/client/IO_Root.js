@@ -40,7 +40,7 @@ module.exports = {
 				// Get namespaces
 				//===================================
 
-				var doodad = root.Doodad,
+				const doodad = root.Doodad,
 					types = doodad.Types,
 					tools = doodad.Tools,
 					mixIns = doodad.MixIns,
@@ -79,7 +79,7 @@ module.exports = {
 					}),
 
 					__pipeOnReady: doodad.PROTECTED(function __pipeOnReady(ev) {
-						var stream = ev.handlerData[0],
+						const stream = ev.handlerData[0],
 							transform = ev.handlerData[1],
 							end = ev.handlerData[2];
 
@@ -88,31 +88,29 @@ module.exports = {
 							return;
 						};
 
-						var data = ev.data;
+						let data = ev.data;
 
 						if (transform) {
-							var retval = transform(data);
+							const retval = transform(data);
 							if (retval !== undefined) {
 								data = retval;
 							};
 						};
 
-						var hasCallback = !!types.get(data.options, 'callback');
-
 						ev.preventDefault();
 						data.delayed = true; // Will be consumed later
 
-						var eof = (data.raw === io.EOF);
+						const eof = (data.raw === io.EOF);
 
-						var __consume = function consume() {
+						const __consume = function consume() {
 							this.__consumeData(data);
 						};
 
 
 						if (eof) {
-							var value = data.valueOf();
+							const value = data.valueOf();
 							if (end) {
-								var consumeCb = doodad.AsyncCallback(this, __consume);
+								const consumeCb = doodad.AsyncCallback(this, __consume);
 								if (types.isNothing(value)) {
 									stream.write(io.EOF, {callback: consumeCb});
 								} else {
@@ -123,19 +121,19 @@ module.exports = {
 							} else if (types.isNothing(value)) {
 								__consume.call(this);
 							} else {
-								var consumeCb = doodad.AsyncCallback(this, __consume);
+								const consumeCb = doodad.AsyncCallback(this, __consume);
 								stream.write(value, {callback: consumeCb});
 							};
 						} else if (types._instanceof(data.raw, io.Signal)) {
 							__consume.call(this);
 						} else {
-							var consumeCb = doodad.AsyncCallback(this, __consume);
+							const consumeCb = doodad.AsyncCallback(this, __consume);
 							stream.write(data.valueOf(), types.extend({}, data.options, {callback: consumeCb}));
 						};
 					}),
 					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
-						var stream = ev.handlerData[0];
+						const stream = ev.handlerData[0];
 						if (!stream.isDestroyed()) {
 							if (stream.options.flushMode !== 'manual') {
 								stream.flush(stream.options.autoFlushOptions);
@@ -169,9 +167,9 @@ module.exports = {
 							// Stream already piped
 							return stream;
 						};
-						var transform = types.get(options, 'transform');
-						var end = types.get(options, 'end', true);
-						var autoListen = types.get(options, 'autoListen', true);
+						const transform = types.get(options, 'transform'),
+							end = types.get(options, 'end', true),
+							autoListen = types.get(options, 'autoListen', true);
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
 							this.onReady.attach(this, this.__pipeOnReady, null, [stream, transform, end]);
 							if (this._implements(ioMixIns.OutputStreamBase)) {
@@ -194,7 +192,7 @@ module.exports = {
 					}),
 					
 					unpipe: doodad.OVERRIDE(function unpipe(/*optional*/stream) {
-						var pos = -1;
+						let pos = -1;
 						if (stream) {
 							pos = tools.indexOf(this.__pipes, stream);
 							if (pos < 0) {
@@ -267,9 +265,9 @@ module.exports = {
 					}),
 
 					write: doodad.OVERRIDE(function write(raw, /*optional*/options) {
-						var data = this.transform({raw: raw}, options);
+						const data = this.transform({raw: raw}, options);
 
-						var ev = new doodad.Event(data);
+						const ev = new doodad.Event(data);
 						this.onWrite(ev);
 
 						if (ev.prevent) {
@@ -317,7 +315,7 @@ module.exports = {
 					
 					$decode: doodad.PUBLIC(function $decode(buf, encoding) {
 						if (encoding && _shared.Natives.windowTextDecoder && types.isTypedArray(buf)) {
-							var decoder = new _shared.Natives.windowTextDecoder(encoding);
+							const decoder = new _shared.Natives.windowTextDecoder(encoding);
 							return decoder.decode(buf, {stream: false});
 						} else {
 							return types.toString(buf);
@@ -335,9 +333,9 @@ module.exports = {
 					}),
 					
 					transform: doodad.REPLACE(function transform(data, /*optional*/options) {
-						var encoding = types.getDefault(options, 'encoding', this.options.encoding);
+						const encoding = types.getDefault(options, 'encoding', this.options.encoding);
 						if (encoding && _shared.Natives.windowTextDecoder && types.isTypedArray(data.raw)) {
-							var text = '';
+							let text = '';
 							if (!types._instanceof(data.raw, io.Signal) && (!this.__decoder || (this.__decoderEncoding !== encoding))) {
 								if (this.__decoder) {
 									text = this.__decoder.decode(null, {stream: false});

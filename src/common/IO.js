@@ -36,7 +36,7 @@ module.exports = {
 			create: function create(root, /*optional*/_options, _shared) {
 				"use strict";
 
-				var doodad = root.Doodad,
+				const doodad = root.Doodad,
 					mixIns = doodad.MixIns,
 					types = doodad.Types,
 					tools = doodad.Tools,
@@ -47,7 +47,7 @@ module.exports = {
 
 					
 					
-				var __Internal__ = {
+				const __Internal__ = {
 					stdin: null,
 					stdout: null,
 					stderr: null,
@@ -81,12 +81,12 @@ module.exports = {
 						// TODO: Test
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
-						var text = '';
+						let text = '';
 						
-						var data;
+						let data;
 						
 						while (data = this.read(options)) {
-							var value = data.valueOf()
+							const value = data.valueOf()
 
 							if (!types.isNothing(value)) {
 								text += value;
@@ -105,14 +105,15 @@ module.exports = {
 						// TODO: Test
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
-						var line = '';
+						let line = '',
+							dta;
 						
 						if (this.options.newLine) {
-							var ok = false,
+							let ok = false,
 								data;
 							
 							while (data = this.read(options)) {
-								var value = data.valueOf();
+								const value = data.valueOf();
 
 								if (!types.isNothing(value)) {
 									line += value;
@@ -123,13 +124,13 @@ module.exports = {
 									break;
 								};
 
-								var index = tools.search(line, this.options.newLine);
+								const index = tools.search(line, this.options.newLine);
 								if (index >= 0) {
-									var remaining = line.slice(index + this.options.newLine.length);
+									const remaining = line.slice(index + this.options.newLine.length);
 									line = line.slice(0, index);
 
 									if (remaining) {
-										var dta = this.transform({raw: remaining});
+										dta = this.transform({raw: remaining});
 										this.push(dta, {next: true});
 									};
 
@@ -140,7 +141,7 @@ module.exports = {
 							
 							if (!ok) {
 								if (line) {
-									var dta = this.transform({raw: line});
+									dta = this.transform({raw: line});
 									this.push(dta, {next: true});
 									line = null;
 								};
@@ -279,18 +280,19 @@ module.exports = {
 					}),
 					
 					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {
-						var next = types.get(options, 'next', false),
+						const next = types.get(options, 'next', false),
 							buffer = this.__buffer;
 
-						var value = data.valueOf();
-						var newData = null;
+						const value = data.valueOf();
+
+						let newData = null;
 
 						if (types.isString(value)) {
-							var cls = types.getType(this),
+							const cls = types.getType(this),
 								bufferTypes = cls.$__bufferTypes;
 							
 							if (next) {
-								var firstItem = buffer[0],
+								const firstItem = buffer[0],
 									itemValue = firstItem && firstItem.valueOf();
 									
 								if (!firstItem || (itemValue[0] !== bufferTypes.Html)) {
@@ -299,7 +301,7 @@ module.exports = {
 									itemValue[1] = value + firstItem[1];
 								};
 							} else {
-								var lastItem = buffer[buffer.length - 1],
+								const lastItem = buffer[buffer.length - 1],
 									itemValue = lastItem && lastItem.valueOf();
 									
 								if (!lastItem || (itemValue[0] !== bufferTypes.Html)) {
@@ -327,11 +329,11 @@ module.exports = {
 							root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						};
 						
-						var attrs = types.get(options, 'attrs', null);
+						const attrs = types.get(options, 'attrs', null);
 						
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(attrs) || types.isString(attrs), "Invalid attributes.");
 						
-						var html = ('<' + this.options.printTag);
+						let html = ('<' + this.options.printTag);
 
 						if (attrs) {
 							html += (' ' + tools.trim(attrs));
@@ -358,14 +360,15 @@ module.exports = {
 					handleBufferData: doodad.PROTECTED(doodad.JS_METHOD(function handleBufferData(data, state) {
 						data = data.valueOf();
 						
-						var type = data[0],
-							html = null;
+						const type = data[0];
+
+						let html = null;
 						
 						if (type === state.bufferTypes.Html) {
 							html = data[1];
 							state.idented = data[2];
 						} else if (type === state.bufferTypes.Open) {
-							var attrs = data[2];
+							let attrs = data[2];
 							if (attrs) {
 								attrs = tools.trim(attrs);
 							};
@@ -384,7 +387,7 @@ module.exports = {
 							};
 							state.identIncrement = -1;
 						} else if (type === state.bufferTypes.Stream) {
-							var stream = data[1];
+							const stream = data[1];
 							state.idented = stream.options.identLines;
 							stream.flush();
 							stream.onData.detach(this);
@@ -399,12 +402,13 @@ module.exports = {
 					flush: doodad.OVERRIDE(function flush(/*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						
-						var state = this.prepareFlushState(options),
+						const state = this.prepareFlushState(options),
 							buffer = this.__buffer,
-							bufferStart = 0,
 							bufferLen = buffer.length,
 							identLines = types.get(options, 'identLines', false), // boolean
-							identStr = this.options.identStr,
+							identStr = this.options.identStr;
+
+						let bufferStart = 0,
 							identSpace,
 							lines,
 							linesLen,
@@ -416,9 +420,9 @@ module.exports = {
 							// NOTE: This will shrink the buffer
 							state.identCount = this.__tags.length - 1;
 							bufferStart = bufferLen;
-							var closed = 0;
+							let closed = 0;
 							// Get first, not closed, "Open" chunk
-							for (var i = bufferLen - 1; i >= 0; i--) {
+							for (let i = bufferLen - 1; i >= 0; i--) {
 								data = buffer[i].valueOf();
 								type = data[0];
 								if (type === state.bufferTypes.Close) {
@@ -437,8 +441,8 @@ module.exports = {
 							root.DD_ASSERT && root.DD_ASSERT((this.__tags.length === 0), "Some elements have not been closed.");
 						};
 						
-						for (var i = bufferStart; i < bufferLen; i++) {
-							var html = this.handleBufferData(buffer[i], state);
+						for (let i = bufferStart; i < bufferLen; i++) {
+							const html = this.handleBufferData(buffer[i], state);
 							
 							if (html) {
 								root.DD_ASSERT && root.DD_ASSERT(types.isString(html), "Invalid html.");
@@ -454,7 +458,7 @@ module.exports = {
 									lines = html.split(this.options.newLine);
 									identSpace = tools.repeat(identStr, state.identCount);
 									linesLen = lines.length;
-									for (var j = 0; j < linesLen; j++) {
+									for (let j = 0; j < linesLen; j++) {
 										line = tools.trim(lines[j], identStr);
 										if (line.length) {
 											state.html += (identSpace + line + this.options.newLine);
@@ -475,7 +479,7 @@ module.exports = {
 							state.flushElementChunk[1] = state.html;
 							buffer.splice(bufferStart + 1, buffer.length - bufferStart - 1, {raw: state.flushElementChunk, valueOf: function (){return this.raw;}});
 
-							var callback = types.get(options, 'callback');
+							const callback = types.get(options, 'callback');
 							if (callback) {
 								callback();
 							};
@@ -491,7 +495,7 @@ module.exports = {
 					
 					__streamOnData: doodad.PROTECTED(function __streamOnData(ev) {
 						if (!ev.data.options.flushElement) {
-							var cls = types.getType(this),
+							const cls = types.getType(this),
 								bufferTypes = cls.$__bufferTypes,
 								streamData = ev.handlerData[0],
 								value = ev.data.valueOf();
@@ -509,7 +513,7 @@ module.exports = {
 						
 						options = types.extend({}, this.options, options);
 						
-						var tag = types.get(options, 'tag', null),
+						const tag = types.get(options, 'tag', null),
 							attrs = types.get(options, 'attrs', null);
 						
 						if (root.DD_ASSERT) {
@@ -517,17 +521,17 @@ module.exports = {
 							root.DD_ASSERT(types.isNothing(attrs) || types.isString(attrs), "Invalid attributes.");
 						};
 
-						var cls = types.getType(this),
+						const cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes,
 							stream = cls.$createInstance(options);
 							
-						var noOpenClose = types.get(options, 'noOpenClose', false);
+						const noOpenClose = types.get(options, 'noOpenClose', false);
 						
 						// TODO: Transform
 						!noOpenClose && this.push({raw: [bufferTypes.Open, tag, attrs], valueOf: function() {return this.raw;}});
 
 						// TODO: Transform
-						var streamData = {raw: [bufferTypes.Stream, stream], valueOf: function() {return this.raw;}};
+						const streamData = {raw: [bufferTypes.Stream, stream], valueOf: function() {return this.raw;}};
 						this.push(streamData, pushOpts); // <--- Will get replaced on flush
 
 						// TODO: Transform
@@ -543,7 +547,7 @@ module.exports = {
 						
 						options = types.extend({}, this.options, options);
 
-						var tag = types.get(options, 'tag', null),
+						const tag = types.get(options, 'tag', null),
 							attrs = types.get(options, 'attrs', null);
 						
 						if (root.DD_ASSERT) {
@@ -553,7 +557,7 @@ module.exports = {
 
 						this.__tags.push([tag]);
 						
-						var cls = types.getType(this),
+						const cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
 						// TODO: Transform
@@ -561,11 +565,11 @@ module.exports = {
 					}),
 					
 					closeElement: doodad.PUBLIC(function closeElement() {
-						var tags = this.__tags;
+						const tags = this.__tags;
 						
 						root.DD_ASSERT && root.DD_ASSERT((tags.length > 0), "No more elements opened.");
 						
-						var cls = types.getType(this),
+						const cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
 						// TODO: Transform
@@ -590,7 +594,7 @@ module.exports = {
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super(options);
 						
-						var name = types.get(this.options, 'name');
+						const name = types.get(this.options, 'name');
 						
 						if ((name === 'info') && global.console.info) {
 							this.__fn = 'info';
@@ -606,11 +610,11 @@ module.exports = {
 					}),
 					
 					onData: doodad.OVERRIDE(function onData(ev) {
-						var retval = this._super(ev);
+						const retval = this._super(ev);
 
 						ev.preventDefault();
 
-						var value = ev.data.valueOf();
+						const value = ev.data.valueOf();
 						if (!types.isNothing(value)) {
 							global.console[this.__fn](value);
 						};
@@ -802,8 +806,8 @@ module.exports = {
 					_shared.consoleHook = function consoleHook(level, message) {
 						// NOTE: Every "std" must be a stream.
 						if (types._implements(io.stderr, ioInterfaces.IConsole)) {
-							var _interface = io.stderr.getInterface(ioInterfaces.IConsole);
-							var fn;
+							const _interface = io.stderr.getInterface(ioInterfaces.IConsole);
+							let fn;
 							if (level === tools.LogLevels.Info) {
 								fn = 'info';
 							} else if (level === tools.LogLevels.Warning) {
