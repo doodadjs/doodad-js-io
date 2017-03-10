@@ -97,6 +97,15 @@ module.exports = {
 						return this._super.apply(this, args);
 					}),
 
+					transform: doodad.OVERRIDE(function transform(data, /*optional*/options) {
+						// NOTE: Will get replaced by "TextTransformable".
+						if (types.isString(data.raw)) {
+							// <PRB> Must do that to prevent Node.Js to default encode to 'utf-8' a string represention of binary data.
+							data.raw = _shared.Natives.globalBuffer.from(data.raw, "binary");
+						};
+						return this._super(data, options)
+					}),
+
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 
