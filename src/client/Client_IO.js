@@ -162,13 +162,12 @@ module.exports = {
 						if (this.__listening) {
 							const data = this.transform({raw: ev});
 
-							const ev = new doodad.Event(data);
-							this.onKey(ev);
+							const newEv = new doodad.Event(data);
+							this.onKey(newEv);
 
 							this.push(data);
 
-							if (ev.prevent) {
-								//ev.getUnified().preventDefault();  IE < 11
+							if (newEv.prevent) {
 								ev.preventDefault();
 								return false;
 							};
