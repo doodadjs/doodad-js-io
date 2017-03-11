@@ -52,6 +52,27 @@ module.exports = {
 					nodejsIOMixIns = nodejsIO.MixIns,
 					nodejsIOInterfaces = nodejsIO.Interfaces;
 
+				//=====================================================
+				// Internals
+				//=====================================================
+				
+				const __Internal__ = {
+				};
+
+				//=====================================================
+				// DESTROY hook
+				//=====================================================
+				
+				__Internal__.oldDESTROY = _shared.DESTROY;
+				_shared.DESTROY = function DESTROY(obj) {
+					if (types.isLike(obj, doodad.Interface) && types._implements(obj, nodejsIOInterfaces.IStream)) {
+						if (types.isInitialized(obj)) {
+							obj.destroy();
+						};
+					} else {
+						__Internal__.oldDESTROY(obj);
+					};
+				};
 
 				//=====================================================
 				// Interfaces (continued)
@@ -64,6 +85,8 @@ module.exports = {
 					
 					onclose: doodad.RAW_EVENT(),
 
+					destroyed: doodad.PUBLIC(doodad.PERSISTENT(doodad.READ_ONLY( false ))),
+					
 					onerror: doodad.RAW_ERROR_EVENT(function onerror(err) {
 						const host = this[doodad.HostSymbol];
 
@@ -73,7 +96,7 @@ module.exports = {
 							err.trapped = true;
 						};
 
-						if (types.isInitialized(host)) {
+						//if (types.isInitialized(host)) {
 							if (types.isEntrant(host, 'onError') && (host.onError.getCount() > 0)) {
 								const ev = new doodad.ErrorEvent(err);
 
@@ -83,32 +106,32 @@ module.exports = {
 									emitted = true;
 								};
 							};
-						};
+						//};
 
 						return !!emitted;
 					}),
 
-					ondestroy: doodad.RAW_EVENT(),
+					__destroy: doodad.PROTECTED(function __destroy() {
+						_shared.setAttribute(this, 'destroyed', true);
 
-					closed: doodad.PUBLIC(false),
-					destroyed: doodad.PUBLIC(false),
-					
-					close: doodad.PUBLIC(function close() {
-						if (!this.closed) {
-							this.closed = true;
-							tools.callAsync(this.emit, -1, this, ['close'], null, _shared.SECRET); // function must return before event
-						};
+						this.emit('close');
+
+						this.removeAllListeners();
 					}),
 
-					destroy: doodad.PUBLIC(function destroy() {
+					//close: doodad.PUBLIC(doodad.CAN_BE_DESTROYED(function close() {
+					//	if (!this.destroyed) {
+					//		this.__destroy();
+					//		this._delete();
+					//	};
+					//})),
+
+					destroy: doodad.PUBLIC(doodad.CAN_BE_DESTROYED(function destroy() {
 						if (!this.destroyed) {
-							this.destroyed = true;
-							this.close();
-							const host = this[doodad.HostSymbol];
-							types.DESTROY(host);
-							tools.callAsync(this.emit, -1, this, ['destroy'], null, _shared.SECRET); // function must return before event
+							this.__destroy();
+							this._delete();
 						};
-					}),
+					})),
 				}))));
 				
 				nodejsIOInterfaces.REGISTER(doodad.ISOLATED(doodad.MIX_IN(nodejsIOInterfaces.IStream.$extend(
@@ -134,7 +157,8 @@ module.exports = {
 						ended: false,
 					}),
 
-					close: doodad.OVERRIDE(function close() {
+					__destroy: doodad.OVERRIDE(function __destroy() {
+						this.unpipe();
 						this.readable = false;
 						this._readableState = null;
 						this._super();
@@ -170,9 +194,9 @@ module.exports = {
 										if (this.__pipeWriting <= 0) {
 											this.__pipeWriting = 0;
 
-											if (types.isInitialized(host)) {
+											//if (types.isInitialized(host)) {
 												host.__consumeData(data);
-											};
+											//};
 
 											if (eof) {
 												if (!this._readableState.ended) {
@@ -270,9 +294,11 @@ module.exports = {
 								closeCb: null,
 								finishCb: null,
 								writeCb: null,
+								unpipeCb: null,
 								ok: true,
 								drainCb: null,
 								unpipe: function() {
+									this.destination.removeListener('unpipe', this.unpipeCb);
 									this.destination.removeListener('error', this.errorCb);
 									this.destination.removeListener('close', this.closeCb);
 									this.destination.removeListener('destroy', this.closeCb);
@@ -285,6 +311,13 @@ module.exports = {
 							const host = this[doodad.HostSymbol];
 							
 							host.onReady.attach(this, this.__pipeOnReady);
+
+							state.unpipeCb = doodad.Callback(this, function _unpipeCb(readable) {
+								if (readable === this) {
+									this.unpipe(destination);
+								};
+							});
+							destination.on('unpipe', state.unpipeCb);
 
 							state.errorCb = doodad.Callback(this, function _errorCb(err) {
 								try {
@@ -358,9 +391,6 @@ module.exports = {
 					}),
 					
 					unpipe: doodad.PUBLIC(function unpipe(/*optional*/destination) {
-						if (this.destroyed) {
-							return;
-						};
 						let items = null;
 						if (types.isNothing(destination)) {
 							items = this.__destinations;
@@ -428,7 +458,7 @@ module.exports = {
 						needDrain: false,
 					}),
 
-					close: doodad.OVERRIDE(function close() {
+					__destroy: doodad.OVERRIDE(function __destroy() {
 						this.writable = false;
 						this._writableState = null;
 						this._super();
@@ -513,14 +543,14 @@ module.exports = {
 									} else {
 										this.emit('error', err);
 									};
-								} else if (types.isInitialized(host)) {
+								} else {// if (types.isInitialized(host)) {
 									host.flush({callback: function() {
 										host.write(io.EOF, {
 											callback: writeEOFCb,
 										});
 									}});
-								} else if (callback) {
-									callback(new types.NotAvailable("Object is destroyed."));
+								//} else if (callback) {
+								//	callback(new types.NotAvailable("Object is destroyed."));
 								};
 							});
 							host.write(chunk, {encoding: encoding, callback: writeChunkCb});
