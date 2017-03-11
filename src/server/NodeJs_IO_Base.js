@@ -66,7 +66,7 @@ module.exports = {
 				__Internal__.oldDESTROY = _shared.DESTROY;
 				_shared.DESTROY = function DESTROY(obj) {
 					if (types.isLike(obj, doodad.Interface) && types._implements(obj, nodejsIOInterfaces.IStream)) {
-						if (types.isInitialized(obj)) {
+						if (!obj.destroyed) {
 							obj.destroy();
 						};
 					} else {
