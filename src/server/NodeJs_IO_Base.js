@@ -111,24 +111,20 @@ module.exports = {
 						return !!emitted;
 					}),
 
-					__destroy: doodad.PROTECTED(function __destroy() {
-						_shared.setAttribute(this, 'destroyed', true);
-
-						this.emit('close');
-
-						this.removeAllListeners();
-					}),
-
-					//close: doodad.PUBLIC(doodad.CAN_BE_DESTROYED(function close() {
-					//	if (!this.destroyed) {
-					//		this.__destroy();
-					//		this._delete();
-					//	};
-					//})),
-
 					destroy: doodad.PUBLIC(doodad.CAN_BE_DESTROYED(function destroy() {
+						// IMPORTANT: Never access to "host" from this function.
+
 						if (!this.destroyed) {
-							this.__destroy();
+							this.emit('close');
+
+							this.removeAllListeners();
+
+							_shared.setAttribute(this, 'destroyed', true);
+
+							// NOTE: Should calls "IReadable.unpipe".
+							const host = this[doodad.HostSymbol];
+							types.DESTROY(host);
+
 							this._delete();
 						};
 					})),
@@ -155,13 +151,6 @@ module.exports = {
 					_readableState: doodad.PUBLIC({
 						flowing: true,
 						ended: false,
-					}),
-
-					__destroy: doodad.OVERRIDE(function __destroy() {
-						this.unpipe();
-						this.readable = false;
-						this._readableState = null;
-						this._super();
 					}),
 
 					onnewListener: doodad.OVERRIDE(function onnewListener(event, listener) {
@@ -456,12 +445,6 @@ module.exports = {
 					writable: doodad.PUBLIC(true),
 					_writableState: doodad.PUBLIC({
 						needDrain: false,
-					}),
-
-					__destroy: doodad.OVERRIDE(function __destroy() {
-						this.writable = false;
-						this._writableState = null;
-						this._super();
 					}),
 
 					setDefaultEncoding: doodad.PUBLIC(function setDefaultEncoding(encoding) {
