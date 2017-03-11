@@ -153,7 +153,7 @@ module.exports = {
 							this.push(data);
 						};
 						const istream = this.getInterface(nodejsIOInterfaces.IStream);
-						istream.close();
+						istream.destroy();
 					}),
 					
 					streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
@@ -310,7 +310,7 @@ module.exports = {
 					
 					streamOnClose: doodad.NODE_EVENT('close', function streamOnClose(context) {
 						const istream = this.getInterface(nodejsIOInterfaces.IStream);
-						istream.close();
+						istream.destroy();
 					}),
 					
 					
@@ -330,9 +330,6 @@ module.exports = {
 					}),
 					
 					destroy: doodad.OVERRIDE(function destroy() {
-						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
-						iwritable.emit('destroy');
-
 						this.streamOnFinish.clear();
 						this.streamOnError.clear();
 						this.streamOnClose.clear();
