@@ -115,23 +115,6 @@ module.exports = {
 					destroy: doodad.OVERRIDE(function destroy() {
 						this.unpipe();
 
-						if (this._implements(nodejsIOInterfaces.IReadable)) {
-							const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
-							ireadable.readable = false;
-							ireadable._readableState = null;
-						};
-						
-						if (this._implements(nodejsIOInterfaces.IWritable)) {
-							const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
-							iwritable.writable = false;
-						};
-						
-						if (this._implements(nodejsIOInterfaces.IStream)) {
-							const istream = this.getInterface(nodejsIOInterfaces.IStream);
-							_shared.setAttribute(istream, doodad.HostSymbol, null);
-							types.DESTROY(istream);
-						};
-
 						this._super();
 					}),
 
