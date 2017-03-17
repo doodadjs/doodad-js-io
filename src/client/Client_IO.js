@@ -87,30 +87,38 @@ module.exports = {
 						raw: null,
 						functionKeys: null,
 					}),
+
+					onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(ev) {
+						// Shows virtual keyboard on mobile phones and tablets.
+						if (this.element.focus) {
+							this.element.focus();
+						};
+					})),
 					
-					transform: doodad.OVERRIDE(function transform(data, /*optional*/options) {
-						if (client.isEvent(data.raw)) {
-							this.overrideSuper();
-							// NOTE: data.raw is a "keydown" or "keypress" event object
-							if (data.raw.type === 'keypress') {
-								const unifiedEv = data.raw.getUnified();
-								data.text = String.fromCharCode(unifiedEv.which);
+					onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT(['keydown', 'keypress'], function onJsKeyDown(ev) {
+						if (this.__listening) {
+							const key = {};
+
+							// NOTE: ev is a "keydown" or "keypress" event object
+							if (ev.type === 'keypress') {
+								const unifiedEv = ev.getUnified();
+								key.text = String.fromCharCode(unifiedEv.which);
 								
 							} else {
 								var	functionKeys = 0,
-									charCode = data.raw.charCode,
-									scanCode = data.raw.keyCode;
+									charCode = ev.charCode,
+									scanCode = ev.keyCode;
 								
-								if (data.raw.shiftKey) {
+								if (ev.shiftKey) {
 									functionKeys |= io.KeyboardFunctionKeys.Shift;
 								};
-								if (data.raw.ctrlKey) {
+								if (ev.ctrlKey) {
 									functionKeys |= io.KeyboardFunctionKeys.Ctrl;
 								};
-								if (data.raw.altKey) {
+								if (ev.altKey) {
 									functionKeys |= io.KeyboardFunctionKeys.Alt;
 								};
-								if (data.raw.metaKey) {
+								if (ev.metaKey) {
 									functionKeys |= io.KeyboardFunctionKeys.Meta;
 								};
 								
@@ -123,49 +131,32 @@ module.exports = {
 									};
 								};
 
-								data.charCode = charCode;
-								data.scanCode = scanCode;
-								data.text = String.fromCharCode(charCode);
-								data.functionKeys = functionKeys;
+								key.charCode = charCode;
+								key.scanCode = scanCode;
+								key.text = String.fromCharCode(charCode);
+								key.functionKeys = functionKeys;
 							};
-						} else {
-							data = this._super(data, options) || data;
-							data.text = data.valueOf();
-							data.charCode = null;
-							data.scanCode = null;
-							data.functionKeys = null;
-						};
-						data.valueOf = function() {
-							if (data.functionKeys & io.KeyboardFunctionKeys.Alt) {
-								return '';
-							};
-							if (data.functionKeys & io.KeyboardFunctionKeys.Ctrl) {
-								const chr = data.text.toUpperCase();
-								if ((chr >= 'A') && (chr <= 'Z')) {
-									return '^' + chr;
-								} else {
+
+							key.valueOf = function() {
+								if (key.functionKeys & io.KeyboardFunctionKeys.Alt) {
 									return '';
 								};
+								if (key.functionKeys & io.KeyboardFunctionKeys.Ctrl) {
+									const chr = key.text.toUpperCase();
+									if ((chr >= 'A') && (chr <= 'Z')) {
+										return '^' + chr;
+									} else {
+										return '';
+									};
+								};
+								return key.text;
 							};
-							return data.text;
-						};
-					}),
 
-					onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(ev) {
-						// Shows virtual keyboard on mobile phones and tablets.
-						if (this.element.focus) {
-							this.element.focus();
-						};
-					})),
-					
-					onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT(['keydown', 'keypress'], function onJsKeyDown(ev) {
-						if (this.__listening) {
-							const data = this.transform({raw: ev});
-
-							const newEv = new doodad.Event(data);
+							const newEv = new doodad.Event(key);
 							this.onKey(newEv);
 
-							this.push(data);
+							//const data = new io.Data(key);
+							//this.push(data);
 
 							if (newEv.prevent) {
 								ev.preventDefault();
@@ -297,7 +288,7 @@ module.exports = {
 					handleBufferData: doodad.SUPER(function handleBufferData(data, state) {
 						let html = this._super(data, state);
 						
-						data = data.valueOf();
+						data = data.raw;
 						
 						var	type = data[0],
 							container,

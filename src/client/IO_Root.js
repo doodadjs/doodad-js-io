@@ -51,10 +51,13 @@ module.exports = {
 				
 
 				types.complete(_shared.Natives, {
+					windowUint8Array: (types.isNativeFunction(global.Uint8Array) ? global.Uint8Array : undefined),
+					windowTextEncoder: (types.isNativeFunction(global.TextEncoder) ? global.TextEncoder : undefined),
 					windowTextDecoder: (types.isNativeFunction(global.TextDecoder) ? global.TextDecoder : undefined),
 				});
 				
 				
+
 				//=====================================================
 				// Basic implementations
 				//=====================================================
@@ -81,62 +84,40 @@ module.exports = {
 					__pipeOnReady: doodad.PROTECTED(function __pipeOnReady(ev) {
 						const stream = ev.handlerData[0],
 							transform = ev.handlerData[1],
-							end = ev.handlerData[2];
+							end = ev.handlerData[2];  // 'true' permits EOF. 'false' just write the trailing data if there are.
 
-						if (stream.isDestroyed()) {
+						if (stream && _shared.DESTROYED(stream)) {
 							this.unpipe(stream);
 							return;
 						};
 
-						let data = ev.data;
+						ev.preventDefault();
+
+						const data = ev.data;
+						let eof = end && (ev.data.raw === io.EOF);
+						let raw = this.transform(data);
 
 						if (transform) {
-							const retval = transform(data);
+							const retval = transform(raw);
 							if (retval !== undefined) {
-								data = retval;
-							};
-						};
-
-						ev.preventDefault();
-						data.delayed = true; // Will be consumed later
-
-						const eof = (data.raw === io.EOF);
-
-						const __consume = function consume() {
-							this.__consumeData(data);
-						};
-
-
-						if (eof) {
-							const value = data.valueOf();
-							if (end) {
-								const consumeCb = doodad.AsyncCallback(this, __consume);
-								if (types.isNothing(value)) {
-									stream.write(io.EOF, {callback: consumeCb});
+								raw = retval;
+								if (raw === io.EOF) {
+									eof = end;
+									raw = null;
 								} else {
-									stream.write(value, {callback: doodad.Callback(this, function() {
-										stream.write(io.EOF, {callback: consumeCb});
-									})});
+									eof = false;
 								};
-							} else if (types.isNothing(value)) {
-								__consume.call(this);
-							} else {
-								const consumeCb = doodad.AsyncCallback(this, __consume);
-								stream.write(value, {callback: consumeCb});
 							};
-						} else if (types._instanceof(data.raw, io.Signal)) {
-							__consume.call(this);
-						} else {
-							const consumeCb = doodad.AsyncCallback(this, __consume);
-							stream.write(data.valueOf(), types.extend({}, data.options, {callback: consumeCb}));
 						};
+
+						stream.write(raw, {callback: data.defer(), end: eof});
 					}),
 					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
 						const stream = ev.handlerData[0];
-						if (!stream.isDestroyed()) {
+						if (!_shared.DESTROYED(stream)) {
 							if (stream.options.flushMode !== 'manual') {
-								stream.flush(stream.options.autoFlushOptions);
+								stream.flush();
 							};
 						};
 					}),
@@ -246,7 +227,8 @@ module.exports = {
 
 					read: doodad.OVERRIDE(function read(/*optional*/options) {
 						if (this.getCount() > 0) {
-							return this.pull(options);
+							let data = this.pull(options);
+							return this.transform(data, options);
 						} else {
 							return null;
 						};
@@ -265,32 +247,189 @@ module.exports = {
 					}),
 
 					write: doodad.OVERRIDE(function write(raw, /*optional*/options) {
-						const data = this.transform({raw: raw}, options);
+						const callback = types.get(options, 'callback');
+
+						let end = types.get(options, 'end'),
+							eof = false,
+							bof = !end && types.get(options, 'bof'),
+							data = null;
+
+						if (types.isNothing(raw)) {
+							if (end) {
+								raw = io.EOF;
+							} else if (bof) {
+								raw = io.BOF;
+							} else {
+								callback && callback(null);
+								return;
+							};
+						};
+
+						const encoding = types.get(options, 'encoding', this.options.encoding);
+
+						if (types._instanceof(raw, io.Data)) {
+							if (raw.stream) {
+								eof = (raw.raw === io.EOF);
+								bof = !eof && (raw.raw === io.BOF);
+								raw = raw.stream.transform(raw);
+								data = this.transform(raw, {encoding: encoding}); //, options);
+							} else {
+								// A detached data-object has been written.
+								data = raw;
+								eof = (data.raw === io.EOF);
+								bof = !eof && (data.raw === io.BOF);
+							};
+						} else {
+							data = this.transform(raw, {encoding: encoding}); //, options);
+							eof = (data.raw === io.EOF);
+							bof = !eof && (data.raw === io.BOF);
+						};
+
+						if (types.isNothing(end)) {
+							end = eof;
+						};
+
+						data.attach(this);
+
+						if (callback) {
+							data.chain(callback);
+						};
 
 						const ev = new doodad.Event(data);
 						this.onWrite(ev);
 
 						if (ev.prevent) {
-							if (!data.delayed) {
-								this.__consumeData(data);
+							if (!data.consumed) {
+								data.consume();
 							};
 						} else {
-							this.push(data);
-
 							if (this.options.flushMode === 'half') {
-								this.flush(this.options.autoFlushOptions);
+								if (end) {
+									if (eof) {
+										this.push(data);
+										this.flush();
+									} else {
+										this.push(data);
+										this.push(new io.Data(io.EOF));
+										this.flush();
+									};
+								} else if (eof) {
+									data.consume();
+								} else if (bof && (data.raw !== io.BOF)) {
+									this.push(data);
+									this.push(new io.Data(io.BOF));
+									this.flush();
+								} else {
+									this.push(data);
+									this.flush();
+								};
+							} else {
+								if (end) {
+									if (eof) {
+										this.push(data);
+									} else {
+										data.chain(doodad.Callback(this, function(err) {
+											if (!err) {
+												this.push(new io.Data(io.EOF));
+											};
+										}));
+										this.push(data);
+									};
+								} else if (eof) {
+									data.consume();
+								} else if (bof && (data.raw !== io.BOF)) {
+									data.chain(doodad.Callback(this, function(err) {
+										if (!err) {
+											this.push(new io.Data(io.BOF));
+										};
+									}));
+									this.push(data);
+								} else {
+									this.push(data);
+								};
 							};
 						};
 					}),
 
 				})));
 
-				
+
 				//=====================================================
 				// Text transformable client implementation
 				//=====================================================
 
-				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextTransformableBase.$extend(
+				io.ADD('EncodingAliases', types.freezeObject(types.nullObject({
+					// TODO: Add other aliases.
+					'utf8': 'utf-8',
+					//'latin1': 'iso-8859-1',
+				})));
+
+
+				io.REGISTER(io.BinaryData.$inherit(
+					/*typeProto*/
+					{
+						$TYPE_NAME: 'TextData',
+						$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextData')), true) */,
+
+						$validateEncoding: function $validateEncoding(encoding, /*optional*/dontThrow) {
+							encoding = encoding.toLowerCase();
+							if (encoding in io.EncodingAliases) {
+								encoding = io.EncodingAliases[encoding];
+							};
+							if ((encoding !== 'raw') && (encoding !== 'utf-8')) {
+								if (dontThrow) {
+									return null;
+								} else {
+									throw new types.NotSupported("At the time of writing, text encoding other than 'utf-8' was not supported in browsers by default, without the need of loading a huge library.");
+								};
+							};
+							return encoding;
+						},
+
+						$encode: function $encode(str, encoding, /*optional*/options) {
+							// NOTE: You must call "$validateEncoding" before if not already done.
+							// NOTE: Since the W3C spec has been written for "TextEncoder", support for formats other than 'utf-8' has been removed !!!!
+							// FUTURE: See if the W3C has finally changed their mind.
+							// TODO: Maybe allow the use of the "text-encoding" package from NPM.
+							if (types.isString(str)) {
+								if (encoding !== 'utf-8') {
+									throw new types.Error("Only 'utf-8' text encoding is supported.");
+								};
+								const encoder = new _shared.Natives.windowTextEncoder(/*encoding*/);
+								return encoder.encode(str);
+							} else {
+								throw new types.Error("Invalid string.");
+							};
+						},
+
+						$decode: function $decode(buf, encoding, /*optional*/options) {
+							// NOTE: You must call "$validateEncoding" before if not already done.
+							const isView = types.isTypedArray(buf);
+							if (isView || types.isArrayBuffer(buf)) {
+								if (isView) {
+									buf = buf.buffer;
+								};
+								const decoder = new _shared.Natives.windowTextDecoder(encoding);
+								return decoder.decode(buf, {stream: false});
+							} else {
+								throw new types.Error("Invalid 'raw' data.");
+							};
+						},
+					},
+					/*instanceProto*/
+					{
+						_new: types.SUPER(function _new(/*optional*/raw, /*optional*/options) {
+							const encoding = types.get(options, 'encoding');
+							if (encoding === 'raw') {
+								throw new types.Error("Invalid encoding for text data.");
+							};
+							this._super(raw, options);
+ 						}),
+					}
+				));
+				
+
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Transformable.$extend(
 											ioMixIns.Stream,
 				{
 					$TYPE_NAME: 'TextTransformable',
@@ -299,64 +438,69 @@ module.exports = {
 					__decoder: doodad.PROTECTED( null ),
 					__decoderEncoding: doodad.PROTECTED( null ),
 					
-					$isValidEncoding: doodad.OVERRIDE(function isValidEncoding(encoding) {
-						// TODO: Find a better way
-						if (_shared.Natives.windowTextDecoder) {
-							try {
-								new _shared.Natives.windowTextDecoder(encoding, {fatal: true});
-								return true;
-							} catch(o) {
-								return false;
-							};
-						} else {
-							return true; // !
-						};
-					}),
-					
-					$decode: doodad.PUBLIC(function $decode(buf, encoding) {
-						if (encoding && _shared.Natives.windowTextDecoder && types.isTypedArray(buf)) {
-							const decoder = new _shared.Natives.windowTextDecoder(encoding);
-							return decoder.decode(buf, {stream: false});
-						} else {
-							return types.toString(buf);
-						};
-					}),
+					$isValidEncoding: doodad.REPLACE(doodad.TYPE(function(encoding) {
+						return (io.TextData.$validateEncoding(encoding, true) !== null);
+					})),
 
 					setOptions: doodad.OVERRIDE(function setOptions(options) {
 						types.getDefault(options, 'encoding', types.getIn(this.options, 'encoding', 'utf-8'));
 
 						this._super(options);
-						
-						if (!types.getType(this).$isValidEncoding(this.options.encoding)) {
-							throw new types.Error("Invalid encoding : '~0~'.", [this.options.encoding]);
-						};
 					}),
 					
-					transform: doodad.REPLACE(function transform(data, /*optional*/options) {
-						const encoding = types.getDefault(options, 'encoding', this.options.encoding);
-						if (encoding && _shared.Natives.windowTextDecoder && types.isTypedArray(data.raw)) {
+					transform: doodad.REPLACE(function transform(raw, /*optional*/options) {
+						if (!options) {
+							options = {};
+						};
+						let encoding = types.get(options, 'encoding');
+						if (encoding) {
+							encoding = io.TextData.$validateEncoding(encoding);
+						} else {
+							encoding = this.options.encoding || 'utf-8';
+						};
+						options.encoding = encoding;
+						let returnText = false;
+						if (types._instanceof(raw, io.Data)) {
+							raw = raw.valueOf('raw');
+							returnText = true;
+						};
+						if (types._instanceof(raw, io.Signal)) {
+							let trailing = null;
+							if (this.__decoder) {
+								trailing = this.__decoder.decode(null, {stream: false}) || null;
+							};
+							this.__decoder = null;
+							this.__decoderEncoding = null;
+							if (returnText) {
+								return trailing;
+							} else {
+								const dta = new io.TextData(raw, options);
+								dta.trailing = trailing;
+								return dta;
+							};
+						} else if (encoding && (types.isArrayBuffer(raw) || types.isTypedArray(raw))) {
 							let text = '';
-							if (!types._instanceof(data.raw, io.Signal) && (!this.__decoder || (this.__decoderEncoding !== encoding))) {
-								if (this.__decoder) {
-									text = this.__decoder.decode(null, {stream: false});
+							if (this.__decoderEncoding !== encoding) {
+								if (this.__transformDecoder) {
+									text = this.__decoder.decode(null, {stream: false}) || '';
+									this.__decoder = null;
 								};
 								this.__decoder = new _shared.Natives.windowTextDecoder(encoding);
 								this.__decoderEncoding = encoding;
 							};
-							if (this.__decoder) {
-								if (data.raw === io.EOF) {
-									text += this.__decoder.decode(null, {stream: false});
-								} else if (!types._instanceof(data.raw, io.Signal)) {
-									text += this.__decoder.decode(data.raw, {stream: true});
-								};
+							text += this.__decoder.decode(raw, {stream: true}) || '';
+							if (returnText) {
+								return text || null;
+							} else {
+								return new io.TextData(text || null, options);
 							};
-							data.text = text;
-						} else if (!types._instanceof(data.raw, io.Signal)) {
-							data.text = types.toString(data.raw);
-						};
-						
-						data.valueOf = function valueOf() {
-							return this.text || null;
+						} else {
+							const text = types.toString(raw);
+							if (returnText) {
+								return text;
+							} else {
+								return new io.TextData(text, options);
+							};
 						};
 					}),
 					
@@ -364,17 +508,18 @@ module.exports = {
 						this._super();
 						
 						this.__decoder = null;
+						this.__decoderEncoding = null;
 					}),
 					
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 						
 						this.__decoder = null;
+						this.__decoderEncoding = null;
 					}),
 				})));
-				
 
-				
+
 				//===================================
 				// Init
 				//===================================
