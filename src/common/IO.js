@@ -52,8 +52,120 @@ module.exports = {
 					stdout: null,
 					stderr: null,
 				};
+
+				//=========================================
+				// Enums
+				//=========================================
 					
-					
+				io.ADD('KeyboardFunctionKeys', types.freezeObject(types.nullObject({
+					Shift: 1,
+					Ctrl: 2,
+					Alt: 4,
+					Meta: 8,
+				})));
+				
+				// Source: http://www.cambiaresearch.com/articles/15/javascript-char-codes-key-codes
+				io.ADD('KeyboardScanCodes', types.freezeObject(types.nullObject({
+					Backspace: 8,
+					Tab: 9,
+					Enter: 13,
+					Shift: 16,
+					Ctrl: 17,
+					Alt: 18,
+					PauseBreak: 19,
+					CapsLock: 20,
+					Escape: 27,
+					PageUp: 33,
+					PageDown: 34,
+					End: 35,
+					Home: 36,
+					LeftArrow: 37,
+					UpArrow: 38,
+					RightArrow: 39,
+					DownArrow: 40,
+					Insert: 45,
+					Delete: 46,
+					Zero: 48,
+					One: 49,
+					Two: 50,
+					Three: 51,
+					Four: 52,
+					Five: 53,
+					Six: 54,
+					Seven: 55,
+					Eight: 56,
+					Nine: 57,
+					A: 65,
+					B: 66,
+					C: 67,
+					D: 68,
+					E: 69,
+					F: 70,
+					G: 71,
+					H: 72,
+					I: 73,
+					J: 74,
+					K: 75,
+					L: 76,
+					M: 77,
+					N: 78,
+					O: 79,
+					P: 80,
+					Q: 81,
+					R: 82,
+					S: 83,
+					T: 84,
+					U: 85,
+					V: 86,
+					W: 87,
+					X: 88,
+					Y: 89,
+					Z: 90,
+					LeftWindow: 91,
+					RightWindow: 92,
+					Select: 93,
+					Numpad0: 96,
+					Numpad1: 97,
+					Numpad2: 98,
+					Numpad3: 99,
+					Numpad4: 100,
+					Numpad5: 101,
+					Numpad6: 102,
+					Numpad7: 103,
+					Numpad8: 104,
+					Numpad9: 105,
+					Multiply: 106,
+					Add: 107,
+					Subtract: 109,
+					DecimalPoint: 110,
+					Divide: 111,
+					F1: 112,
+					F2: 113,
+					F3: 114,
+					F4: 115,
+					F5: 116,
+					F6: 117,
+					F7: 118,
+					F8: 119,
+					F9: 120,
+					F10: 121,
+					F11: 122,
+					F12: 123,
+					NumLock: 144,
+					ScrollLock: 145,
+					SemiColon: 186,
+					EqualSign: 187,
+					Comma: 188,
+					Dash: 189,
+					Period: 190,
+					ForwardSlash: 191,
+					GraveAccent: 192,
+					OpenBracket: 219,
+					BackSlash: 220,
+					CloseBraket: 221,
+					SingleQuote: 222,
+				})));
+				
 				//=====================================================
 				// Interfaces (continued)
 				//=====================================================
@@ -86,7 +198,7 @@ module.exports = {
 						let data;
 						
 						while (data = this.read(options)) {
-							text += data;
+							text += types.toString(data);
 						};
 						
 						return text || null;
@@ -109,7 +221,8 @@ module.exports = {
 									ok = true;
 									break;
 								} else {
-									line += this.transform(data, options) || '';
+									const raw = this.transform(data, options) || '';
+									line += types.toString(raw);
 								};
 
 								const index = tools.search(line, this.options.newLine);
@@ -199,12 +312,27 @@ module.exports = {
 					$TYPE_NAME: 'Stream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamBase')), true) */,
 				})));
-
+/*
+				io.REGISTER(doodad.BASE(doodad.Object.$extend(
+									ioMixIns.BufferedStream,
+				{
+					$TYPE_NAME: 'BufferedStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedStreamBase')), true) * /,
+				})));
+*/
 				io.REGISTER(doodad.BASE(io.Stream.$extend(
 									ioMixIns.InputStream,
 				{
 					$TYPE_NAME: 'InputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputStreamBase')), true) */,
+				})));
+				
+//				io.REGISTER(doodad.BASE(io.BufferedStream.$extend(
+				io.REGISTER(doodad.BASE(io.Stream.$extend(
+									ioMixIns.BufferedInputStream,
+				{
+					$TYPE_NAME: 'BufferedInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputStreamBase')), true) */,
 				})));
 				
 				io.REGISTER(doodad.BASE(io.Stream.$extend(
@@ -214,6 +342,14 @@ module.exports = {
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamBase')), true) */,
 				})));
 				
+//				io.REGISTER(doodad.BASE(io.BufferedStream.$extend(
+				io.REGISTER(doodad.BASE(io.Stream.$extend(
+									ioMixIns.BufferedOutputStream,
+				{
+					$TYPE_NAME: 'BufferedOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedOutputStreamBase')), true) */,
+				})));
+				
 				io.REGISTER(doodad.BASE(io.InputStream.$extend(
 									ioMixIns.TextInput,
 				{
@@ -221,14 +357,30 @@ module.exports = {
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamBase')), true) */,
 				})));
 
-				io.REGISTER(io.OutputStream.$extend(
+				io.REGISTER(doodad.BASE(io.BufferedInputStream.$extend(
+									ioMixIns.TextInput,
+				{
+					$TYPE_NAME: 'BufferedTextInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedTextInputStreamBase')), true) */,
+				})));
+
+				io.REGISTER(doodad.BASE(io.OutputStream.$extend(
 									ioMixIns.TextOutput,
 				{
 					$TYPE_NAME: 'TextOutputStream',
-					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStream')), true) */,
-				}));
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamBase')), true) */,
+				})));
 				
-				io.REGISTER(io.TextOutputStream.$extend(
+				io.REGISTER(doodad.BASE(io.BufferedOutputStream.$extend(
+									ioMixIns.TextOutput,
+				{
+					$TYPE_NAME: 'BufferedTextOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedTextOutputStreamBase')), true) */,
+				})));
+				
+
+
+				io.REGISTER(io.BufferedTextOutputStream.$extend(
 									ioMixIns.NestedStream,
 				{
 					$TYPE_NAME: 'HtmlOutputStream',
@@ -263,7 +415,7 @@ module.exports = {
 						};
 					}),
 					
-					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {
+					__submitInternal: doodad.OVERRIDE(function __submitInternal(data, /*optional*/options) {
 						const next = types.get(options, 'next', false),
 							buffer = this.__buffer;
 
@@ -586,18 +738,13 @@ module.exports = {
 							this.__fn = 'log';
 						};
 					}),
-					
-					onData: doodad.OVERRIDE(function onData(ev) {
-						const retval = this._super(ev);
 
-						ev.preventDefault();
+					__submitInternal: doodad.REPLACE(function __submitInternal(data, /*optional*/options) {
+						const value = data.valueOf();
 
-						const value = ev.data.valueOf();
 						if (!types.isNothing(value)) {
 							global.console[this.__fn](value);
 						};
-
-						return retval;
 					}),
 
 					// Console hook
@@ -686,38 +833,11 @@ module.exports = {
 				
 				
 				io.REGISTER(io.Stream.$extend(
-									io.InputStream,
 									io.OutputStream,
 									ioMixIns.TextTransformable,
 				{
 					$TYPE_NAME: 'TextDecoderStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextDecoderStreamNodeJs')), true) */,
-
-					__listening: doodad.PROTECTED(false),
-
-					reset: doodad.OVERRIDE(function reset() {
-						this._super();
-
-						this.__listening = false;
-					}),
-
-					isListening: doodad.OVERRIDE(function isListening() {
-						return this.__listening;
-					}),
-					
-					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-						if (!this.__listening) {
-							this.__listening = true;
-							this.onListen(new doodad.Event());
-						};
-					}),
-					
-					stopListening: doodad.OVERRIDE(function stopListening() {
-						if (this.__listening) {
-							this.__listening = false;
-							this.onStopListening(new doodad.Event());
-						};
-					}),
 				}));
 
 

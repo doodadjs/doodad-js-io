@@ -175,6 +175,25 @@ module.exports = {
 						_shared.setAttribute(this, 'stream', stream);
 					}),
 					
+					__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
+						const size = types.get(options, 'size');
+						const raw = this.stream.read(size);
+						const data = raw && new io.BinaryData(raw, options);
+						return data;
+					}),
+					
+					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {
+						const raw = this.transform(data, options);
+						this.stream.push(raw); //, types.get(options, 'encoding'));
+					}),
+					
+					clear: doodad.OVERRIDE(function clear() {
+						this._super();
+
+						while (this.stream.read()) {
+						};
+					}),
+					
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 
@@ -251,6 +270,13 @@ module.exports = {
 				{
 					$TYPE_NAME: 'TextInputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamNodeJs')), true) */,
+
+					__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
+						const size = types.get(options, 'size');
+						const raw = this.stream.read(size);
+						const data = raw && new io.TextData(raw, options);
+						return data;
+					}),
 				}));
 				
 				
@@ -331,14 +357,17 @@ module.exports = {
 						this._super();
 					}),
 
+					clear: doodad.OVERRIDE(function clear() {
+					}),
+					
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 
 						this.__lastWriteOk = true;
 					}),
 					
-					canWrite: doodad.OVERRIDE(function canWrite() {
-						return this._super() && this.__lastWriteOk;
+					canWrite: doodad.REPLACE(function canWrite() {
+						return this.__lastWriteOk;
 					}),
 
 					__writeToStream: doodad.PROTECTED(function __writeToStream(raw, /*optional*/end) {
@@ -355,20 +384,13 @@ module.exports = {
 						};
 					}),
 
-					//onReady: doodad.OVERRIDE(function onReady(ev) {
-					onData: doodad.OVERRIDE(function onData(ev) {
-						const cancelled = this._super(ev);
-
-						const data = ev.data;
-
-						ev.preventDefault();
-
+					__submitInternal: doodad.REPLACE(function __submitInternal(data, /*optional*/options) {
 						const eof = (data.raw === io.EOF);
 
 						const lastOk = this.__lastWriteOk;
 
 						if (eof || lastOk) {
-							const buf = this.transform(data);
+							const buf = this.transform(data, options);
 							const ok = (buf || eof ? this.__writeToStream(buf, eof) : true) && lastOk;
 							if (!ok && lastOk) {
 								this.streamOnDrain.attachOnce(this.stream); // async
@@ -377,8 +399,6 @@ module.exports = {
 						} else {
 							throw new types.BufferOverflow();
 						};
-
-						return cancelled;
 					}),
 
 					cork: doodad.REPLACE(nodejsIOInterfaces.IWritable, function cork() {
@@ -418,13 +438,12 @@ module.exports = {
 				
 				
 				io.REGISTER(io.Stream.$extend(
-									io.TextInputStream,
+									//io.TextInputStream,
 									io.TextOutputStream,
 				{
 					$TYPE_NAME: 'UrlDecoderStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('UrlDecoderStreamNodeJs')), true) */,
 
-					__listening: doodad.PROTECTED(false),
 					__remaining: doodad.PROTECTED(null),
 					__mode: doodad.PROTECTED(0),
 
@@ -439,31 +458,14 @@ module.exports = {
 						this._super(options);
 					}),
 
+					clear: doodad.OVERRIDE(function clear() {
+					}),
+					
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 
-						this.__listening = false;
 						this.__remaining = '';
 						this.__mode = 0;
-					}),
-
-					isListening: doodad.OVERRIDE(function isListening() {
-						return this.__listening;
-					}),
-					
-					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-						//options = types.nullObject(options);
-						if (!this.__listening) {
-							this.__listening = true;
-							this.onListen(new doodad.Event());
-						};
-					}),
-					
-					stopListening: doodad.OVERRIDE(function stopListening() {
-						if (this.__listening) {
-							this.__listening = false;
-							this.onStopListening(new doodad.Event());
-						};
 					}),
 
 					onWrite: doodad.OVERRIDE(function onWrite(ev) {
@@ -543,48 +545,27 @@ module.exports = {
 							this.__remaining = remaining;
 						};
 
-						if (this.options.flushMode === 'half') {
-							this.flush();
-						};
-
 						return retval;
 					}),
 				}));
 
 
 				io.REGISTER(io.Stream.$extend(
-									io.InputStream,
+									//io.InputStream,
 									io.OutputStream,
 				{
 					$TYPE_NAME: 'Base64DecoderStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('Base64DecoderStreamNodeJs')), true) */,
 
-					__listening: doodad.PROTECTED(false),
 					__remaining: doodad.PROTECTED(null),
 
+					clear: doodad.OVERRIDE(function clear() {
+					}),
+					
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 
-						this.__listening = false;
 						this.__remaining = '';
-					}),
-
-					isListening: doodad.OVERRIDE(function isListening() {
-						return this.__listening;
-					}),
-					
-					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-						if (!this.__listening) {
-							this.__listening = true;
-							this.onListen(new doodad.Event());
-						};
-					}),
-					
-					stopListening: doodad.OVERRIDE(function stopListening() {
-						if (this.__listening) {
-							this.__listening = false;
-							this.onStopListening(new doodad.Event());
-						};
 					}),
 
 					onWrite: doodad.OVERRIDE(function onWrite(ev) {
@@ -615,28 +596,22 @@ module.exports = {
 							this.push(new io.Data(io.EOF), {callback: data.defer()});
 						};
 
-						if (this.options.flushMode === 'half') {
-							this.flush();
-						};
-
 						return retval;
 					}),
 				}));
 
 
 				io.REGISTER(io.Stream.$extend(
-									io.InputStream,
+									//io.InputStream,
 									io.OutputStream,
 				{
 					$TYPE_NAME: 'FormMultipartDecoderStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('FormMultipartDecoderStreamNodeJs')), true) */,
 
-					__listening: doodad.PROTECTED(false),
 					__headersCompiled: doodad.PROTECTED(false),
 					__headers: doodad.PROTECTED(null),
 					__inPart: doodad.PROTECTED(false),
 					__remaining: doodad.PROTECTED(null),
-					__parsing: doodad.PROTECTED(false),
 
 					__boundary: doodad.PROTECTED(null),
 
@@ -653,42 +628,14 @@ module.exports = {
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 
-						this.__listening = false;
 						this.__headers = types.nullObject();
 						this.__headersCompiled = false;
 						this.__inPart = false;
 						this.__remaining = null;
-						this.__parsing = false;
-					}),
-
-					isListening: doodad.OVERRIDE(function isListening() {
-						return this.__listening;
-					}),
-					
-					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-						if (!this.__listening) {
-							this.__listening = true;
-							this.onListen(new doodad.Event());
-						};
-					}),
-					
-					stopListening: doodad.OVERRIDE(function stopListening() {
-						if (this.__listening) {
-							this.__listening = false;
-							this.onStopListening(new doodad.Event());
-						};
-					}),
-
-					canWrite: doodad.OVERRIDE(function canWrite() {
-						return this._super() && !this.__parsing;
 					}),
 
 					onWrite: doodad.OVERRIDE(function onWrite(ev) {
 						const retval = this._super(ev);
-
-						if (this.__parsing) {
-							throw new types.BufferOverflow();
-						};
 
 						const data = ev.data;
 
@@ -789,10 +736,6 @@ module.exports = {
 
 						if (eof) {
 							this.push(new io.Data(io.EOF), {callback: data.defer()});
-						};
-
-						if (this.options.flushMode === 'half') {
-							this.flush();
 						};
 
 						return retval;

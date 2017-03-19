@@ -162,7 +162,17 @@ module.exports = {
 						return this._super(event, listener);
 					}),
 
+					//__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
 					__pipeOnReady: doodad.PROTECTED(function __pipeOnReady(ev) {
+						//const isBuffered = ev.handlerData[0],
+						//	isReady = ev.handlerData[1];
+
+						//if (isBuffered && !isReady && !ev.prevent) {
+						//	this.onData.detach(this, this.__pipeOnData);
+						//	this.onReady.attach(this, this.__pipeOnData, 40, [isBuffered, true]);
+						//	return;
+						//};
+
 						const destinations = this.__destinations;
 						const host = this[doodad.HostSymbol];
 
@@ -305,7 +315,10 @@ module.exports = {
 								},
 							};
 
-							host.onReady.attach(this, this.__pipeOnReady);
+							//const isBuffered = types._implements(this, io.BufferedStreamBase)
+
+							//host.onData.attach(this, this.__pipeOnData, 40, [isBuffered, false]);
+							host.onReady.attach(this, this.__pipeOnReady, 40);
 
 							state.unpipeCb = doodad.Callback(this, function _unpipeCb(readable) {
 								if (readable === this) {
