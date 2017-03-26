@@ -153,7 +153,8 @@ module.exports = {
 							};
 
 							const newEv = new doodad.Event(key);
-							this.onKey(newEv);
+							//this.onKey(newEv);
+							this.onReady(newEv);
 
 							//const data = new io.Data(key);
 							//this.push(data);
