@@ -179,6 +179,9 @@ module.exports = {
 						const size = types.get(options, 'size');
 						const raw = this.stream.read(size);
 						const data = raw && new io.BinaryData(raw, options);
+						if (data) {
+							data.attach(this);
+						};
 						return data;
 					}),
 					
@@ -276,6 +279,9 @@ module.exports = {
 						const size = types.get(options, 'size');
 						const raw = this.stream.read(size);
 						const data = raw && new io.TextData(raw, options);
+						if (data) {
+							data.attach(this);
+						};
 						return data;
 					}),
 				}));
