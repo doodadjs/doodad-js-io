@@ -143,16 +143,16 @@ module.exports = {
 					onend: doodad.RAW_EVENT(),
 					onreadable: doodad.RAW_EVENT(),
 					
-					__destinations: doodad.PROTECTED(null),
-					
-					__pipeWriting: doodad.PROTECTED(0),
-
 					__encoding: doodad.PROTECTED(null),
 
 					readable: doodad.PUBLIC(true),
+
 					_readableState: doodad.PUBLIC({
-						flowing: true,
+						//flowing: true,
 						ended: false,
+						pipesCount: 0,
+						pipes: null,
+						awaitDrain: 0,
 					}),
 
 					onnewListener: doodad.OVERRIDE(function onnewListener(event, listener) {
@@ -162,102 +162,48 @@ module.exports = {
 						return this._super(event, listener);
 					}),
 
-					//__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
-					__pipeOnReady: doodad.PROTECTED(function __pipeOnReady(ev) {
-						//const isBuffered = ev.handlerData[0],
-						//	isReady = ev.handlerData[1];
+					__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
+						// TODO: Test me
 
-						//if (isBuffered && !isReady && !ev.prevent) {
-						//	this.onData.detach(this, this.__pipeOnData);
-						//	this.onReady.attach(this, this.__pipeOnData, 40, [isBuffered, true]);
-						//	return;
-						//};
-
-						const destinations = this.__destinations;
 						const host = this[doodad.HostSymbol];
 
 						const data = ev.data;
-
-						ev.preventDefault();
-
 						const eof = (data.raw === io.EOF);
 
-						const globalState = {drainCount: 0, consumeCb: null};
+						const destination = ev.handlerData[0],
+							state = ev.handlerData[1];
 
-						if (destinations.length) {
-							const createWriteCb = function _createWriteCb(state) {
-								if (!globalState.consumeCb) {
-									globalState.consumeCb = data.defer();	// Will be consumed later
-								};
-								return doodad.AsyncCallback(this, function _writeCb(err) { // async
-									this.__pipeWriting--;
-									if (err) {
-										state.ok = false;
-										globalState.consumeCb(err);
-										this.onerror(err);
-									} else if (state.ok) {
-										if (this.__pipeWriting <= 0) {
-											this.__pipeWriting = 0;
+						if (state.consumeCb) {
+							// Oops... Normally, it should waits, but it has not !
+							throw new types.BufferOverflow();
 
-											globalState.consumeCb(null);
+						} else {
+							const encoding = destination.getDefaultEncoding();
 
-											if (eof) {
-												if (!this._readableState.ended) {
-													this.onend();
-													this._readableState.ended = true;
-												};
-											};
-										};
-									};
-								}, this.onerror);
+							const defer = function defer() {
+								state.consumeCb = data.defer();
+								data.chain(function(err) {
+									state.consumeCb = null;
+								});
+								return state.consumeCb;
 							};
-
-							const encoding = this.getEncoding();
-							const value = host.transform(data, {encoding: encoding});
 
 							if (eof) {
-								// End
-								tools.forEach(destinations, function(state) {
-									this.__pipeWriting++;
-									state.ok = true;
-									if (state.endDestination) {
-										if (types.isNothing(value)) {
-											state.destination.end(createWriteCb.call(this, state));
-										} else {
-											state.destination.end(value, createWriteCb.call(this, state));
-										};
-									} else if (!types.isNothing(value)) {
-										state.destination.write(value, createWriteCb.call(this, state));
-									};
-								}, this);
-							};
-
-							if (!types.isNothing(value)) {
-								tools.forEach(destinations, function forEachDestination(state) {
-									if (!eof || !state.endDestination) {
-										this.__pipeWriting++;
-										state.ok = state.destination.write(value); //, createWriteCb.call(this, state));
-										if (!state.ok) {
-											if (globalState.drainCount === 0) {
-												this.pause();
-											};
-											if (!state.drainCb) {
-												const drainFn = createWriteCb.call(this, state);
-												state.drainCb = doodad.Callback(this, function _drainCb() {
-													globalState.drainCount--;
-													state.ok = true;
-													state.drainCb = null;
-													drainFn(null);
-													if (globalState.drainCount <= 0) {
-														this.resume();
-													};
-												});
-												globalState.drainCount++;
-												state.destination.once('drain', state.drainCb);
-											};
-										};
-									};
-								}, this);
+								const value = data.valueOf(encoding);
+								if (state.endDestination) {
+									if (types.isNothing(value)) {
+										destination.end(defer());
+									} else {
+										destination.end(value, defer());
+									}
+								} else if (!types.isNothing(value)) {
+									destination.write(value, defer());
+								};
+							} else {
+								const value = data.valueOf(encoding);
+								if (!types.isNothing(value)) {
+									destination.write(value, defer());
+								};
 							};
 						};
 					}),
@@ -282,69 +228,102 @@ module.exports = {
 					}),
 					
 					pipe: doodad.PUBLIC(function pipe(destination, /*optional*/options) {
+						// TODO: Test me
+
 						const host = this[doodad.HostSymbol];
+
 						if (types._implements(destination, ioInterfaces.IStream)) {
 							return host.pipe(destination, options);
 						};
-						if (tools.findItem(this.__destinations, function(item) {
-							return (item.destination === destination);
-						}) === null) {
-							let destinations = this.__destinations;
-							if (!destinations) {
-								this.__destinations = destinations = [];
-							};
 
+						const rs = this._readableState;
+
+						const found = (types.isArray(rs.pipes) ? (tools.indexOf(rs.pipes, destination) >= 0) : (rs.pipes === destination))
+						if (!found) {
 							const state = {
+								isInput: host._implements(ioMixIns.InputStreamBase) && !host._implements(ioMixIns.OutputStreamBase),
 								endDestination: types.get(options, 'end', true) && (tools.indexOf([io.stdout, io.stderr, process.stdout, process.stderr], destination) < 0),
 								destination: destination,
+								unpipeCb: null,
 								errorCb: null,
 								closeCb: null,
-								finishCb: null,
-								writeCb: null,
-								unpipeCb: null,
-								ok: true,
 								drainCb: null,
-								unpipe: function() {
-									this.destination.removeListener('unpipe', this.unpipeCb);
-									this.destination.removeListener('error', this.errorCb);
-									this.destination.removeListener('close', this.closeCb);
-									this.destination.removeListener('destroy', this.closeCb);
-									if (this.drainCb) {
-										this.destination.removeListener('drain', this.drainCb);
-									};
-								},
+								consumeCb: null,
 							};
 
-							//const isBuffered = types._implements(this, io.BufferedStreamBase)
-
-							//host.onData.attach(this, this.__pipeOnData, 40, [isBuffered, false]);
-							host.onReady.attach(this, this.__pipeOnReady, 40);
+							if (state.isInput) {
+								host.onReady.attach(this, this.__pipeOnData, 40, [destination, state]);
+							} else {
+								host.onData.attach(this, this.__pipeOnData, 40, [destination, state]);
+							};
 
 							state.unpipeCb = doodad.Callback(this, function _unpipeCb(readable) {
 								if (readable === this) {
-									this.unpipe(destination);
+									if (state.isInput) {
+										this.onReady.detach(this, null, [state.destination]);
+									} else {
+										this.onData.detach(this, null, [state.destination]);
+									};
+
+									state.destination.removeListener('unpipe', state.unpipeCb);
+									state.destination.removeListener('error', state.errorCb);
+									state.destination.removeListener('close', state.closeCb);
+									state.destination.removeListener('destroy', state.closeCb);
+									if (state.drainCb) {
+										state.destination.removeListener('drain', state.drainCb);
+									};
+
+									state.unpipeCb = null;
+									state.errorCb = null;
+									state.closeCb = null;
+									state.drainCb = null;
+									state.consumeCb = null;
+
+									const rs = this._readableState;
+									if (types.isArray(rs.pipes)) {
+										types.popItem(rs.pipes, state.destination);
+										rs.pipesCount = rs.pipes.length;
+									} else if (state.destination === rs.pipes) {
+										rs.pipes = null;
+										rs.pipesCount = 0;
+									};
+
+									state.destination = null;
 								};
 							});
-							destination.on('unpipe', state.unpipeCb);
+							destination.prependListener('unpipe', state.unpipeCb);
 
 							state.errorCb = doodad.Callback(this, function _errorCb(err) {
+								if (state.consumeCb) {
+									try {
+										state.consumeCb(err);
+									} catch(o) {
+									};
+								};
 								try {
 									this.onerror(err);
 								} catch(ex) {
 									throw ex;
 								} finally {
-									this.unpipe(destination);
+									state.unpipeCb();
 								};
 							});
 							destination.once('error', state.errorCb);
 
-							state.closeCb = doodad.Callback(this, function _closeCb() {
-								this.unpipe(destination);
-							});
+							state.closeCb = state.unpipeCb;
 							destination.once('close', state.closeCb);
 							destination.once('destroy', state.closeCb);
 
-							this.__destinations.push(state);
+							if (types.isNothing(rs.pipes)) {
+								rs.pipes = destination;
+								rs.pipesCount = 1;
+							} else if (types.isArray(rs.pipes)) {
+								rs.pipes.push(destination);
+								rs.pipesCount = rs.pipes.length;
+							} else {
+								rs.pipes = [rs.pipes, destination];
+								rs.pipesCount = 2;
+							};
 							
 							const autoListen = types.get(options, 'autoListen', true);
 							if (autoListen) {
@@ -360,25 +339,31 @@ module.exports = {
 					_read: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function _read(/*optional*/size)
 					
 					read: doodad.PUBLIC(function read(/*optional*/size) {
-						if (size === 0) {
+						if (size <= 0) {
+							// <PRB> Node.Js does "read(0)" sometimes.
 							return null;
 						};
+
 						if (!types.isNothing(size)) {
 							throw new types.NotSupported("The 'size' argument is not supported by this stream.");
 						};
+
 						const encoding = this.getEncoding();
 						const host = this[doodad.HostSymbol];
+
 						const data = host.read({encoding: encoding});
 						if (data) {
 							return data;
 						};
+
 						if (this.isPaused()) {
 							// Must be Async (function must return before the event)
 							if (!this._readableState.ended) {
-								tools.callAsync(this.onend, -1, this);
 								this._readableState.ended = true;
+								tools.callAsync(this.onend, -1, this);
 							};
 						};
+
 						return null;
 					}),
 					
@@ -398,49 +383,46 @@ module.exports = {
 					}),
 					
 					unpipe: doodad.PUBLIC(function unpipe(/*optional*/destination) {
-						const host = this[doodad.HostSymbol];
+						// TODO: Test me
+
 						if (types._implements(destination, ioInterfaces.IStream)) {
-							return host.unpipe(destination);
-						};
-						let items = null;
-						if (types.isNothing(destination)) {
-							// TODO: host.unpipe();
-							items = this.__destinations;
+							const host = this[doodad.HostSymbol];
+							host.unpipe(destination);
+
 						} else {
-							const item = types.popItem(this.__destinations, function(itm) {
-								return itm.destination === destination;
-							});
-							if (item) {
-								items = [item];
-							};
-						};
-						this.pause();
-						if (items) {
-							let itm;
-							while (itm = items.pop()) {
-								itm.unpipe();
-								let dest = itm.destination;
-								if (types._implements(dest, nodejsIOInterfaces.IWritable)) {
-									dest = dest.getInterface(nodejsIOInterfaces.IWritable);
+							this.pause();
+
+							if (types.isNothing(destination)) {
+								const rs = this._readableState;
+								const pipes = rs.pipes;
+								if (types.isArray(pipes)) {
+									const len = pipes.length;
+									for (let i = len; i >= 0; i--) { // NOTE: Array gets modified
+										if (types.has(pipes, i)) {
+											pipes[i].emit('unpipe', this);
+										};
+									};
+								} else if (!types.isNothing(pipes)) {
+									pipes.emit('unpipe', this);
 								};
-								dest.emit('unpipe', this);
+							} else {
+								destination.emit('unpipe', this);
 							};
 						};
-						if (!this.__destinations || !this.__destinations.length) {
-							host.onReady.detach(this, this.__pipeOnReady);
-						};
+
+						return this;
 					}),
 					
 					push: doodad.PUBLIC(function push(chunk, /*optional*/encoding) {
 						const host = this[doodad.HostSymbol];
-						const data = host.transform(chunk);
-						host.push(data, {encoding: encoding});
+						const data = host.transform(chunk, {encoding: encoding});
+						host.push(data);
 						return (host.getCount() < host.options.bufferSize);
 					}),
 					
 					unshift: doodad.PUBLIC(function unshift(chunk) {
 						const host = this[doodad.HostSymbol];
-						const data = host.transform(chunk);
+						const data = host.transform(chunk, {encoding: encoding});
 						host.push(data, {next: true});
 						return (host.getCount() < host.options.bufferSize);
 					}),
@@ -494,42 +476,25 @@ module.exports = {
 							encoding = undefined;
 						};
 						
-						const host = this[doodad.HostSymbol];
-
 						if (types.isNothing(encoding)) {
 							encoding = this.getDefaultEncoding();
 						};
 						
-						const state = {ok: false};
+						const host = this[doodad.HostSymbol];
 
-						const options = {
-							callback: doodad.AsyncCallback(this, function(err) {
-								if (err) {
-									if (callback) {
-										callback(err);
-									} else if (err) {
-										this.onerror(err);
-									};
-								} else {
-									callback && callback(null);
-									if (!state.ok && host.canWrite()) {
-										//this._writableState.needDrain = false;
-										//this.writable = true;
-										this.ondrain();
-									};
-								};
-							}),
-							encoding: encoding,
+						const data = host.transform(chunk, {encoding: encoding});
+
+						data.attach(host);
+
+						host.write(data, {encoding: encoding, callback: callback});
+						
+						data.consume();
+
+						if (!data.consumed) {
+							data.chain(doodad.AsyncCallback(this, this.ondrain));
 						};
-						
-						host.write(chunk, options);
-						
-						state.ok = host.canWrite();
 
-						//this._writableState.needDrain = !state.ok;
-						//this.writable = state.ok;
-
-						return state.ok;
+						return data.consumed; // && host.canWrite();
 					}),
 					
 					end: doodad.PUBLIC(function end(/*optional*/chunk, /*optional*/encoding, /*optional*/callback) {
@@ -543,24 +508,25 @@ module.exports = {
 							encoding = undefined;
 						};
 
-						if (callback) {
-							callback = doodad.Callback(null, callback);
+						if (types.isNothing(encoding)) {
+							encoding = this.getDefaultEncoding();
 						};
-
+						
 						const host = this[doodad.HostSymbol];
 
-						host.write(chunk, {end: true, encoding: encoding, callback: doodad.Callback(this, function(err) {
-							if (err) {
-								if (callback) {
-									callback(err);
-								} else {
-									this.onerror(err);
-								};
-							} else {
-								callback && callback(null);
-								this.onfinish();
-							};
-						})});
+						const data = host.transform(chunk, {encoding: encoding});
+
+						data.attach(host);
+
+						host.write(data, {eof: true, encoding: encoding, callback: callback});
+						
+						data.consume();
+
+						if (!data.consumed) {
+							data.chain(doodad.AsyncCallback(this, this.ondrain));
+						};
+
+						return data.consumed;
 					}),
 				}))));
 				

@@ -74,8 +74,6 @@ module.exports = {
 					$TYPE_NAME: 'KeyboardInputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('KeyboardInputStream')), true) */,
 					
-					onKey: doodad.EVENT(false),
-
 					element: doodad.READ_ONLY(null),
 					
 					__listening: doodad.PROTECTED(false),
@@ -87,6 +85,12 @@ module.exports = {
 						raw: null,
 						functionKeys: null,
 					}),
+
+					onReady: doodad.CALL_FIRST(doodad.OVERRIDE(function onReady(ev) {
+						ev.data.event = ev;
+
+						return this._super(ev);
+					})),
 
 					onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(ev) {
 						// Shows virtual keyboard on mobile phones and tablets.
@@ -152,14 +156,11 @@ module.exports = {
 								return key.text;
 							};
 
-							const newEv = new doodad.Event(key);
-							//this.onKey(newEv);
-							this.onReady(newEv);
+							const data = new io.Data(key);
 
-							//const data = new io.Data(key);
-							//this.push(data);
+							this.push(data);
 
-							if (newEv.prevent) {
+							if (data.event.prevent) {
 								ev.preventDefault();
 								return false;
 							};
@@ -187,6 +188,7 @@ module.exports = {
 					isListening: doodad.OVERRIDE(function isListening() {
 						return this.__listening;
 					}),
+
 					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
 						if (!this.__listening) {
 							this.__listening = true;
@@ -195,6 +197,7 @@ module.exports = {
 							this.onListen(new doodad.Event());
 						};
 					}),
+
 					stopListening: doodad.OVERRIDE(function stopListening(/*optional*/options) {
 						if (this.__listening) {
 							this.__listening = false;
@@ -289,7 +292,7 @@ module.exports = {
 					handleBufferData: doodad.SUPER(function handleBufferData(data, state) {
 						let html = this._super(data, state);
 						
-						data = data.raw;
+						data = data.valueOf();
 						
 						var	type = data[0],
 							container,
@@ -322,7 +325,7 @@ module.exports = {
 							root.DD_ASSERT && root.DD_ASSERT(state.parent);
 						} else if (type === state.bufferTypes.Flush) {
 							container = data[2];
-							if (container) {
+							if (container && !container.parentNode) {
 								while (element = container.firstChild) {
 									state.parent.appendChild(element);
 								};
@@ -332,19 +335,20 @@ module.exports = {
 						return html;
 					}),
 
-					onReady: doodad.OVERRIDE(function onReady(ev) {
-						const retval = this._super(ev);
-
-						ev.preventDefault();
-
-						return retval;
-					}),
+					//onData: doodad.OVERRIDE(function onData(ev) {
+					//	const retval = this._super(ev);
+					//
+					//	ev.preventDefault();
+					//
+					//	return retval;
+					//}),
 
 					flush: doodad.OVERRIDE(function flush(/*optional*/options) {
 						this._super(options);
 
 						this.__div.innerHTML = '';
 					}),
+
 					openStream: doodad.OVERRIDE(function openStream(/*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						
@@ -376,12 +380,14 @@ module.exports = {
 
 						return this._super(types.extend({}, options, {noOpenClose: true}));
 					}),
+
 					openElement: doodad.OVERRIDE(function openElement(/*optional*/options) {
 						this._super(options);
 						
 						const tags = this.__tags;
 						tags[tags.length - 1][1] = this.element;
 					}),
+
 					closeElement: doodad.OVERRIDE(function closeElement() {
 						const tags = this.__tags;
 						
@@ -394,11 +400,13 @@ module.exports = {
 						
 						_shared.setAttribute(this, 'element', element);
 					}),
+
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 						
 						_shared.setAttribute(this, 'element', this.options.element);
 					}),
+
 					clear: doodad.OVERRIDE(function clear() {
 						this._super();
 						
@@ -461,10 +469,7 @@ module.exports = {
 							this.onError(new doodad.ErrorEvent(this.__fileReader.error));
 							
 						} else {
-							let data;
-
-							data = this.transform({raw: this.__fileReader.result});
-							this.push(data);
+							this.push(new io.BinaryData(this.__fileReader.result));
 							
 							const encoding = types.get(this.options, 'encoding', null);
 
@@ -482,8 +487,7 @@ module.exports = {
 								};
 								
 							} else {
-								data = this.transform({raw: io.EOF});
-								this.push(data);
+								this.push(new io.Data(io.EOF));
 							};
 						};
 					})),

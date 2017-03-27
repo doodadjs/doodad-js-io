@@ -73,10 +73,10 @@ module.exports = {
 					
 					stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
-					__listening: doodad.PROTECTED(false),
 					__ended: doodad.PROTECTED(false),
 					__waiting: doodad.PROTECTED(false),
 					__streamError: doodad.PROTECTED(false),
+					__listening: doodad.PROTECTED(false),
 
 					onError: doodad.OVERRIDE(function onError(ev) {
 						if (!this.__streamError) {
@@ -182,9 +182,10 @@ module.exports = {
 						return data;
 					}),
 					
-					__pushInternal: doodad.OVERRIDE(function __pushInternal(data, /*optional*/options) {
+					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
 						const raw = this.transform(data, options);
 						this.stream.push(raw); //, types.get(options, 'encoding'));
+						data.consume();
 					}),
 					
 					clear: doodad.OVERRIDE(function clear() {
@@ -222,11 +223,11 @@ module.exports = {
 						return host.stream.wrap(stream);
 					}),
 
-					isListening: doodad.OVERRIDE(function isListening() {
+					isListening: doodad.REPLACE(function isListening() {
 						return this.__listening;
 					}),
 
-					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
+					listen: doodad.REPLACE(function listen(/*optional*/options) {
 						if (!this.__listening) {
 							this.__listening = true;
 							
@@ -240,12 +241,12 @@ module.exports = {
 							
 								stream.resume();
 
-								this.onListen(new doodad.Event());
+								this.onListen();
 							};
 						};
 					}),
 
-					stopListening: doodad.OVERRIDE(function stopListening() {
+					stopListening: doodad.REPLACE(function stopListening() {
 						if (this.__listening) {
 							this.__listening = false;
 							
@@ -257,7 +258,7 @@ module.exports = {
 							
 								this.stream.pause();
 
-								this.onStopListening(new doodad.Event());
+								this.onStopListening();
 							};
 						};
 					}),
@@ -290,10 +291,11 @@ module.exports = {
 					
 					__lastWriteOk: doodad.PROTECTED(true),
 					__streamError: doodad.PROTECTED(false),
-					
+					__finished: doodad.PROTECTED(false),
+
 					onError: doodad.OVERRIDE(function onError(ev) {
 						if (!this.__streamError) {
-							const emitted = (this.stream.listenerCount('error') > 0) && this.stream.emit('error', ev.error);
+							const emitted = (!types.DESTROYED(this.stream) && this.stream.listenerCount('error') > 0) && this.stream.emit('error', ev.error);
 							if (emitted) {
 								ev.preventDefault();
 							};
@@ -304,11 +306,6 @@ module.exports = {
 						return cancelled;
 					}),
 
-					streamOnFinish: doodad.NODE_EVENT('finish', function streamOnFinish(context) {
-						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
-						iwritable.onfinish();
-					}),
-					
 					streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
 						if (types.isEntrant(this, 'onError')) {
 							this.__streamError = true;
@@ -322,14 +319,49 @@ module.exports = {
 						};
 					}),
 					
-					streamOnDrain: doodad.NODE_EVENT('drain', function streamOnDrain(context, ex) {
+					streamOnPipeDrain: doodad.NODE_EVENT('drain', function streamOnPipeDrain(context) {
+						// <PRB> Some Node.Js streams don't wait after pipes before emitting 'finish'.
+
+						this.streamOnPipeFinish.detach(context.emitter);
+						this.streamOnPipeClose.detach(context.emitter);
+
+						if (--context.data.count === 0) {
+							this.__lastWriteOk = true;
+
+							context.data.consume();
+						};
+					}),
+
+					streamOnPipeFinish: doodad.NODE_EVENT('finish', function streamOnPipeFinish(context) {
+						// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
+						this.streamOnPipeDrain(context);
+					}),
+					
+					streamOnPipeClose: doodad.NODE_EVENT('close', function streamOnPipeClose(context) {
+						// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
+						this.streamOnPipeFinish(context);
+					}),
+
+					streamOnDrain: doodad.NODE_EVENT('drain', function streamOnDrain(context) {
 						this.__lastWriteOk = true;
-						this.onFlush();
+
+						context.data.consume();
+					}),
+					
+					streamOnFinish: doodad.NODE_EVENT('finish', function streamOnFinish(context) {
+						// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
+						this.streamOnDrain(context);
+
+						//_shared.setAttribute(this, 'stream', null);
+						this.__finished = true;
+
+						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
+						iwritable.onfinish();
 					}),
 					
 					streamOnClose: doodad.NODE_EVENT('close', function streamOnClose(context) {
-						const istream = this.getInterface(nodejsIOInterfaces.IStream);
-						istream.destroy();
+						// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
+						this.streamOnFinish(context);
 					}),
 					
 					
@@ -354,50 +386,102 @@ module.exports = {
 						this.streamOnClose.clear();
 						this.streamOnDrain.clear();
 						
+						this.streamOnPipeDrain.clear();
+						this.streamOnPipeFinish.clear();
+						this.streamOnPipeClose.clear();
+
 						this._super();
 					}),
 
-					clear: doodad.OVERRIDE(function clear() {
-					}),
-					
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 
 						this.__lastWriteOk = true;
+						this.__finished = false;
 					}),
 					
+					transform: doodad.REPLACE(function transform(raw, /*optional*/options) {
+						let encoding = types.get(options, 'encoding');
+						if (encoding) {
+							encoding = io.BinaryData.$validateEncoding(encoding);
+						} else {
+							encoding = this.options.encoding || 'raw';
+						};
+						if (types._instanceof(raw, io.Data)) {
+							return raw.valueOf(encoding);
+						} else {
+							if (!options) {
+								options = {};
+							};
+							options.encoding = encoding;
+							return new io.BinaryData(raw, options);
+						};
+					}),
+
 					canWrite: doodad.REPLACE(function canWrite() {
-						return this.__lastWriteOk;
+						return this.__lastWriteOk && !this.__finished;
 					}),
 
 					__writeToStream: doodad.PROTECTED(function __writeToStream(raw, /*optional*/end) {
 						if (end) {
-							if (raw) {
-								return this.stream.end(raw);
+							if (types.isNothing(raw)) {
+								this.stream.end();
+								return true;
 							} else {
-								return this.stream.end();
+								this.stream.end(raw);
+								return false;
 							};
 						} else {
-							if (raw) {
+							if (types.isNothing(raw)) {
+								return true;
+							} else {
 								return this.stream.write(raw);
 							};
 						};
 					}),
 
 					__submitInternal: doodad.REPLACE(function __submitInternal(data, /*optional*/options) {
+						if (data.consumed) {
+							throw new types.Error("Data object has been consumed.");
+						};
+
+						const callback = types.get(options, 'callback');
 						const eof = (data.raw === io.EOF);
 
-						const lastOk = this.__lastWriteOk;
+						if (callback) {
+							data.chain(callback);
+						};
 
-						if (eof || lastOk) {
-							const buf = this.transform(data, options);
-							const ok = (buf || eof ? this.__writeToStream(buf, eof) : true) && lastOk;
-							if (!ok && lastOk) {
-								this.streamOnDrain.attachOnce(this.stream); // async
+						if (!this.__finished) {
+							const lastOk = this.__lastWriteOk;
+
+							if (eof || lastOk) {
+								const buf = data.valueOf();
+								const ok = this.__lastWriteOk = (buf || eof ? this.__writeToStream(buf, eof) : true) && lastOk;
+								if (ok && !eof) {
+									data.consume();
+								} else {
+									const context = {count: 1, consume: data.consume.bind(data)};
+									const rs = this.stream._readableState;
+									if (eof && rs && (rs.pipesCount > 0)) {
+										// <PRB> Some Node.Js streams don't wait after pipes before emitting 'drain' or 'finish'.
+										// NOTE: 'rs.pipes' can be a stream or an array of streams.
+										context.count = rs.pipesCount;
+										this.streamOnPipeDrain.attachOnce(rs.pipes, context, true);
+										this.streamOnPipeFinish.attachOnce(rs.pipes, context, true);
+										this.streamOnPipeClose.attachOnce(rs.pipes, context, true);
+									} else {
+										this.streamOnDrain.attachOnce(this.stream, context, true);
+									};
+								};
+							} else {
+								// Stream's 'write' function previously returned 'false', meaning that we should wait for the 'drain' event, but something has been submitted before that event.
+								throw new types.BufferOverflow();
 							};
-							this.__lastWriteOk = ok;
+						} else if (eof) {
+							data.consume();
 						} else {
-							throw new types.BufferOverflow();
+							throw new types.NotAvailable("Stream has finished.");
 						};
 					}),
 
@@ -423,13 +507,17 @@ module.exports = {
 
 					__writeToStream: doodad.REPLACE(function __writeToStream(raw, /*optional*/end) {
 						if (end) {
-							if (raw) {
-								return this.stream.end(raw, this.options.encoding);
+							if (types.isNothing(raw)) {
+								this.stream.end();
+								return true;
 							} else {
-								return this.stream.end();
+								this.stream.end(raw, this.options.encoding);
+								return false;
 							};
 						} else {
-							if (raw) {
+							if (types.isNothing(raw)) {
+								return true;
+							} else {
 								return this.stream.write(raw, this.options.encoding);
 							};
 						};
@@ -438,8 +526,8 @@ module.exports = {
 				
 				
 				io.REGISTER(io.Stream.$extend(
-									//io.TextInputStream,
-									io.TextOutputStream,
+									//io.TextOutputStream,
+									io.OutputStream,
 				{
 					$TYPE_NAME: 'UrlDecoderStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('UrlDecoderStreamNodeJs')), true) */,
@@ -518,7 +606,7 @@ module.exports = {
 									},
 								};
 								section.raw = section;
-								this.push(section, {callback: data.defer()});
+								this.submit(new io.Data(section), {callback: data.defer()});
 
 								if (mode === Modes.Key) {
 									this.__mode = Modes.Value;
@@ -538,9 +626,9 @@ module.exports = {
 									Modes: Modes, 
 									text: decode(remaining), 
 								};
-								this.push(new io.Data(section), {callback: data.defer()});
+								this.submit(new io.Data(section), {callback: data.defer()});
 							};
-							this.push(new io.Data(io.EOF), {callback: data.defer()});
+							this.submit(new io.Data(io.EOF), {callback: data.defer()});
 						} else if (remaining) {
 							this.__remaining = remaining;
 						};
@@ -551,7 +639,6 @@ module.exports = {
 
 
 				io.REGISTER(io.Stream.$extend(
-									//io.InputStream,
 									io.OutputStream,
 				{
 					$TYPE_NAME: 'Base64DecoderStream',
@@ -589,11 +676,11 @@ module.exports = {
 							if (chunkLen !== bufLen) {
 								this.__remaining = buf.slice(chunkLen);
 							};
-							this.push(new io.BinaryData(chunk), {callback: data.defer()});
+							this.submit(new io.BinaryData(chunk), {callback: data.defer()});
 						};
 
 						if (eof) {
-							this.push(new io.Data(io.EOF), {callback: data.defer()});
+							this.submit(new io.Data(io.EOF), {callback: data.defer()});
 						};
 
 						return retval;
@@ -602,7 +689,6 @@ module.exports = {
 
 
 				io.REGISTER(io.Stream.$extend(
-									//io.InputStream,
 									io.OutputStream,
 				{
 					$TYPE_NAME: 'FormMultipartDecoderStream',
@@ -666,7 +752,7 @@ module.exports = {
 										if (index === start + 1) {
 											this.__headersCompiled = true;
 											start = index + 1;
-											this.push(new io.Data(io.BOF, {headers: this.__headers}), {callback: data.defer()});
+											this.submit(new io.Data(io.BOF, {headers: this.__headers}), {callback: data.defer()});
 											break;
 										};
 										const str = buf.slice(start, index).toString('utf-8');  // Doing like Node.js (UTF-8). Normally it should be ASCII 7 bits.
@@ -685,7 +771,7 @@ module.exports = {
 										buf = buf.slice(start, end);
 									};
 									start = end;
-									this.push(new io.BinaryData(buf), {callback: data.defer()});
+									this.submit(new io.BinaryData(buf), {callback: data.defer()});
 								};
 
 								return start;
@@ -704,7 +790,7 @@ module.exports = {
 										if (this.__inPart) {
 											start = __parseHeaders.call(this, buf, start, index);
 											if (this.__headersCompiled && (start >= index)) {
-												this.push(new io.Data(io.EOF), {callback: data.defer()});
+												this.submit(new io.Data(io.EOF), {callback: data.defer()});
 												this.__headers = types.nullObject();
 												this.__headersCompiled = false;
 												if ((cr !== 0x0D) && (lf !== 0x0A)) { // "\r\n"
@@ -735,7 +821,7 @@ module.exports = {
 						};
 
 						if (eof) {
-							this.push(new io.Data(io.EOF), {callback: data.defer()});
+							this.submit(new io.Data(io.EOF), {callback: data.defer()});
 						};
 
 						return retval;

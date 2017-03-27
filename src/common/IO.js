@@ -312,14 +312,7 @@ module.exports = {
 					$TYPE_NAME: 'Stream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamBase')), true) */,
 				})));
-/*
-				io.REGISTER(doodad.BASE(doodad.Object.$extend(
-									ioMixIns.BufferedStream,
-				{
-					$TYPE_NAME: 'BufferedStream',
-					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedStreamBase')), true) * /,
-				})));
-*/
+
 				io.REGISTER(doodad.BASE(io.Stream.$extend(
 									ioMixIns.InputStream,
 				{
@@ -327,7 +320,6 @@ module.exports = {
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputStreamBase')), true) */,
 				})));
 				
-//				io.REGISTER(doodad.BASE(io.BufferedStream.$extend(
 				io.REGISTER(doodad.BASE(io.Stream.$extend(
 									ioMixIns.BufferedInputStream,
 				{
@@ -342,7 +334,6 @@ module.exports = {
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamBase')), true) */,
 				})));
 				
-//				io.REGISTER(doodad.BASE(io.BufferedStream.$extend(
 				io.REGISTER(doodad.BASE(io.Stream.$extend(
 									ioMixIns.BufferedOutputStream,
 				{
@@ -419,20 +410,20 @@ module.exports = {
 						const next = types.get(options, 'next', false),
 							buffer = this.__buffer;
 
-						const value = data.valueOf();
+						if (types._instanceof(data, io.TextData)) {
+							const value = data.toString();
 
-						let newData = null;
-
-						if (types.isString(value)) {
 							const cls = types.getType(this),
 								bufferTypes = cls.$__bufferTypes;
 							
+							let newData = null;
+
 							if (next) {
 								const firstItem = buffer[0],
 									itemValue = firstItem && firstItem.valueOf();
 									
 								if (!firstItem || (itemValue[0] !== bufferTypes.Html)) {
-									newData = new io.Data([bufferTypes.Html, value, false], data.options);
+									newData = new io.Data([bufferTypes.Html, value, false]);
 								} else {
 									itemValue[1] = value + firstItem[1];
 								};
@@ -441,21 +432,32 @@ module.exports = {
 									itemValue = lastItem && lastItem.valueOf();
 									
 								if (!lastItem || (itemValue[0] !== bufferTypes.Html)) {
-									newData = new io.Data([bufferTypes.Html, value, false], data.options);
+									newData = new io.Data([bufferTypes.Html, value, false]);
 								} else {
 									itemValue[1] += value;
 								};
 							};
-						} else {
-							newData = data;
-						};
 
-						if (newData) {
-							this._super(newData, options);
-						} else {
-							data.consume();
+							if (newData) {
+								newData.attach(this);
+								newData.chain(data.consume.bind(data));
 
-							this.overrideSuper();
+								this._super(newData, options);
+
+							} else {
+								const callback = types.get(options, 'callback');
+
+								if (callback) {
+									data.chain(callback);
+								};
+
+								data.consume();
+
+								this.overrideSuper();
+							};
+
+						} else {
+							this._super(data, options);
 						};
 					}),
 
@@ -613,11 +615,19 @@ module.exports = {
 						if (state.flushElementChunk && (bufferStart < bufferLen)) {
 							// Replace everything after the "Open" chunk by the "Flush" chunk.
 							state.flushElementChunk[1] = state.html;
-							buffer.splice(bufferStart + 1, buffer.length - bufferStart - 1, {raw: state.flushElementChunk, valueOf: function (){return this.raw;}});
+
+							const data = new io.Data(state.flushElementChunk);
+							data.attach(this);
+
+							const datas = buffer.splice(bufferStart + 1, buffer.length - bufferStart - 1, data);
+
+							tools.forEach(datas, function(dta) {
+								dta.consume();
+							});
 
 							const callback = types.get(options, 'callback');
 							if (callback) {
-								callback();
+								callback(null);
 							};
 							
 							this.onFlush();
@@ -663,11 +673,11 @@ module.exports = {
 							
 						const noOpenClose = types.get(options, 'noOpenClose', false);
 						
-						!noOpenClose && this.push(new io.Data([bufferTypes.Open, tag, attrs]));
+						!noOpenClose && this.submit(new io.Data([bufferTypes.Open, tag, attrs]));
 
-						this.push(new io.Data([bufferTypes.Stream, stream])); // <--- Will get replaced on flush
+						this.submit(new io.Data([bufferTypes.Stream, stream])); // <--- Will get replaced on flush
 
-						!noOpenClose && this.push(new io.Data([bufferTypes.Close, tag]));
+						!noOpenClose && this.submit(new io.Data([bufferTypes.Close, tag]));
 						
 						stream.onData.attach(this, this.__streamOnData, 50, [streamData]);
 
@@ -692,7 +702,7 @@ module.exports = {
 						const cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
-						this.push(new io.Data([bufferTypes.Open, tag, attrs]));
+						this.submit(new io.Data([bufferTypes.Open, tag, attrs]));
 					}),
 					
 					closeElement: doodad.PUBLIC(function closeElement() {
@@ -703,7 +713,7 @@ module.exports = {
 						const cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
-						this.push(new io.Data([bufferTypes.Close, tags.pop()[0]]));
+						this.submit(new io.Data([bufferTypes.Close, tags.pop()[0]]));
 					}),
 					
 					reset: doodad.OVERRIDE(function reset() {
@@ -745,6 +755,14 @@ module.exports = {
 						if (!types.isNothing(value)) {
 							global.console[this.__fn](value);
 						};
+
+						const callback = types.get(options, 'callback');
+
+						if (callback) {
+							data.chain(callback);
+						};
+
+						data.consume();
 					}),
 
 					// Console hook
@@ -832,9 +850,7 @@ module.exports = {
 
 				
 				
-				io.REGISTER(io.Stream.$extend(
-									io.OutputStream,
-									ioMixIns.TextTransformable,
+				io.REGISTER(io.TextOutputStream.$extend(
 				{
 					$TYPE_NAME: 'TextDecoderStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextDecoderStreamNodeJs')), true) */,

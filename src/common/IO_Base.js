@@ -60,14 +60,12 @@ module.exports = {
 						return '';
 					}),
 				}));
-				
 					
 				io.REGISTER(types.SINGLETON(io.Signal.$extend(
 				{
 					$TYPE_NAME: 'BOF',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BOFSingleton')), true) */,
 				})));
-				
 					
 				io.REGISTER(types.SINGLETON(io.Signal.$extend(
 				{
@@ -118,6 +116,7 @@ module.exports = {
 						timeoutObj: null,
 						trailing: null, // Trailing text/buffer on EOF. IMPORTANT: Must be a buffer if raw is a buffer, or a string if raw is a string
 						hasError: false,
+						callbacks: null,
 
 						_new: types.SUPER(function _new(/*optional*/raw, /*optional*/options) {
 							this._super();
@@ -126,30 +125,7 @@ module.exports = {
 							this.raw = raw;
 							this.options = types.nullObject(options);
 							this.options.encoding = encoding;
-							const timeout = types.get(options, 'timeout', (root.getOptions().debug ? 120000 : Infinity));
-							if (types.isFinite(timeout) && (timeout > 1000)) {
-								this.timeoutObj = tools.callAsync(function dataTimeout() {
-									// Data object looks like stalled.
-									debugger;
-									if (!this.consumed) {
-										this.timeoutObj = null;
-										const err = new types.TimeoutError("Data object has not been consumed.");
-										this.consume(err);
-									};
-								}, timeout, this, null, true);
-							};
  						}),
-
-						valueOf: function valueOf(/*optional*/encoding) {
-							if (!types.isNothing(encoding) && (encoding !== 'raw')) {
-								throw new types.NotSupported("This Data object only supports 'raw' encoding.");
-							};
-							if (types._instanceof(this.raw, io.Signal)) {
-								return null;
-							} else {
-								return this.raw;
-							};
-						},
 
 						attach: function attach(stream) {
 							if (this.consumed) {
@@ -162,6 +138,18 @@ module.exports = {
 								//	this.consume(ev.error);
 								//});
 								this.stream = stream;
+								const timeout = types.get(this.options, 'timeout', (root.getOptions().debug ? 120000 : Infinity));
+								if (types.isFinite(timeout) && (timeout > 1000)) {
+									this.timeoutObj = tools.callAsync(function dataTimeout() {
+										// Data object looks like stalled.
+										debugger;
+										if (!this.consumed) {
+											this.timeoutObj = null;
+											const err = new types.TimeoutError("Data object has not been consumed.");
+											this.consume(err);
+										};
+									}, timeout, this, null, true);
+								};
 							};
 						},
 
@@ -172,7 +160,7 @@ module.exports = {
 								throw new types.NotAvailable("Data object has not been attached to its stream.");
 							} else {
 								this.deferred++;
-								const cb = types.INHERIT(io.DeferCallback, this.consume.bind(this)); // doodad.AsyncCallback(this, this.consume);
+								const cb = types.INHERIT(io.DeferCallback, this.consume.bind(this));
 								cb.data = this;
 								return cb;
 							};
@@ -193,7 +181,7 @@ module.exports = {
 									this.timeoutObj.cancel();
 									this.timeoutObj = null;  // Free memory
 								};
-								const cbChain = this.options.callback;
+								const cbChain = this.callbacks;
 								if (types.isArray(cbChain)) {
 									const len = cbChain.length;
 									for (let i = 0; i < len; i++) {
@@ -202,7 +190,7 @@ module.exports = {
 								} else if (!types.isNothing(cbChain)) {
 									cbChain(err);
 								};
-								this.options.callback = null; // Free memory
+								this.callbacks = null; // Free memory
 								if (!_shared.DESTROYED(this.stream)) {
 									//this.stream.onError.detach(this);
 									this.stream.consumeData(this, err);
@@ -222,15 +210,15 @@ module.exports = {
 								if (this.consumed) {
 									callback();
 								} else {
-									let cbChain = this.options.callback;
+									let cbChain = this.callbacks;
 									if (types.isNothing(cbChain)) {
-										this.options.callback = callback;
+										this.callbacks = callback;
 									} else {
 										if (!types.isArray(cbChain)) {
-											this.options.callback = cbChain = [cbChain];
+											this.callbacks = cbChain = [cbChain];
 										};
 										if (root.DD_ASSERT) {
-											root.DD_ASSERT(tools.findItem(cbChain, callback) === null, "Callback has already been chained.");
+											root.DD_ASSERT(tools.findItem(cbChain, callback, null, true) === null, "Callback has already been chained.");
 										};
 										cbChain.push(callback);
 									};
@@ -240,15 +228,31 @@ module.exports = {
 
 						unchain: function chain(callback) {
 							if (!this.consumed && !types.isNothing(callback)) {
-								let cbChain = this.options.callback;
+								let cbChain = this.callbacks;
 								if (types.isArray(cbChain)) {
 									types.popItem(cbChain, callback);
 									if (!cbChain.length) {
-										this.options.callback = null;
+										this.callbacks = null;
 									};
 								} else if (cbChain === callback) {
-									this.options.callback = null;
+									this.callbacks = null;
 								};
+							};
+						},
+
+						valueOf: function valueOf() {
+							if (types._instanceof(this.raw, io.Signal)) {
+								return null;
+							} else {
+								return this.raw;
+							};
+						},
+
+						toString: function toString() {
+							if (types._instanceof(this.raw, io.Signal)) {
+								return '';
+							} else {
+								return types.toString(this.raw);
 							};
 						},
 					}
@@ -277,63 +281,37 @@ module.exports = {
 					},
 					/*instanceProto*/
 					{
-						valueOf: function valueOf(/*optional*/encoding) {
+						valueOf: function valueOf() {
+							// NOTE: That's still binary data.
+							const type = types.getType(this);
 							let buf = (types._instanceof(this.raw, io.Signal) ? null : this.raw);
-							if (types.isNothing(encoding)) {
-								if (types.isString(buf) || types.isString(this.trailing)) {
-									return (this.trailing ? (buf || '') + this.trailing : buf) || null;
-								} else {
-									const type = types.getType(this);
-									if (this.trailing) {
-										// TODO: Concat buf and trailing.
-										//buf = (buf ? buf.concat(this.trailing) : this.trailing);
-										if (buf) {
-											throw new types.Error("'ArrayBuffer' doesn't support concatenation.");
-										} else {
-											buf = this.trailing;
-										};
-									};
-									return type.$decode(buf, this.options.encoding, this.options) || null;
+							if (types.isString(buf) || types.isString(this.trailing)) {
+								let encoding = this.options.encoding;
+								if (this.stream && (encoding === 'raw')) {
+									encoding = this.stream.options.encoding;
 								};
+								return type.$encode((this.trailing ? (buf || '') + this.trailing : buf) || '', encoding, this.options);
 							} else {
-								const type = types.getType(this);
-								encoding = type.$validateEncoding(encoding);
-								let thisEncoding = this.options.encoding;
-								if (thisEncoding === 'raw') {
-									thisEncoding = this.stream.options.encoding;
-								};
-								if ((encoding === 'raw') || (encoding === thisEncoding)) {
-									if (types.isString(buf) || types.isString(this.trailing)) {
-										return type.$encode((this.trailing ? (buf || '') + this.trailing : buf) || '', thisEncoding, this.options);
+								if (this.trailing) {
+									// TODO: Concat buf and trailing.
+									//buf = (buf ? buf.concat(this.trailing) : this.trailing);
+									if (buf) {
+										throw new types.NotSupported("'ArrayBuffer' doesn't support concatenation.");
 									} else {
-										if (this.trailing) {
-											// TODO: Concat buf and trailing.
-											//buf = (buf ? buf.concat(this.trailing) : this.trailing);
-											if (buf) {
-												throw new types.Error("'ArrayBuffer' doesn't support concatenation.");
-											} else {
-												buf = this.trailing;
-											};
-										};
-										return buf || null;
+										buf = this.trailing;
 									};
-								} else {
-									if (types.isString(buf) || types.isString(this.trailing)) {
-										buf = (this.trailing ? (buf || '') + this.trailing : buf) || '';
-									} else {
-										if (this.trailing) {
-											// TODO: Concat buf and trailing.
-											//buf = (buf ? buf.concat(this.trailing) : this.trailing);
-											if (buf) {
-												throw new types.Error("'ArrayBuffer' doesn't support concatenation.");
-											} else {
-												buf = this.trailing;
-											};
-										};
-										buf = type.$decode(buf, thisEncoding, this.options);
-									};
-									return (buf ? type.$encode(buf, encoding, this.options) || null : null);
 								};
+								return buf || null;
+							};
+						},
+
+						toString: function toString() {
+							const type = types.getType(this);
+							if (types.isString(this.raw) || types.isString(this.trailing)) {
+								return (this.trailing ? (this.raw || '') + this.trailing : (this.raw || ''));
+							} else {
+								const value = this.valueOf();
+								return type.$decode(value, this.options.encoding, this.options) || '';
 							};
 						},
 					}
@@ -354,19 +332,16 @@ module.exports = {
 					})),
 
 					transform: doodad.PUBLIC(function transform(raw, /*optional*/options) {
-						if (!options) {
-							options = {};
-						};
-						let encoding = types.get(options, 'encoding');
-						if (encoding) {
-							encoding = io.TextData.$validateEncoding(encoding);
-						} else {
-							encoding = this.options.encoding || 'raw';
-						};
-						options.encoding = encoding;
 						if (types._instanceof(raw, io.Data)) {
-							return raw.valueOf(options.encoding);
+							return raw.valueOf();
 						} else {
+							const encoding = types.get(options, 'encoding');
+							if (!encoding) {
+								if (!options) {
+									options = {};
+								};
+								options.encoding = this.options.encoding || 'raw';
+							};
 							return new io.Data(raw, options);
 						};
 					}),
@@ -411,7 +386,6 @@ module.exports = {
 					
 					onDestroy: doodad.EVENT(false), // function(ev)
 					onError: doodad.ERROR_EVENT(), // function onError(ev)
-					onData: doodad.EVENT(false), // function(ev)
 					onBOF: doodad.EVENT(false), // function(ev)
 					onEOF: doodad.EVENT(false), // function(ev)
 
@@ -470,30 +444,10 @@ module.exports = {
 					$TYPE_NAME: 'BufferedStreamBase',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedStreamBaseMixIn')), true) */,
 
-					__buffer: doodad.PROTECTED(null),
-					__flushing: doodad.PROTECTED(false),
-
 					onFlush: doodad.EVENT(false), // function(ev)
 
-					onError: doodad.OVERRIDE(function onError(ev) {
-						const cancelled = this._super(ev);
-
-						const buffer = this.__buffer,
-							len = buffer.length,
-							err = ev.error;
-
-						for (let i = 0; i < len; i++) {
-							const data = buffer[i];
-							data.consume(err);
-						};
-
-						this.clearBuffer();
-
-						return cancelled;
-					}),
-
 					setOptions: doodad.OVERRIDE(function setOptions(options) {
-						types.getDefault(options, 'flushMode', types.getIn(this.options, 'flushMode', 'auto')); // 'auto', 'manual', 'half'
+						types.getDefault(options, 'flushMode', types.getIn(this.options, 'flushMode', 'auto')); // 'auto', 'manual'
 						if (options.flushMode === 'auto') {
 							types.getDefault(options, 'bufferSize', types.getIn(this.options, 'bufferSize', 1));
 						} else {
@@ -503,16 +457,12 @@ module.exports = {
 						this._super(options);
 					}),
 
-					clearBuffer: doodad.PUBLIC(function clearBuffer() {
-						this.__buffer = [];
-					}),
+					clearBuffer: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function clearBuffer()
 
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 						
 						this.clearBuffer();
-
-						this.__flushing = false;
 					}),
 					
 					clear: doodad.OVERRIDE(function clear() {
@@ -521,101 +471,9 @@ module.exports = {
 						this.clearBuffer();
 					}),
 					
-					getCount: doodad.PUBLIC(function getCount() {
-						return this.__buffer.length;
-					}),
+					getCount: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function getCount()
 
-					flush: doodad.PUBLIC(function flush(/*optional*/options) {
-						const callback = types.get(options, 'callback'),
-							count = types.get(options, 'count', Infinity);
-
-						const listening = !this._implements(ioMixIns.Listener) || this.isListening();
-
-						const MAX_LOOP_COUNT = 30;  // TODO: Make it a stream option
-
-						if (this.__flushing) {
-							if (callback) {
-								let flushCb, errorCb;
-								this.onFlush.attachOnce(this, flushCb = function(ev) {
-									this.onError.detach(this, errorCb);
-									callback(null);
-								});
-								this.onError.attachOnce(this, errorCb = function(ev) {
-									this.onFlush.detach(this, flushCb);
-									callback(ev.error);
-								});
-							};
-						} else if (listening && (count > 0)) {
-							const state = {count: 0, deferred: false, error: null};
-							let __flushCbSync, __flushCbAsync;
-							const __flush = function flush() {
-								let finished = false;
-								try {
-									for (let i = 0; i < MAX_LOOP_COUNT; i++) {
-										if ((state.count++ < count) && (this.getCount() > 0)) {
-											const data = this.pull();
-
-											let continueCb = null;
-
-											data.chain(continueCb = function continueFlush(err) {
-												if (err) {
-													callback && callback(err);
-												} else if (err || state.deferred) {
-													state.deferred = false;
-													__flushCbSync();
-												};
-											});
-
-											this.onData(new doodad.Event(data));
-
-											if (!data.consumed) {
-												data.consume();
-												if (data.deferred > 0) {
-													state.deferred = true;
-													break;
-												};
-											};
-
-										} else {
-											finished = true;
-											break;
-										};
-									};
-
-									if (!finished && !state.deferred) {
-										// After each X data objects, we continue on another tick
-										__flushCbAsync();
-									};
-								} catch(ex) {
-									state.error = ex;
-									finished = true;
-									throw ex;
-								} finally {
-									if (finished) {
-										this.__flushing = false;
-
-										callback && callback(state.error);
-
-										if (!state.error) {
-											tools.callAsync(this.onFlush, -1, this);
-										};
-									};
-								};
-							};
-
-							__flushCbSync = doodad.Callback(this, __flush, true);
-							__flushCbAsync = doodad.AsyncCallback(this, __flush, this.onError);
-
-							this.__flushing = true;
-
-							__flush.call(this);
-
-						} else {
-							callback && callback(null);
-
-							tools.callAsync(this.onFlush, -1, this);
-						};
-					}),
+					flush: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function flush(/*optional*/options)
 
 					flushAsync: doodad.PUBLIC(doodad.ASYNC(function flushAsync(/*optional*/options) {
 						const Promise = types.getPromise();
@@ -633,7 +491,7 @@ module.exports = {
 							};
 							destroyHandler = function destroyHandler(ev) {
 								cleanup.call(this);
-								reject(new types.NotAvailable("Target object is about to be destroyed."));
+								reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
@@ -649,6 +507,7 @@ module.exports = {
 						}, this);
 					})),
 				}))));
+
 
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 				{
@@ -668,6 +527,7 @@ module.exports = {
 
 				})));
 				
+
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 									ioMixIns.Listener,
 				{
@@ -676,7 +536,19 @@ module.exports = {
 
 					onReady: doodad.EVENT(false), // function(ev)
 
-					__pushInternal: doodad.PROTECTED(doodad.MUST_OVERRIDE()), //function __pushInternal(data, /*optional*/options)
+					__pushInternal: doodad.PROTECTED(function __pushInternal(data, /*optional*/options) {
+						if (data.consumed) {
+							throw new types.Error("Data object has been consumed.");
+						};
+
+						const callback = types.get(options, 'callback');
+
+						if (callback) {
+							data.chain(callback);
+						};
+
+						data.consume();
+					}),
 
 					push: doodad.PUBLIC(function push(data, /*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types._instanceof(data, io.Data), "Invalid Data object.");
@@ -685,22 +557,29 @@ module.exports = {
 							throw new types.Error("Data object has been consumed.");
 						};
 
-						const callback = types.get(options, 'callback');
-
 						if (data.stream !== this) {
 							data.attach(this);
 						};
 
-						if (callback) {
-							data.chain(callback);
+
+						let prevent = false;
+
+						if (!this._implements(ioMixIns.BufferedStreamBase)) {
+							const ev = new doodad.Event(data);
+
+							this.onReady(ev);
+
+							prevent = ev.prevent;
 						};
 
-						const ev = new doodad.Event(data);
-
-						this.onReady(ev);
-
-						if (ev.prevent) {
-							if (!data.consumed) {
+						if (prevent) {
+							const callback = types.get(options, 'callback');
+							if (data.consumed) {
+								callback && callback(null);
+							} else {
+								if (callback) {
+									data.chain(callback);
+								};
 								data.consume();
 							};
 						} else {
@@ -708,7 +587,8 @@ module.exports = {
 						};
 					}),
 
-					__pullInternal: doodad.PROTECTED(doodad.MUST_OVERRIDE()), //function __pullInternal(/*optional*/options)
+					__pullInternal: doodad.PROTECTED(function __pullInternal(/*optional*/options) {
+					}),
 
 					pull: doodad.PUBLIC(function pull(/*optional*/options) {
 						const data = this.__pullInternal(options);
@@ -724,7 +604,19 @@ module.exports = {
 
 					read: doodad.PUBLIC(function read(/*optional*/options) {
 						const data = this.pull(options);
-						return this.transform(data, options);
+
+						let value = null;
+
+						if (data.deferred <= 0) {
+							// NOTE: Data should not have been consumed.
+							value = this.transform(data, options);
+							data.consume();
+						} else {
+							// Not ready yet.
+							this.push(data, {next: true});
+						};
+
+						return value;
 					}),
 					
 					readAsync: doodad.PUBLIC(doodad.ASYNC(function readAsync(/*optional*/options) {
@@ -737,6 +629,8 @@ module.exports = {
 								.then(function(ev) {
 									return this.read(options);
 								});
+						} else {
+							return null;
 						};
 					})),
 				}))));
@@ -788,12 +682,24 @@ module.exports = {
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamBaseMixIn')), true) */,
 
 					onWrite: doodad.EVENT(false),
+					onData: doodad.EVENT(false), // function(ev)
 
 					canWrite: doodad.PUBLIC(function canWrite() {
 						return true;
 					}),
 
 					__submitInternal: doodad.PROTECTED(function __submitInternal(data, /*optional*/options) {
+						if (data.consumed) {
+							throw new types.Error("Data object has been consumed.");
+						};
+
+						const callback = types.get(options, 'callback');
+
+						if (callback) {
+							data.chain(callback);
+						};
+
+						data.consume();
 					}),
 
 					submit: doodad.PUBLIC(function submit(data, /*optional*/options) {
@@ -803,22 +709,28 @@ module.exports = {
 							throw new types.Error("Data object has been consumed.");
 						};
 
-						const callback = types.get(options, 'callback');
-
 						if (data.stream !== this) {
 							data.attach(this);
 						};
 
-						if (callback) {
-							data.chain(callback);
+						let prevent = false;
+
+						if (!this._implements(ioMixIns.BufferedStreamBase)) {
+							const ev = new doodad.Event(data);
+
+							this.onData(ev);
+
+							prevent = ev.prevent;
 						};
 
-						const ev = new doodad.Event(data);
-
-						this.onData(ev);
-
-						if (ev.prevent) {
-							if (!data.consumed) {
+						if (prevent) {
+							const callback = types.get(options, 'callback');
+							if (data.consumed) {
+								callback && callback(null);
+							} else {
+								if (callback) {
+									data.chain(callback);
+								};
 								data.consume();
 							};
 						} else {
@@ -829,44 +741,48 @@ module.exports = {
 					write: doodad.PUBLIC(function write(raw, /*optional*/options) {
 						const callback = types.get(options, 'callback');
 
-						let end = types.get(options, 'end'),
-							eof = false,
-							bof = !end && types.get(options, 'bof'),
-							data = null;
+						let end = types.get(options, 'eof'),
+							start = types.get(options, 'bof');
 
-						if (types.isNothing(raw)) {
-							if (end) {
-								raw = io.EOF;
-							} else if (bof) {
-								raw = io.BOF;
-							} else {
-								callback && callback(null);
-								return;
-							};
+						const encoding = types.get(options, 'encoding') || this.options.encoding;
+
+						let eof = false,
+							bof = false,
+							value;
+
+						const isData = types._instanceof(raw, io.Data);
+
+						if (isData) {
+							value = raw.raw;
+						} else {
+							value = raw;
 						};
 
-						const encoding = types.get(options, 'encoding', this.options.encoding);
-
-						if (types._instanceof(raw, io.Data)) {
-							if (raw.stream) {
-								eof = (raw.raw === io.EOF);
-								bof = !eof && (raw.raw === io.BOF);
-								raw = raw.stream.transform(raw);
-								data = this.transform(raw, {encoding: encoding}); //, options);
-							} else {
-								// A detached data-object has been written.
-								data = raw;
-								eof = (data.raw === io.EOF);
-								bof = !eof && (data.raw === io.BOF);
+						eof = end || (value === io.EOF),
+						bof = !eof && (start || (value === io.BOF));
+						if (isData) {
+							value = raw.valueOf();
+						};
+						if (types.isNothing(value)) {
+							if (eof) {
+								value = io.EOF;
+							} else if (bof) {
+								value = io.BOF;
 							};
-						} else {
-							data = this.transform(raw, {encoding: encoding}); //, options);
-							eof = (data.raw === io.EOF);
-							bof = !eof && (data.raw === io.BOF);
+						};
+						const data = this.transform(value, {encoding: encoding});
+						if (isData) {
+							if (raw.stream) {
+								data.chain(raw.defer());
+							};
 						};
 
 						if (types.isNothing(end)) {
 							end = eof;
+						};
+
+						if (types.isNothing(start)) {
+							start = bof;
 						};
 
 						data.attach(this);
@@ -894,15 +810,24 @@ module.exports = {
 									}));
 									this.submit(data);
 								};
-							} else if (eof) {
-								data.consume();
-							} else if (bof && (data.raw !== io.BOF)) {
-								data.chain(doodad.Callback(this, function(err) {
-									if (!err) {
-										this.submit(new io.Data(io.BOF));
-									};
-								}));
-								this.submit(data);
+							} else if (start) {
+								if (bof) {
+									this.submit(data);
+								} else {
+									data.chain(doodad.Callback(this, function(err) {
+										if (!err) {
+											this.submit(data);
+										};
+									}));
+									this.submit(new io.Data(io.BOF));
+								};
+							} else if (eof || bof) {
+								if (data.trailing) {
+									const type = types.getType(data);
+									this.submit(new type(data.trailing, data.options));
+								} else {
+									data.consume();
+								};
 							} else {
 								this.submit(data);
 							};
@@ -924,7 +849,7 @@ module.exports = {
 							};
 							destroyHandler = function destroyHandler(ev) {
 								cleanup.call(this);
-								reject(new types.NotAvailable("Target object is about to be destroyed."));
+								reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
@@ -972,7 +897,7 @@ module.exports = {
 							};
 							destroyHandler = function destroyHandler(ev) {
 								cleanup.call(this);
-								reject(new types.NotAvailable("Target object is about to be destroyed."));
+								reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
@@ -1002,7 +927,7 @@ module.exports = {
 							};
 							destroyHandler = function destroyHandler(ev) {
 								cleanup.call(this);
-								reject(new types.NotAvailable("Target object is about to be destroyed."));
+								reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
@@ -1032,7 +957,7 @@ module.exports = {
 							};
 							destroyHandler = function destroyHandler(ev) {
 								cleanup.call(this);
-								reject(new types.NotAvailable("Target object is about to be destroyed."));
+								reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
@@ -1048,6 +973,148 @@ module.exports = {
 					})),
 				}))));
 				
+
+				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.BufferedStreamBase.$extend(
+				{
+					$TYPE_NAME: 'BufferedStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedStreamMixIn')), true) */,
+
+					__buffer: doodad.PROTECTED(null),
+					__flushing: doodad.PROTECTED(false),
+
+					onError: doodad.OVERRIDE(function onError(ev) {
+						const cancelled = this._super(ev);
+
+						const buffer = this.__buffer,
+							len = buffer.length,
+							err = ev.error;
+
+						for (let i = 0; i < len; i++) {
+							const data = buffer[i];
+							data.consume(err);
+						};
+
+						this.clearBuffer();
+
+						return cancelled;
+					}),
+
+					clearBuffer: doodad.REPLACE(function clearBuffer() {
+						this.__buffer = [];
+					}),
+
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
+						
+						this.__flushing = false;
+					}),
+					
+					getCount: doodad.REPLACE(function getCount() {
+						return this.__buffer.length;
+					}),
+
+					flush: doodad.REPLACE(function flush(/*optional*/options) {
+						const callback = types.get(options, 'callback'),
+							count = types.get(options, 'count', Infinity);
+
+						const listening = !this._implements(ioMixIns.Listener) || this.isListening();
+
+						const MAX_LOOP_COUNT = 30;  // TODO: Make it a stream option
+
+						if (this.__flushing) {
+							if (callback) {
+								let flushCb, errorCb;
+								this.onFlush.attachOnce(this, flushCb = function(ev) {
+									this.onError.detach(this, errorCb);
+									callback(null);
+								});
+								this.onError.attachOnce(this, errorCb = function(ev) {
+									this.onFlush.detach(this, flushCb);
+									callback(ev.error);
+								});
+							};
+						} else if (listening && (count > 0)) {
+							const isInput = this._implements(ioMixIns.InputStreamBase) && !this._implements(ioMixIns.OutputStreamBase);
+							const state = {count: 0, deferred: false, error: null};
+							let __flushCbSync, __flushCbAsync;
+							const __flush = function flush() {
+								let finished = false;
+								try {
+									const buffer = this.__buffer;
+									for (let i = 0; i < MAX_LOOP_COUNT; i++) {
+										if ((state.count++ < count) && (buffer.length > 0)) {
+											const data = buffer.pop();
+
+											//let continueCb = null;
+
+											data.chain(/*continueCb =*/ function continueFlush(err) {
+												if (err) {
+													callback && callback(err);
+												} else if (state.deferred) {
+													state.deferred = false;
+													__flushCbSync();
+												};
+											});
+
+											const ev = new doodad.Event(data);
+
+											if (isInput) {
+												this.onReady(ev);
+											} else {
+												this.onData(ev);
+											};
+
+											// NOTE: No need to call "preventDefault"... Data is always assumed to be consumed. If nothing listen to "onData" or "onReady" (as appropriated), data is lost.
+											if (!data.consumed) {
+												data.consume();
+
+												if (!data.consumed) {
+													state.deferred = true;
+													break;
+												};
+											};
+
+										} else {
+											finished = true;
+											break;
+										};
+									};
+
+									if (!finished && !state.deferred) {
+										// After each X data objects, we continue on another tick
+										__flushCbAsync();
+									};
+								} catch(ex) {
+									state.error = ex;
+									finished = true;
+									throw ex;
+								} finally {
+									if (finished) {
+										this.__flushing = false;
+
+										callback && callback(state.error);
+
+										if (!state.error) {
+											tools.callAsync(this.onFlush, -1, this);
+										};
+									};
+								};
+							};
+
+							__flushCbSync = doodad.Callback(this, __flush, true);
+							__flushCbAsync = doodad.AsyncCallback(this, __flush, this.onError);
+
+							this.__flushing = true;
+
+							__flush.call(this);
+
+						} else {
+							callback && callback(null);
+
+							tools.callAsync(this.onFlush, -1, this);
+						};
+					}),
+				}))));
 
 
 				
