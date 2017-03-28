@@ -414,11 +414,16 @@ module.exports = {
 							transform = ev.handlerData[1],
 							end = ev.handlerData[2],  // 'true' permits EOF. 'false' just write the trailing data if there are.
 							isListener = ev.handlerData[3],
-							isNodeJsStream = ev.handlerData[4];
-
+							isInput = ev.handlerData[4],
+							isNodeJsStream = ev.handlerData[5];
+						
 						if (stream && _shared.DESTROYED(stream)) {
 							this.unpipe(stream);
 							return;
+						};
+
+						if (isInput) {
+							ev.preventDefault();
 						};
 
 						const data = ev.data;
@@ -454,7 +459,7 @@ module.exports = {
 									this.__pipeNodeStreamOnDrain.attachOnce(stream, {consume: consumeCb});
 									stream.end(raw);
 								};
-							} else if (!bof && !types.isNothing(raw)) {
+							} else if (!types.isNothing(raw)) {
 								const consumeCb = data.defer();
 								const state = {ok: false};
 								const ok = state.ok = stream.write(raw);
@@ -528,7 +533,7 @@ module.exports = {
 							isInput = this._implements(ioMixIns.InputStreamBase) && !this._implements(ioMixIns.OutputStreamBase),
 							isBuffered = this._implements(ioMixIns.BufferedStreamBase);
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-							let datas = [stream, transform, end, isListener, false];
+							let datas = [stream, transform, end, isListener, isInput, false];
 							if (isInput) {
 								this.onReady.attach(this, this.__pipeOnData, 40, datas);
 							} else {
@@ -551,7 +556,7 @@ module.exports = {
 								const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 								ireadable.pipe(stream);
 							} else {
-								let datas = [stream, transform, end, isListener, true];
+								let datas = [stream, transform, end, isListener, isInput, true];
 								if (isInput) {
 									this.onReady.attach(this, this.__pipeOnData, 40, datas);
 								} else {

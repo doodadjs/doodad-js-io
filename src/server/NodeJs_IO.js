@@ -96,11 +96,6 @@ module.exports = {
 							throw new types.BufferOverflow();
 						};
 
-						const __endCb = doodad.AsyncCallback(this, function endCb(err) {
-							// TODO: if (err) {}
-							this.stopListening();
-						});
-
 						const __pushCb = doodad.Callback(this, function pushCb(err) {
 							if (!err && this.__listening) {
 								const chunk = this.stream.read();
@@ -109,7 +104,8 @@ module.exports = {
 								} else {
 									this.__waiting = false;
 									if (this.__ended) {
-										this.push(new io.BinaryData(io.EOF), {callback: __endCb});
+										this.stopListening();
+										this.push(new io.BinaryData(io.EOF));
 									} else {
 										this.stream.resume();
 										this.streamOnData.attach(this.stream);
@@ -133,13 +129,8 @@ module.exports = {
 					streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
 						this.__ended = true;
 						if (!this.__waiting) {
-							const __endCb = doodad.AsyncCallback(this, function endCb(err) {
-								if (err || (this.getCount() === 0)) {
-									this.stopListening();
-								};
-							});
-
-							this.push(new io.BinaryData(io.EOF), {callback: __endCb});
+							this.stopListening();
+							this.push(new io.BinaryData(io.EOF));
 						};
 					}),
 
@@ -177,17 +168,33 @@ module.exports = {
 					
 					__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
 						const size = types.get(options, 'size');
+
 						const raw = this.stream.read(size);
-						const data = raw && new io.BinaryData(raw, options);
-						if (data) {
+
+						if (raw) {
+							const data = new io.BinaryData(raw, options);
+
 							data.attach(this);
+
+							return data;
+
+						} else {
+							return null;
+
 						};
-						return data;
 					}),
 					
 					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
+						const next = types.get(options, 'next', false);
+
 						const raw = this.transform(data, options);
-						this.stream.push(raw); //, types.get(options, 'encoding'));
+
+						if (next) {
+							this.stream.unshift(raw);
+						} else {
+							this.stream.push(raw);
+						};
+
 						data.consume();
 					}),
 					
@@ -652,9 +659,6 @@ module.exports = {
 
 					__remaining: doodad.PROTECTED(null),
 
-					clear: doodad.OVERRIDE(function clear() {
-					}),
-					
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 

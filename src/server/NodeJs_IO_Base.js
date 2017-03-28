@@ -178,8 +178,6 @@ module.exports = {
 							throw new types.BufferOverflow();
 
 						} else {
-							const encoding = destination.getDefaultEncoding();
-
 							const defer = function defer() {
 								state.consumeCb = data.defer();
 								data.chain(function(err) {
@@ -189,7 +187,7 @@ module.exports = {
 							};
 
 							if (eof) {
-								const value = data.valueOf(encoding);
+								const value = data.valueOf();
 								if (state.endDestination) {
 									if (types.isNothing(value)) {
 										destination.end(defer());
@@ -200,7 +198,7 @@ module.exports = {
 									destination.write(value, defer());
 								};
 							} else {
-								const value = data.valueOf(encoding);
+								const value = data.valueOf();
 								if (!types.isNothing(value)) {
 									destination.write(value, defer());
 								};

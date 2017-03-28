@@ -332,11 +332,16 @@ module.exports = {
 						const stream = ev.handlerData[0],
 							transform = ev.handlerData[1],
 							end = ev.handlerData[2],  // 'true' permits EOF. 'false' just write the trailing data if there are.
-							isListener = ev.handlerData[3];
+							isListener = ev.handlerData[3],
+							isInput = ev.handlerData[4];
 
 						if (stream && _shared.DESTROYED(stream)) {
 							this.unpipe(stream);
 							return;
+						};
+
+						if (isInput) {
+							ev.preventDefault();
 						};
 
 						const data = ev.data;
@@ -397,7 +402,7 @@ module.exports = {
 							isBuffered = this._implements(ioMixIns.BufferedStreamBase);
 
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-							let datas = [stream, transform, end, isListener, false];
+							let datas = [stream, transform, end, isListener, isInput];
 							if (isInput) {
 								this.onReady.attach(this, this.__pipeOnData, 40, datas);
 							} else {
