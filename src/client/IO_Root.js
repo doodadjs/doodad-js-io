@@ -120,27 +120,22 @@ module.exports = {
  						}),
 
 						toString: function toString() {
-							const trailing = this.trailing;
-							let buf = this.raw;
-							if (types._instanceof(buf, io.Signal)) {
-								buf = null;
-							};
-							if (types.isString(buf) || types.isString(trailing)) {
-								return (trailing ? (buf || '') + trailing : (buf || ''));
+							const buf = (types._instanceof(this.raw, io.Signal) ? this.trailing : this.raw);
+							if (types.isNothing(buf)) {
+								return '';
+							} else if (types.isString(buf)) {
+								return buf;
 							} else {
 								let encoding = this.options.encoding || 'raw';
+								if (this.stream && (encoding === 'raw')) {
+									encoding = this.stream.options.encoding || 'raw';
+								};
 								if (encoding === 'raw') {
 									// Raw binary. We assume UTF-8 like Node.Js.
 									encoding = 'utf-8';
 								};
 								const decoder = new _shared.Natives.windowTextDecoder(encoding);
-								let text = '';
-								if (buf) {
-									text += (decoder.decode(buf, {stream: !!trailing}) || '');
-								};
-								if (trailing) {
-									text += (decoder.decode(trailing, {stream: false}) || '');
-								};
+								const text = decoder.decode(buf, {stream: false}) || '';
 								return text;
 							};
 						},

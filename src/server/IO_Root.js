@@ -151,15 +151,16 @@ module.exports = {
  						}),
 
 						toString: function toString() {
-							const trailing = this.trailing;
-							let buf = this.raw;
-							if (types._instanceof(buf, io.Signal)) {
-								buf = null;
-							};
-							if (types.isString(buf) || types.isString(trailing)) {
-								return (trailing ? (buf || '') + trailing : (buf || ''));
+							const buf = (types._instanceof(this.raw, io.Signal) ? this.trailing : this.raw);
+							if (types.isNothing(buf)) {
+								return '';
+							} else if (types.isString(buf)) {
+								return buf;
 							} else {
 								let encoding = this.options.encoding || 'raw';
+								if (this.stream && (encoding === 'raw')) {
+									encoding = this.stream.options.encoding || 'raw';
+								};
 								if (encoding === 'raw') {
 									// Raw binary. We assume UTF-8 like Node.Js.
 									encoding = 'utf-8';
@@ -172,14 +173,8 @@ module.exports = {
 									// StringDecoder
 									decoder = new nodeStringDecoder(encoding);
 								};
-								let text = '';
-								if (buf) {
-									text += (decoder.write(buf) || '');
-								};
-								if (trailing) {
-									text += (decoder.write(trailing) || '');
-								};
-								text += (decoder.end() || '');
+								let text = decoder.write(buf) || '';
+								text += decoder.end() || '';
 								return text;
 							};
 						},

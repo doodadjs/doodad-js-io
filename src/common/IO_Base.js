@@ -284,34 +284,33 @@ module.exports = {
 						valueOf: function valueOf() {
 							// NOTE: That's still binary data.
 							const type = types.getType(this);
-							let buf = (types._instanceof(this.raw, io.Signal) ? null : this.raw);
-							if (types.isString(buf) || types.isString(this.trailing)) {
-								let encoding = this.options.encoding;
+							const buf = (types._instanceof(this.raw, io.Signal) ? this.trailing : this.raw);
+							if (types.isNothing(buf)) {
+								return null;
+							} else if (types.isString(buf)) {
+								let encoding = this.options.encoding || 'raw';
 								if (this.stream && (encoding === 'raw')) {
-									encoding = this.stream.options.encoding;
+									encoding = this.stream.options.encoding || 'raw';
 								};
-								return type.$encode((this.trailing ? (buf || '') + this.trailing : buf) || '', encoding, this.options);
+								return type.$encode(buf, encoding, this.options) || null;
 							} else {
-								if (this.trailing) {
-									// TODO: Concat buf and trailing.
-									//buf = (buf ? buf.concat(this.trailing) : this.trailing);
-									if (buf) {
-										throw new types.NotSupported("'ArrayBuffer' doesn't support concatenation.");
-									} else {
-										buf = this.trailing;
-									};
-								};
-								return buf || null;
+								return buf;
 							};
 						},
 
 						toString: function toString() {
 							const type = types.getType(this);
-							if (types.isString(this.raw) || types.isString(this.trailing)) {
-								return (this.trailing ? (this.raw || '') + this.trailing : (this.raw || ''));
+							const buf = (types._instanceof(this.raw, io.Signal) ? this.trailing : this.raw);
+							if (types.isNothing(buf)) {
+								return '';
+							} else if (types.isString(buf)) {
+								return buf;
 							} else {
-								const value = this.valueOf();
-								return type.$decode(value, this.options.encoding, this.options) || '';
+								let encoding = this.options.encoding || 'raw';
+								if (this.stream && (encoding === 'raw')) {
+									encoding = this.stream.options.encoding || 'raw';
+								};
+								return type.$decode(buf, encoding, this.options) || '';
 							};
 						},
 					}
@@ -820,13 +819,6 @@ module.exports = {
 										};
 									}));
 									this.submit(new io.Data(io.BOF));
-								};
-							} else if (eof || bof) {
-								if (data.trailing) {
-									const type = types.getType(data);
-									this.submit(new type(data.trailing, data.options));
-								} else {
-									data.consume();
 								};
 							} else {
 								this.submit(data);
