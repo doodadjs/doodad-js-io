@@ -163,8 +163,6 @@ module.exports = {
 					}),
 
 					__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
-						// TODO: Test me
-
 						const host = this[doodad.HostSymbol];
 
 						const data = ev.data;
@@ -173,8 +171,12 @@ module.exports = {
 						const destination = ev.handlerData[0],
 							state = ev.handlerData[1];
 
+						if (state.isInput || state.isBuffered) {
+							ev.preventDefault();
+						};
+
 						if (state.consumeCb) {
-							// Oops... Normally, it should waits, but it has not !
+							// Oops... Normally, it should wait, but it has not !
 							throw new types.BufferOverflow();
 
 						} else {
@@ -186,21 +188,27 @@ module.exports = {
 								return state.consumeCb;
 							};
 
+							const value = data.valueOf();
+
 							if (eof) {
-								const value = data.valueOf();
 								if (state.endDestination) {
 									if (types.isNothing(value)) {
 										destination.end(defer());
 									} else {
 										destination.end(value, defer());
-									}
+									};
 								} else if (!types.isNothing(value)) {
-									destination.write(value, defer());
+									const ok = destination.write(value);
+									if (!ok) {
+										destination.once('drain', defer());
+									};
 								};
 							} else {
-								const value = data.valueOf();
 								if (!types.isNothing(value)) {
-									destination.write(value, defer());
+									const ok = destination.write(value);
+									if (!ok) {
+										destination.once('drain', defer());
+									};
 								};
 							};
 						};
@@ -226,8 +234,6 @@ module.exports = {
 					}),
 					
 					pipe: doodad.PUBLIC(function pipe(destination, /*optional*/options) {
-						// TODO: Test me
-
 						const host = this[doodad.HostSymbol];
 
 						if (types._implements(destination, ioInterfaces.IStream)) {
@@ -240,6 +246,7 @@ module.exports = {
 						if (!found) {
 							const state = {
 								isInput: host._implements(ioMixIns.InputStreamBase) && !host._implements(ioMixIns.OutputStreamBase),
+								isBuffered: host._implements(ioMixIns.BufferedStreamBase),
 								endDestination: types.get(options, 'end', true) && (tools.indexOf([io.stdout, io.stderr, process.stdout, process.stderr], destination) < 0),
 								destination: destination,
 								unpipeCb: null,
@@ -257,10 +264,11 @@ module.exports = {
 
 							state.unpipeCb = doodad.Callback(this, function _unpipeCb(readable) {
 								if (readable === this) {
+									const host = this[doodad.HostSymbol];
 									if (state.isInput) {
-										this.onReady.detach(this, null, [state.destination]);
+										host.onReady.detach(this, null, [state.destination]);
 									} else {
-										this.onData.detach(this, null, [state.destination]);
+										host.onData.detach(this, null, [state.destination]);
 									};
 
 									state.destination.removeListener('unpipe', state.unpipeCb);
@@ -308,7 +316,9 @@ module.exports = {
 							});
 							destination.once('error', state.errorCb);
 
-							state.closeCb = state.unpipeCb;
+							state.closeCb = doodad.Callback(this, function _closeCb() {
+								state.unpipeCb(this);
+							});
 							destination.once('close', state.closeCb);
 							destination.once('destroy', state.closeCb);
 
@@ -381,8 +391,6 @@ module.exports = {
 					}),
 					
 					unpipe: doodad.PUBLIC(function unpipe(/*optional*/destination) {
-						// TODO: Test me
-
 						if (types._implements(destination, ioInterfaces.IStream)) {
 							const host = this[doodad.HostSymbol];
 							host.unpipe(destination);
@@ -413,14 +421,14 @@ module.exports = {
 					
 					push: doodad.PUBLIC(function push(chunk, /*optional*/encoding) {
 						const host = this[doodad.HostSymbol];
-						const data = host.transform(chunk, {encoding: encoding});
+						const data = host.transformIn(chunk, {encoding: encoding});
 						host.push(data);
 						return (host.getCount() < host.options.bufferSize);
 					}),
 					
 					unshift: doodad.PUBLIC(function unshift(chunk) {
 						const host = this[doodad.HostSymbol];
-						const data = host.transform(chunk, {encoding: encoding});
+						const data = host.transformIn(chunk);
 						host.push(data, {next: true});
 						return (host.getCount() < host.options.bufferSize);
 					}),
@@ -480,7 +488,7 @@ module.exports = {
 						
 						const host = this[doodad.HostSymbol];
 
-						const data = host.transform(chunk, {encoding: encoding});
+						const data = host.transformIn(chunk, {encoding: encoding});
 
 						data.attach(host);
 
@@ -492,7 +500,7 @@ module.exports = {
 							data.chain(doodad.AsyncCallback(this, this.ondrain));
 						};
 
-						return data.consumed; // && host.canWrite();
+						return data.consumed;
 					}),
 					
 					end: doodad.PUBLIC(function end(/*optional*/chunk, /*optional*/encoding, /*optional*/callback) {
@@ -512,7 +520,7 @@ module.exports = {
 						
 						const host = this[doodad.HostSymbol];
 
-						const data = host.transform(chunk, {encoding: encoding});
+						const data = host.transformIn(chunk, {encoding: encoding});
 
 						data.attach(host);
 

@@ -47,8 +47,9 @@ module.exports = {
 				//const __Internal__ = {
 				//};
 				
-				//types.complete(_shared.Natives, {
-				//});
+				types.complete(_shared.Natives, {
+					windowUint8Array: global.Uint8Array,
+				});
 
 
 				io.REGISTER(doodad.Class.$extend(
@@ -138,13 +139,13 @@ module.exports = {
 								//	this.consume(ev.error);
 								//});
 								this.stream = stream;
-								const timeout = types.get(this.options, 'timeout', (root.getOptions().debug ? 120000 : Infinity));
-								if (types.isFinite(timeout) && (timeout > 1000)) {
+								const timeout = types.get(stream.options, 'timeout', (root.getOptions().debug ? 120000 : Infinity));
+								if (types.isFinite(timeout) && (timeout >= 1000)) {
 									this.timeoutObj = tools.callAsync(function dataTimeout() {
-										// Data object looks like stalled.
-										debugger;
+										this.timeoutObj = null;
 										if (!this.consumed) {
-											this.timeoutObj = null;
+											// Data object looks like stalled.
+											debugger;
 											const err = new types.TimeoutError("Data object has not been consumed.");
 											this.consume(err);
 										};
@@ -321,30 +322,17 @@ module.exports = {
 				// Interfaces
 				//=====================================================
 				
-				ioMixIns.REGISTER(doodad.MIX_IN(doodad.Class.$extend(
+				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(doodad.Class.$extend(
 				{
-					$TYPE_NAME: 'Transformable',
-					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TransformableMixIn')), true) */,
+					$TYPE_NAME: 'TransformableBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TransformableBaseMixInBase')), true) */,
 
-					$isValidEncoding: doodad.PUBLIC(doodad.TYPE(function(encoding) {
-						return (io.Data.$validateEncoding(encoding, true) !== null);
-					})),
-
-					transform: doodad.PUBLIC(function transform(raw, /*optional*/options) {
-						if (types._instanceof(raw, io.Data)) {
-							return raw.valueOf();
-						} else {
-							const encoding = types.get(options, 'encoding');
-							if (!encoding) {
-								if (!options) {
-									options = {};
-								};
-								options.encoding = this.options.encoding || 'raw';
-							};
-							return new io.Data(raw, options);
-						};
-					}),
-				})));
+					$isValidEncoding: doodad.PUBLIC(doodad.TYPE(doodad.MUST_OVERRIDE(function(encoding) {
+						return false;
+					}))),
+					transformIn: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function transformIn(raw, /*optional*/options)
+					transformOut: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function transformOut(data, /*optional*/options)
+				}))));
 				
 
 				ioMixIns.REGISTER(doodad.MIX_IN(doodad.Class.$extend(
@@ -377,6 +365,7 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(doodad.Class.$extend(
 									mixIns.Creatable,
 									mixIns.Events,
+									ioMixIns.TransformableBase,
 				{
 					$TYPE_NAME: 'StreamBase',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamBaseMixIn')), true) */,
@@ -508,6 +497,98 @@ module.exports = {
 				}))));
 
 
+				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.TransformableBase.$extend(
+									ioMixIns.StreamBase,
+				{
+					$TYPE_NAME: 'ObjectTransformableBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ObjectTransformableBaseMixInBase')), true) */,
+
+					$isValidEncoding: doodad.OVERRIDE(function(encoding) {
+						if (io.Data.$validateEncoding(encoding, true) !== null) {
+							this.overrideSuper();
+							return true;
+						} else {
+							return this._super(encoding);
+						};
+					}),
+				}))));
+
+
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.ObjectTransformableBase.$extend(
+				{
+					$TYPE_NAME: 'ObjectTransformableIn',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ObjectTransformableInMixIn')), true) */,
+
+					transformIn: doodad.REPLACE(function transformIn(raw, /*optional*/options) {
+						return new io.Data(raw, options);
+					}),
+				})));
+
+
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.ObjectTransformableBase.$extend(
+				{
+					$TYPE_NAME: 'ObjectTransformableOut',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ObjectTransformableOutMixIn')), true) */,
+
+					transformOut: doodad.REPLACE(function transformOut(data, /*optional*/options) {
+						const value = data.valueOf();
+						if (types.isNothing(value)) {
+							return null;
+						} else if (types.isObject(value)) {
+							return value;
+						} else {
+							return types.toObject(value);
+						};
+					}),
+				})));
+
+
+				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.TransformableBase.$extend(
+									ioMixIns.StreamBase,
+				{
+					$TYPE_NAME: 'BinaryTransformableBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryTransformableBaseMixInBase')), true) */,
+
+					$isValidEncoding: doodad.OVERRIDE(function(encoding) {
+						if (io.BinaryData.$validateEncoding(encoding, true) !== null) {
+							this.overrideSuper();
+							return true;
+						} else {
+							return this._super(encoding);
+						};
+					}),
+				}))));
+
+
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.BinaryTransformableBase.$extend(
+				{
+					$TYPE_NAME: 'BinaryTransformableIn',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryTransformableInMixIn')), true) */,
+
+					transformIn: doodad.REPLACE(function transformIn(raw, /*optional*/options) {
+						return new io.BinaryData(raw, options);
+					}),
+				})));
+
+
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.BinaryTransformableBase.$extend(
+				{
+					$TYPE_NAME: 'BinaryTransformableOut',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryTransformableInMixIn')), true) */,
+
+					transformOut: doodad.REPLACE(function transformOut(data, /*optional*/options) {
+						const value = data.valueOf();
+						if (types.isNothing(value)) {
+							return null;
+						} else if (types.isTypedArray(value)) {
+							return value;
+						} else {
+							return new _shared.Natives.windowUint8Array(value);
+						};
+					}),
+				})));
+
+
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 				{
 					$TYPE_NAME: 'TextStreamBase',
@@ -608,7 +689,7 @@ module.exports = {
 
 						if (data.deferred <= 0) {
 							// NOTE: Data should not have been consumed.
-							value = this.transform(data, options);
+							value = this.transformOut(data, options);
 							data.consume();
 						} else {
 							// Not ready yet.
@@ -769,7 +850,7 @@ module.exports = {
 								value = io.BOF;
 							};
 						};
-						const data = this.transform(value, {encoding: encoding});
+						const data = this.transformIn(value, {encoding: encoding});
 						if (isData) {
 							if (raw.stream) {
 								data.chain(raw.defer());
@@ -1007,7 +1088,8 @@ module.exports = {
 
 					flush: doodad.REPLACE(function flush(/*optional*/options) {
 						const callback = types.get(options, 'callback'),
-							count = types.get(options, 'count', Infinity);
+							count = types.get(options, 'count', Infinity),
+							purge = types.get(options, 'purge', false);
 
 						const listening = !this._implements(ioMixIns.Listener) || this.isListening();
 
@@ -1035,11 +1117,11 @@ module.exports = {
 									const buffer = this.__buffer;
 									for (let i = 0; i < MAX_LOOP_COUNT; i++) {
 										if ((state.count++ < count) && (buffer.length > 0)) {
-											const data = buffer.pop();
+											const data = buffer.shift();
 
-											//let continueCb = null;
+											let continueCb = null;
 
-											data.chain(/*continueCb =*/ function continueFlush(err) {
+											data.chain(continueCb = function continueFlush(err) {
 												if (err) {
 													callback && callback(err);
 												} else if (state.deferred) {
@@ -1056,14 +1138,20 @@ module.exports = {
 												this.onData(ev);
 											};
 
-											// NOTE: No need to call "preventDefault"... Data is always assumed to be consumed. If nothing listen to "onData" or "onReady" (as appropriated), data is lost.
-											if (!data.consumed) {
-												data.consume();
-
+											if (ev.prevent || purge) {
 												if (!data.consumed) {
-													state.deferred = true;
-													break;
+													data.consume();
+
+													if (!data.consumed) {
+														state.deferred = true;
+														break;
+													};
 												};
+											} else {
+												data.unchain(continueCb);
+												buffer.unshift(data);
+												finished = true;
+												break;
 											};
 
 										} else {

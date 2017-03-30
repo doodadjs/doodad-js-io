@@ -185,29 +185,37 @@ module.exports = {
 				// Interfaces (continued)
 				//=====================================================
 
-				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Transformable.$extend(
+				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.TransformableBase.$extend(
 											ioMixIns.StreamBase,
 				{
-					$TYPE_NAME: 'TextTransformable',
-					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableMixIn')), true) */,
-					
-					__decoderIn: doodad.PROTECTED( null ),
-					__decoderInEncoding: doodad.PROTECTED( null ),
+					$TYPE_NAME: 'TextTransformableBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableBaseMixInBase')), true) */,
 
-					__decoderOut: doodad.PROTECTED( null ),
-					__decoderOutEncoding: doodad.PROTECTED( null ),
-					
-					$isValidEncoding: doodad.REPLACE(doodad.TYPE(function(encoding) {
-						return (io.TextData.$validateEncoding(encoding, true) !== null);
-					})),
+					$isValidEncoding: doodad.OVERRIDE(function(encoding) {
+						if (io.TextData.$validateEncoding(encoding, true) !== null) {
+							this.overrideSuper();
+							return true;
+						} else {
+							return this._super(encoding);
+						};
+					}),
 
 					setOptions: doodad.OVERRIDE(function setOptions(options) {
 						types.getDefault(options, 'encoding', types.getIn(this.options, 'encoding', 'utf-8'));
 
 						this._super(options);
 					}),
+				}))));
 					
-					transform: doodad.REPLACE(function transform(raw, /*optional*/options) {
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextTransformableBase.$extend(
+				{
+					$TYPE_NAME: 'TextTransformableIn',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableInMixIn')), true) */,
+
+					__decoderIn: doodad.PROTECTED( null ),
+					__decoderInEncoding: doodad.PROTECTED( null ),
+
+					transformIn: doodad.REPLACE(function transformIn(raw, /*optional*/options) {
 						let encoding = types.get(options, 'encoding');
 						if (encoding) {
 							encoding = io.TextData.$validateEncoding(encoding);
@@ -219,92 +227,50 @@ module.exports = {
 							encoding = 'utf-8';
 						};
 
-						let out = false,
-							outEOF = false;
 						if (types._instanceof(raw, io.Signal)) {
 							let trailing = null;
-							const decoder = (out ? this.__decoderOut : this.__decoderIn);
+							const decoder = this.__decoderIn;
 							if (decoder) {
 								trailing = decoder.end() || null;
 							};
-							if (out) {
-								this.__decoderOut = null;
-								this.__decoderOutEncoding = null;
-								return trailing;
-							} else {
-								this.__decoderIn = null;
-								this.__decoderInEncoding = null;
-								if (!options) {
-									options = {};
-								};
-								options.encoding = encoding;
-								const dta = new io.TextData(raw, options);
-								dta.trailing = trailing;
-								return dta;
+							this.__decoderIn = null;
+							this.__decoderInEncoding = null;
+							if (!options) {
+								options = {};
 							};
-						} else if (types._instanceof(raw, io.TextData)) {
-							return raw.toString() || null;
-						} else if (types._instanceof(raw, io.BinaryData)) {
-							if (raw.raw === io.EOF) {
-								outEOF = true;
-							};
-							raw = raw.valueOf();
-							out = true;
-						} else if (types._instanceof(raw, io.Data)) {
-							return raw.toString() || null;
-						};
-
-						if (encoding && (types.isArrayBuffer(raw) || types.isTypedArray(raw))) {
-							let text = '';
-							let decoder = (out ? this.__decoderOut : this.__decoderIn);
-							const decoderEncoding = (out ? this.__decoderOutEncoding : this.__decoderInEncoding);
-							if (decoderEncoding !== encoding) {
-								if (decoder) {
-									text = decoder.end() || '';
-									if (out) {
-										this.__decoderOut = null;
-										this.__decoderOutEncoding = null;
-									} else {
+							options.encoding = encoding;
+							const dta = new io.TextData(raw, options);
+							dta.trailing = trailing;
+							return dta;
+						} else {
+							if (encoding && (types.isArrayBuffer(raw) || types.isTypedArray(raw))) {
+								let decoder = this.__decoderIn;
+								const decoderEncoding = this.__decoderInEncoding;
+								let text = '';
+								if (decoderEncoding !== encoding) {
+									if (decoder) {
+										text = decoder.end() || '';
 										this.__decoderIn = null;
 										this.__decoderInEncoding = null;
 									};
-								};
-								if (nodeIConv) {
-									// iconv-lite
-									decoder = nodeIConv.getDecoder(encoding);
-								} else {
-									// StringDecoder
-									decoder = new nodeStringDecoder(encoding);
-								};
-								if (out) {
-									if (!outEOF) {
-										this.__decoderOut = decoder;
-										this.__decoderOutEncoding = encoding;
+									if (nodeIConv) {
+										// iconv-lite
+										decoder = nodeIConv.getDecoder(encoding);
+									} else {
+										// StringDecoder
+										decoder = new nodeStringDecoder(encoding);
 									};
-								} else {
 									this.__decoderIn = decoder;
 									this.__decoderInEncoding = encoding;
 								};
-							};
-							if (outEOF) {
-								text += decoder.end(raw) || '';
-							} else if (raw) {
 								text += decoder.write(raw) || '';
-							};
-							if (out) {
-								return text || null;
-							} else {
 								if (!options) {
 									options = {};
 								};
 								options.encoding = encoding;
 								return new io.TextData(text || null, options);
-							};
-						} else {
-							const text = (types.isNothing(raw) ? null : types.toString(raw) || null);
-							if (out) {
-								return text;
 							} else {
+								const text = (types.isNothing(raw) ? null : types.toString(raw) || null);
 								if (!options) {
 									options = {};
 								};
@@ -319,9 +285,6 @@ module.exports = {
 						
 						this.__decoderIn = null;
 						this.__decoderInEncoding = null;
-
-						this.__decoderOut = null;
-						this.__decoderOutEncoding = null;
 					}),
 					
 					reset: doodad.OVERRIDE(function reset() {
@@ -329,7 +292,80 @@ module.exports = {
 						
 						this.__decoderIn = null;
 						this.__decoderInEncoding = null;
+					}),
+				})));
 
+				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextTransformableBase.$extend(
+				{
+					$TYPE_NAME: 'TextTransformableOut',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableOutMixIn')), true) */,
+
+					__decoderOut: doodad.PROTECTED( null ),
+					__decoderOutEncoding: doodad.PROTECTED( null ),
+					
+					transformOut: doodad.REPLACE(function transformOut(data, /*optional*/options) {
+						if (types._instanceof(data, io.TextData)) {
+							return data.toString() || null;
+						} else if (types._instanceof(data, io.BinaryData)) {
+							const eof = (data.raw === io.EOF);
+							const value = data.valueOf();
+							let encoding = types.get(options, 'encoding');
+							if (encoding) {
+								encoding = io.TextData.$validateEncoding(encoding);
+							} else {
+								encoding = this.options.encoding || 'raw';
+							};
+							if (encoding === 'raw') {
+								// Raw binary. We assume UTF-8 like Node.Js.
+								encoding = 'utf-8';
+							};
+							if (encoding && (types.isArrayBuffer(value) || types.isTypedArray(value))) {
+								let decoder = this.__decoderOut;
+								const decoderEncoding = this.__decoderOutEncoding;
+								let text = '';
+								if (decoderEncoding !== encoding) {
+									if (decoder) {
+										text = decoder.end() || '';
+										this.__decoderOut = null;
+										this.__decoderOutEncoding = null;
+									};
+									if (nodeIConv) {
+										// iconv-lite
+										decoder = nodeIConv.getDecoder(encoding);
+									} else {
+										// StringDecoder
+										decoder = new nodeStringDecoder(encoding);
+									};
+									if (!eof) {
+										this.__decoderOut = decoder;
+										this.__decoderOutEncoding = encoding;
+									};
+								};
+								if (eof) {
+									text += decoder.end(value) || '';
+								} else if (!types.isNothing(value)) {
+									text += decoder.write(value) || '';
+								};
+								return text || null;
+							} else {
+								const text = (types.isNothing(value) ? null : types.toString(value) || null);
+								return text;
+							};
+						} else if (types._instanceof(data, io.Data)) {
+							return data.toString() || null;
+						};
+					}),
+					
+					clear: doodad.OVERRIDE(function clear() {
+						this._super();
+						
+						this.__decoderOut = null;
+						this.__decoderOutEncoding = null;
+					}),
+					
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
+						
 						this.__decoderOut = null;
 						this.__decoderOutEncoding = null;
 					}),
@@ -342,7 +378,6 @@ module.exports = {
 				
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 								mixIns.NodeEvents,
-								ioMixIns.Transformable,
 				{
 					$TYPE_NAME: 'Stream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamMixInBase')), true) */,
@@ -407,8 +442,8 @@ module.exports = {
 					__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
 						const stream = ev.handlerData[0],
 							transform = ev.handlerData[1],
-							end = ev.handlerData[2],  // 'true' permits EOF. 'false' just write the trailing data if there are.
-							isListener = ev.handlerData[3],
+							end = ev.handlerData[2],  // 'true' permits EOF. 'false' just writes the trailing data when there is.
+							isBuffered = ev.handlerData[3],
 							isInput = ev.handlerData[4],
 							isNodeJsStream = ev.handlerData[5];
 						
@@ -417,7 +452,7 @@ module.exports = {
 							return;
 						};
 
-						if (isInput) {
+						if (isInput || isBuffered) {
 							ev.preventDefault();
 						};
 
@@ -442,26 +477,18 @@ module.exports = {
 						//};
 
 						if (isNodeJsStream) {
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-// TODO: Repeat what is made in "NodeJs_IO.js"
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 							const raw = data.valueOf();
 							if (eof) {
 								if (types.isNothing(raw)) {
-									stream.end();
+									stream.end(data.defer());
 								} else {
-									const consumeCb = data.defer();
-									this.__pipeNodeStreamOnDrain.attachOnce(stream, {consume: consumeCb});
-									stream.end(raw);
+									stream.end(raw, data.defer());
 								};
 							} else if (!types.isNothing(raw)) {
-								const consumeCb = data.defer();
 								const state = {ok: false};
 								const ok = state.ok = stream.write(raw);
-								if (ok) {
-									consumeCb();
-								} else {
-									this.__pipeNodeStreamOnDrain.attachOnce(stream, {consume: consumeCb});
+								if (!ok) {
+									this.__pipeNodeStreamOnDrain.attachOnce(stream, {consume: data.defer()});
 								};
 							};
 						} else {
@@ -528,7 +555,7 @@ module.exports = {
 							isInput = this._implements(ioMixIns.InputStreamBase) && !this._implements(ioMixIns.OutputStreamBase),
 							isBuffered = this._implements(ioMixIns.BufferedStreamBase);
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-							let datas = [stream, transform, end, isListener, isInput, false];
+							let datas = [stream, transform, end, isBuffered, isInput, false];
 							if (isInput) {
 								this.onReady.attach(this, this.__pipeOnData, 40, datas);
 							} else {
@@ -551,14 +578,11 @@ module.exports = {
 								const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 								ireadable.pipe(stream);
 							} else {
-								let datas = [stream, transform, end, isListener, isInput, true];
+								let datas = [stream, transform, end, isBuffered, isInput, true];
 								if (isInput) {
 									this.onReady.attach(this, this.__pipeOnData, 40, datas);
 								} else {
 									this.onData.attach(this, this.__pipeOnData, 40, datas);
-								};
-								if (this._implements(ioMixIns.BufferedStreamBase) && stream._implements(ioMixIns.BufferedStreamBase)) {
-									this.onFlush.attach(this, this.__pipeOnFlush, 40, [stream]);
 								};
 								this.__pipeNodeStreamOnError.attachOnce(stream);
 								this.__pipeNodeStreamOnFinish.attachOnce(stream);
@@ -675,7 +699,7 @@ module.exports = {
 						let emitted = false;
 						if (ireadable) {
 							if (!ireadable.isPaused()) {
-								const buf = this.transform(ev.data);
+								const buf = this.transformOut(ev.data);
 								if (!types.isNothing(buf)) {
 									emitted = ireadable.ondata(buf);
 								};
@@ -739,7 +763,7 @@ module.exports = {
 						let emitted = false;
 						if (ireadable) {
 							if (!ireadable.isPaused()) {
-								const buf = this.transform(ev.data);
+								const buf = this.transformOut(ev.data);
 								if (!types.isNothing(buf)) {
 									emitted = ireadable.ondata(buf);
 								};

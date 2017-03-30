@@ -70,6 +70,8 @@ module.exports = {
 				clientIO.REGISTER(io.TextInputStream.$extend(
 										ioMixIns.KeyboardInput,
 										mixIns.JsEvents,
+										ioMixIns.ObjectTransformableIn,
+										ioMixIns.ObjectTransformableOut,
 				{
 					$TYPE_NAME: 'KeyboardInputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('KeyboardInputStream')), true) */,
@@ -139,21 +141,6 @@ module.exports = {
 								key.scanCode = scanCode;
 								key.text = String.fromCharCode(charCode);
 								key.functionKeys = functionKeys;
-							};
-
-							key.valueOf = function() {
-								if (key.functionKeys & io.KeyboardFunctionKeys.Alt) {
-									return '';
-								};
-								if (key.functionKeys & io.KeyboardFunctionKeys.Ctrl) {
-									const chr = key.text.toUpperCase();
-									if ((chr >= 'A') && (chr <= 'Z')) {
-										return '^' + chr;
-									} else {
-										return '';
-									};
-								};
-								return key.text;
 							};
 
 							const data = new io.Data(key);
@@ -335,13 +322,13 @@ module.exports = {
 						return html;
 					}),
 
-					//onData: doodad.OVERRIDE(function onData(ev) {
-					//	const retval = this._super(ev);
-					//
-					//	ev.preventDefault();
-					//
-					//	return retval;
-					//}),
+					onData: doodad.OVERRIDE(function onData(ev) {
+						const retval = this._super(ev);
+					
+						ev.preventDefault();
+					
+						return retval;
+					}),
 
 					flush: doodad.OVERRIDE(function flush(/*optional*/options) {
 						this._super(options);
@@ -416,13 +403,13 @@ module.exports = {
 					}),
 				}));
 
-
+/*
 				// TODO : Test and debug
 				clientIO.REGISTER(io.InputStream.$extend(
 										mixIns.JsEvents,
 				{
 					$TYPE_NAME: 'FileInputStream',
-					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('FileInputStream')), true) */,
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('FileInputStream')), true) * /,
 					
 					__listening: doodad.PROTECTED(false),
 					__file: doodad.PROTECTED(null),
@@ -431,7 +418,7 @@ module.exports = {
 					
 					__buffer: doodad.PROTECTED(null),
 
-					create: doodad.OVERRIDE(function create(file, /*optional*/options) {
+					create: doodad.OVERRIDE(function create(file, /*optional* /options) {
 						if (!__Internal__.streamsSupported) {
 							throw new types.NotSupported("Browser streams are not supported.");
 						};
@@ -496,7 +483,7 @@ module.exports = {
 						return this.__listening;
 					}),
 
-					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
+					listen: doodad.OVERRIDE(function listen(/*optional* /options) {
 						if (!this.__listening) {
 							this.__listening = true;
 							const encoding = types.get(this.options, 'encoding', null);
@@ -520,7 +507,7 @@ module.exports = {
 						};
 					}),
 					
-					stopListening: doodad.OVERRIDE(function stopListening(/*optional*/options) {
+					stopListening: doodad.OVERRIDE(function stopListening(/*optional* /options) {
 						if (this.__listening) {
 							this.__listening = false;
 							this.onJsLoadEnd.clear();
@@ -532,7 +519,7 @@ module.exports = {
 					}),
 				}));
 				
-				files.ADD('openFile', function openFile(url, /*optional*/options) {
+				files.ADD('openFile', function openFile(url, /*optional* /options) {
 					if (!__Internal__.streamsSupported) {
 						throw new types.NotSupported("Streams are not supported.");
 					};
@@ -547,7 +534,7 @@ module.exports = {
 							if (encoding) {
 								headers.set('Accept', 'text/plain');
 							} else {
-								headers.set('Accept', '*/*');
+								headers.set('Accept', '* /*');  Remove space between * and /
 							};
 						};
 						const init = {
@@ -572,7 +559,7 @@ module.exports = {
 						});
 					});
 				});
-
+*/
 
 				//===================================
 				// Init

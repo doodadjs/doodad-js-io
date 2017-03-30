@@ -67,6 +67,8 @@ module.exports = {
 				
 				nodejsIO.REGISTER(io.InputStream.$extend(
 										mixIns.NodeEvents,
+										ioMixIns.BinaryTransformableIn,
+										ioMixIns.BinaryTransformableOut,
 				{
 					$TYPE_NAME: 'BinaryInputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryInputStreamNodeJs')), true) */,
@@ -187,7 +189,7 @@ module.exports = {
 					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
 						const next = types.get(options, 'next', false);
 
-						const raw = this.transform(data, options);
+						const raw = this.transformOut(data, options);
 
 						if (next) {
 							this.stream.unshift(raw);
@@ -277,7 +279,7 @@ module.exports = {
 				
 				nodejsIO.REGISTER(nodejsIO.BinaryInputStream.$extend(
 									ioMixIns.TextInput,
-									ioMixIns.TextTransformable,
+									ioMixIns.TextTransformableOut,
 				{
 					$TYPE_NAME: 'TextInputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamNodeJs')), true) */,
@@ -296,6 +298,8 @@ module.exports = {
 				
 				nodejsIO.REGISTER(io.OutputStream.$extend(
 									mixIns.NodeEvents,
+									ioMixIns.BinaryTransformableIn,
+									ioMixIns.BinaryTransformableOut,
 				{
 					$TYPE_NAME: 'BinaryOutputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryOutputStreamNodeJs')), true) */,
@@ -413,24 +417,6 @@ module.exports = {
 						this.__finished = false;
 					}),
 					
-					transform: doodad.REPLACE(function transform(raw, /*optional*/options) {
-						let encoding = types.get(options, 'encoding');
-						if (encoding) {
-							encoding = io.BinaryData.$validateEncoding(encoding);
-						} else {
-							encoding = this.options.encoding || 'raw';
-						};
-						if (types._instanceof(raw, io.Data)) {
-							return raw.valueOf(encoding);
-						} else {
-							if (!options) {
-								options = {};
-							};
-							options.encoding = encoding;
-							return new io.BinaryData(raw, options);
-						};
-					}),
-
 					canWrite: doodad.REPLACE(function canWrite() {
 						return this.__lastWriteOk && !this.__finished;
 					}),
@@ -513,7 +499,7 @@ module.exports = {
 				
 				nodejsIO.REGISTER(nodejsIO.BinaryOutputStream.$extend(
 									ioMixIns.TextOutput,
-									ioMixIns.TextTransformable,
+									ioMixIns.TextTransformableIn,
 				{
 					$TYPE_NAME: 'TextOutputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamNodeJs')), true) */,
@@ -539,8 +525,9 @@ module.exports = {
 				
 				
 				io.REGISTER(io.Stream.$extend(
-									//io.TextOutputStream,
-									io.OutputStream,
+									io.BufferedOutputStream,
+									ioMixIns.TextTransformableIn,
+									ioMixIns.ObjectTransformableOut,
 				{
 					$TYPE_NAME: 'UrlDecoderStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('UrlDecoderStreamNodeJs')), true) */,
@@ -583,14 +570,14 @@ module.exports = {
 						const decode = function decode(value) {
 							value = _shared.Natives.windowUnescape(value);
 							value = _shared.Natives.globalBuffer.from(value, 'binary');
-							value = type.$decode(value, encoding);
+							value = io.TextData.$decode(value, encoding);
 							return value;
 						};
 
 						let remaining = this.__remaining;
 						this.__remaining = '';
 
-						const value = this.transform(data) || '';
+						const value = data.toString();
 						if ((remaining.length + value.length) > this.options.maxStringLength) {
 							throw new types.BufferOverflow("URL buffer exceeded maximum permitted length.");
 						};
@@ -619,7 +606,7 @@ module.exports = {
 									},
 								};
 								section.raw = section;
-								this.submit(new io.Data(section), {callback: data.defer()});
+								this.submit(new io.Data(section));
 
 								if (mode === Modes.Key) {
 									this.__mode = Modes.Value;
@@ -639,9 +626,9 @@ module.exports = {
 									Modes: Modes, 
 									text: decode(remaining), 
 								};
-								this.submit(new io.Data(section), {callback: data.defer()});
+								this.submit(new io.Data(section));
 							};
-							this.submit(new io.Data(io.EOF), {callback: data.defer()});
+							this.submit(new io.Data(io.EOF));
 						} else if (remaining) {
 							this.__remaining = remaining;
 						};
@@ -652,7 +639,9 @@ module.exports = {
 
 
 				io.REGISTER(io.Stream.$extend(
-									io.OutputStream,
+									io.BufferedOutputStream,
+									ioMixIns.TextTransformableIn,
+									ioMixIns.BinaryTransformableOut,
 				{
 					$TYPE_NAME: 'Base64DecoderStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('Base64DecoderStreamNodeJs')), true) */,
@@ -674,8 +663,8 @@ module.exports = {
 
 						const eof = (data.raw === io.EOF);
 
-						const value = this.transform(data);
-						const buf = this.__remaining + (types.isNothing(value) ? '' : value.toString('ascii').replace(/\n|\r/gm, ''));
+						const value = data.toString();
+						const buf = this.__remaining + (types.isNothing(value) ? '' : value.replace(/\n|\r/gm, ''));
 						this.__remaining = '';
 
 						const bufLen = buf.length;
@@ -686,11 +675,11 @@ module.exports = {
 							if (chunkLen !== bufLen) {
 								this.__remaining = buf.slice(chunkLen);
 							};
-							this.submit(new io.BinaryData(chunk), {callback: data.defer()});
+							this.submit(new io.BinaryData(chunk));
 						};
 
 						if (eof) {
-							this.submit(new io.Data(io.EOF), {callback: data.defer()});
+							this.submit(new io.Data(io.EOF));
 						};
 
 						return retval;
@@ -699,7 +688,9 @@ module.exports = {
 
 
 				io.REGISTER(io.Stream.$extend(
-									io.OutputStream,
+									io.BufferedOutputStream,
+									ioMixIns.BinaryTransformableIn,
+									ioMixIns.BinaryTransformableOut,
 				{
 					$TYPE_NAME: 'FormMultipartDecoderStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('FormMultipartDecoderStreamNodeJs')), true) */,
@@ -738,7 +729,7 @@ module.exports = {
 						ev.preventDefault();
 
 						const eof = (data.raw === io.EOF);
-						const buf = this.transform(data);
+						let buf = data.valueOf();
 						const remaining = this.__remaining;
 						if (remaining) {
 							this.__remaining = null;
@@ -762,7 +753,7 @@ module.exports = {
 										if (index === start + 1) {
 											this.__headersCompiled = true;
 											start = index + 1;
-											this.submit(new io.Data(io.BOF, {headers: this.__headers}), {callback: data.defer()});
+											this.submit(new io.Data(io.BOF, {headers: this.__headers}));
 											break;
 										};
 										const str = buf.slice(start, index).toString('utf-8');  // Doing like Node.js (UTF-8). Normally it should be ASCII 7 bits.
@@ -781,7 +772,7 @@ module.exports = {
 										buf = buf.slice(start, end);
 									};
 									start = end;
-									this.submit(new io.BinaryData(buf), {callback: data.defer()});
+									this.submit(new io.BinaryData(buf));
 								};
 
 								return start;
@@ -800,7 +791,7 @@ module.exports = {
 										if (this.__inPart) {
 											start = __parseHeaders.call(this, buf, start, index);
 											if (this.__headersCompiled && (start >= index)) {
-												this.submit(new io.Data(io.EOF), {callback: data.defer()});
+												this.submit(new io.Data(io.EOF));
 												this.__headers = types.nullObject();
 												this.__headersCompiled = false;
 												if ((cr !== 0x0D) && (lf !== 0x0A)) { // "\r\n"
@@ -831,7 +822,7 @@ module.exports = {
 						};
 
 						if (eof) {
-							this.submit(new io.Data(io.EOF), {callback: data.defer()});
+							this.submit(new io.Data(io.EOF));
 						};
 
 						return retval;

@@ -183,7 +183,7 @@ module.exports = {
 				//=====================================================
 				
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextInputStreamBase.$extend(
-									ioMixIns.TextTransformable,
+									ioMixIns.TextTransformableOut,
 				{
 					$TYPE_NAME: 'TextInputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamMixIn')), true) */,
@@ -221,7 +221,7 @@ module.exports = {
 									ok = true;
 									break;
 								} else {
-									const raw = this.transform(data, options) || '';
+									const raw = this.transformOut(data, options) || '';
 									line += types.toString(raw);
 								};
 
@@ -251,7 +251,7 @@ module.exports = {
 
 				
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.TextOutputStreamBase.$extend(
-									ioMixIns.TextTransformable,
+									ioMixIns.TextTransformableIn,
 				{
 					$TYPE_NAME: 'TextOutputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamMixInBase')), true) */,
@@ -373,6 +373,8 @@ module.exports = {
 
 				io.REGISTER(io.BufferedTextOutputStream.$extend(
 									ioMixIns.NestedStream,
+									ioMixIns.TextTransformableIn,
+									ioMixIns.TextTransformableOut,
 				{
 					$TYPE_NAME: 'HtmlOutputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('HtmlOutputStream')), true) */,
@@ -723,8 +725,11 @@ module.exports = {
 					}),
 				}));
 
+
 				io.REGISTER(io.TextOutputStream.$extend(
 									ioInterfaces.IConsole,
+									ioMixIns.TextTransformableIn,
+									ioMixIns.TextTransformableOut,
 				{
 					$TYPE_NAME: 'ConsoleOutputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ConsoleOutputStream')), true) */,
@@ -842,15 +847,29 @@ module.exports = {
 					$TYPE_NAME: 'NullOutputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('NullOutputStream')), true) */,
 					
+					$isValidEncoding: doodad.OVERRIDE(function $isValidEncoding(encoding) {
+						return true;
+					}),
+
 					onData: doodad.OVERRIDE(function onData(ev) {
 						ev.preventDefault();
 						return this._super(ev);
+					}),
+
+					transformIn: doodad.REPLACE(function transformIn(raw, /*optional*/options) {
+						return new io.Data(raw, options);
+					}),
+
+					transformOut: doodad.REPLACE(function transformOut(data, /*optional*/options) {
+						return null;
 					}),
 				}));
 
 				
 				
 				io.REGISTER(io.TextOutputStream.$extend(
+									ioMixIns.TextTransformableIn,
+									ioMixIns.TextTransformableOut,
 				{
 					$TYPE_NAME: 'TextDecoderStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextDecoderStreamNodeJs')), true) */,
