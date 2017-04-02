@@ -77,21 +77,7 @@ module.exports = {
 					
 					__ended: doodad.PROTECTED(false),
 					__waiting: doodad.PROTECTED(false),
-					__streamError: doodad.PROTECTED(false),
 					__listening: doodad.PROTECTED(false),
-
-					onError: doodad.OVERRIDE(function onError(ev) {
-						if (!this.__streamError) {
-							const emitted = (this.stream.listenerCount('error') > 0) && this.stream.emit('error', ev.error);
-							if (emitted) {
-								ev.preventDefault();
-							};
-						};
-
-						const cancelled = this._super(ev);
-
-						return cancelled;
-					}),
 
 					streamOnData: doodad.NODE_EVENT('data', function streamOnData(context, chunk) {
 						if (this.__waiting) {
@@ -147,14 +133,7 @@ module.exports = {
 					
 					streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
 						if (types.isEntrant(this, 'onError')) {
-							this.__streamError = true;
-							try {
-								this.onError(new doodad.ErrorEvent(ex));
-							} catch (ex) {
-								throw ex;
-							} finally {
-								this.__streamError = false;
-							};
+							this.onError(new doodad.ErrorEvent(ex));
 						};
 					}),
 					
@@ -212,7 +191,6 @@ module.exports = {
 
 						this.__ended = false;
 						this.__waiting = false;
-						this.__streamError = false;
 					}),
 
 					_read: doodad.REPLACE(nodejsIOInterfaces.IReadable, function _read(/*optional*/size) {
@@ -307,32 +285,11 @@ module.exports = {
 					stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
 					__lastWriteOk: doodad.PROTECTED(true),
-					__streamError: doodad.PROTECTED(false),
 					__finished: doodad.PROTECTED(false),
-
-					onError: doodad.OVERRIDE(function onError(ev) {
-						if (!this.__streamError) {
-							const emitted = (!types.DESTROYED(this.stream) && this.stream.listenerCount('error') > 0) && this.stream.emit('error', ev.error);
-							if (emitted) {
-								ev.preventDefault();
-							};
-						};
-
-						const cancelled = this._super(ev);
-
-						return cancelled;
-					}),
 
 					streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
 						if (types.isEntrant(this, 'onError')) {
-							this.__streamError = true;
-							try {
-								this.onError(new doodad.ErrorEvent(ex));
-							} catch (ex) {
-								throw ex;
-							} finally {
-								this.__streamError = false;
-							};
+							this.onError(new doodad.ErrorEvent(ex));
 						};
 					}),
 					
@@ -469,6 +426,8 @@ module.exports = {
 										this.streamOnPipeDrain.attachOnce(rs.pipes, context, true);
 										this.streamOnPipeFinish.attachOnce(rs.pipes, context, true);
 										this.streamOnPipeClose.attachOnce(rs.pipes, context, true);
+									} else if (ok && eof) {
+										data.consume();
 									} else {
 										this.streamOnDrain.attachOnce(this.stream, context, true);
 									};
@@ -628,7 +587,7 @@ module.exports = {
 								};
 								this.submit(new io.Data(section));
 							};
-							this.submit(new io.Data(io.EOF));
+							this.submit(new io.Data(io.EOF), {callback: data.defer()});
 						} else if (remaining) {
 							this.__remaining = remaining;
 						};
@@ -679,7 +638,7 @@ module.exports = {
 						};
 
 						if (eof) {
-							this.submit(new io.Data(io.EOF));
+							this.submit(new io.Data(io.EOF), {callback: data.defer()});
 						};
 
 						return retval;
@@ -791,7 +750,7 @@ module.exports = {
 										if (this.__inPart) {
 											start = __parseHeaders.call(this, buf, start, index);
 											if (this.__headersCompiled && (start >= index)) {
-												this.submit(new io.Data(io.EOF));
+												this.submit(new io.Data(io.EOF), {callback: data.defer()});
 												this.__headers = types.nullObject();
 												this.__headersCompiled = false;
 												if ((cr !== 0x0D) && (lf !== 0x0A)) { // "\r\n"
@@ -822,7 +781,7 @@ module.exports = {
 						};
 
 						if (eof) {
-							this.submit(new io.Data(io.EOF));
+							this.submit(new io.Data(io.EOF), {callback: data.defer()});
 						};
 
 						return retval;

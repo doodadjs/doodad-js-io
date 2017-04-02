@@ -147,7 +147,10 @@ module.exports = {
 											// Data object looks like stalled.
 											debugger;
 											const err = new types.TimeoutError("Data object has not been consumed.");
-											this.consume(err);
+											try {
+												this.consume(err);
+											} catch(o) {
+											};
 										};
 									}, timeout, this, null, true);
 								};
@@ -826,36 +829,8 @@ module.exports = {
 
 						const encoding = types.get(options, 'encoding') || this.options.encoding;
 
-						let eof = false,
-							bof = false,
-							value;
-
-						const isData = types._instanceof(raw, io.Data);
-
-						if (isData) {
-							value = raw.raw;
-						} else {
-							value = raw;
-						};
-
-						eof = end || (value === io.EOF),
-						bof = !eof && (start || (value === io.BOF));
-						if (isData) {
-							value = raw.valueOf();
-						};
-						if (types.isNothing(value)) {
-							if (eof) {
-								value = io.EOF;
-							} else if (bof) {
-								value = io.BOF;
-							};
-						};
-						const data = this.transformIn(value, {encoding: encoding});
-						if (isData) {
-							if (raw.stream) {
-								data.chain(raw.defer());
-							};
-						};
+						const eof = end || (raw === io.EOF),
+							bof = !eof && (start || (raw === io.BOF));
 
 						if (types.isNothing(end)) {
 							end = eof;
@@ -864,6 +839,20 @@ module.exports = {
 						if (types.isNothing(start)) {
 							start = bof;
 						};
+
+						if ((!end && eof) || (!start && bof)) {
+							return;
+						};
+
+						if (types.isNothing(raw)) {
+							if (eof) {
+								raw = io.EOF;
+							} else if (bof) {
+								raw = io.BOF;
+							};
+						};
+
+						const data = this.transformIn(raw, {encoding: encoding});
 
 						data.attach(this);
 
@@ -883,12 +872,14 @@ module.exports = {
 								if (eof) {
 									this.submit(data);
 								} else {
+									const data2 = data;
+									data = new io.Data(io.EOF); // will returns Data(EOF)
 									data.chain(doodad.Callback(this, function(err) {
 										if (!err) {
-											this.submit(new io.Data(io.EOF));
+											this.submit(data);
 										};
 									}));
-									this.submit(data);
+									this.submit(data2);
 								};
 							} else if (start) {
 								if (bof) {
@@ -905,6 +896,8 @@ module.exports = {
 								this.submit(data);
 							};
 						};
+
+						return data;
 					}),
 					
 					writeAsync: doodad.PUBLIC(doodad.ASYNC(function writeAsync(raw, /*optional*/options) {
@@ -926,12 +919,12 @@ module.exports = {
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
-							this.write(raw, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
+							const data = this.write(raw, types.extend({}, options, {callback: doodad.AsyncCallback(this, function(err) {
 								cleanup.call(this);
 								if (err) {
 									reject(err);
 								} else {
-									resolve(this);
+									resolve(data);
 								};
 							})}));
 						}, this);
@@ -1054,6 +1047,7 @@ module.exports = {
 
 					__buffer: doodad.PROTECTED(null),
 					__flushing: doodad.PROTECTED(false),
+					__flushPurge: doodad.PROTECTED(false),
 
 					onError: doodad.OVERRIDE(function onError(ev) {
 						const cancelled = this._super(ev);
@@ -1080,6 +1074,7 @@ module.exports = {
 						this._super();
 						
 						this.__flushing = false;
+						this.__flushPurge = false;
 					}),
 					
 					getCount: doodad.REPLACE(function getCount() {
@@ -1089,11 +1084,13 @@ module.exports = {
 					flush: doodad.REPLACE(function flush(/*optional*/options) {
 						const callback = types.get(options, 'callback'),
 							count = types.get(options, 'count', Infinity),
-							purge = types.get(options, 'purge', false);
+							purge = types.get(options, 'purge', this.__flushPurge);
 
 						const listening = !this._implements(ioMixIns.Listener) || this.isListening();
 
 						const MAX_LOOP_COUNT = 30;  // TODO: Make it a stream option
+
+						this.__flushPurge = purge;
 
 						if (this.__flushing) {
 							if (callback) {

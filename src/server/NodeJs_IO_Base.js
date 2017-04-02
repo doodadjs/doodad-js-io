@@ -488,13 +488,7 @@ module.exports = {
 						
 						const host = this[doodad.HostSymbol];
 
-						const data = host.transformIn(chunk, {encoding: encoding});
-
-						data.attach(host);
-
-						host.write(data, {encoding: encoding, callback: callback});
-						
-						data.consume();
+						const data = host.write(chunk, {encoding: encoding, callback: callback});
 
 						if (!data.consumed) {
 							data.chain(doodad.AsyncCallback(this, this.ondrain));
@@ -520,13 +514,7 @@ module.exports = {
 						
 						const host = this[doodad.HostSymbol];
 
-						const data = host.transformIn(chunk, {encoding: encoding});
-
-						data.attach(host);
-
-						host.write(data, {eof: true, encoding: encoding, callback: callback});
-						
-						data.consume();
+						const data = host.write(chunk, {eof: true, encoding: encoding, callback: callback});
 
 						if (!data.consumed) {
 							data.chain(doodad.AsyncCallback(this, this.ondrain));

@@ -389,7 +389,7 @@ module.exports = {
 						//	};
 						//};
 
-						stream.write(data, {eof: eof, bof: bof});
+						stream.write(data.valueOf(), {eof: eof, bof: bof});
 					}),
 					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
@@ -613,6 +613,10 @@ module.exports = {
 							throw new types.BufferOverflow();
 						};
 
+						if (callback) {
+							data.chain(callback);
+						};
+
 						if (next) {
 							buffer.unshift(data);
 						} else {
@@ -621,12 +625,8 @@ module.exports = {
 
 						if (buffer.length >= this.options.bufferSize) {
 							if (this.options.flushMode === 'auto') {
-								this.flush({callback: callback});
-							} else {
-								data.chain(callback);
+								this.flush();
 							};
-						} else {
-							callback && callback(null);
 						};
 					}),
 
