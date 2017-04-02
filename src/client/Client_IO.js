@@ -80,13 +80,6 @@ module.exports = {
 					
 					__listening: doodad.PROTECTED(false),
 					__buffer: doodad.PROTECTED(null),
-					__pendingData: doodad.PROTECTED({
-						charCode: null,
-						scanCode: null,
-						text: null,
-						raw: null,
-						functionKeys: null,
-					}),
 
 					onReady: doodad.CALL_FIRST(doodad.OVERRIDE(function onReady(ev) {
 						ev.data.event = ev;
@@ -94,54 +87,49 @@ module.exports = {
 						return this._super(ev);
 					})),
 
-					onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(ev) {
+					onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(context) {
 						// Shows virtual keyboard on mobile phones and tablets.
 						if (this.element.focus) {
 							this.element.focus();
 						};
 					})),
 					
-					onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT(['keydown', 'keypress'], function onJsKeyDown(ev) {
+					onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT('keydown', function onJsKeyDown(context) {
 						if (this.__listening) {
+							const ev = context.event;
+
 							const key = {};
 
-							// NOTE: ev is a "keydown" or "keypress" event object
-							if (ev.type === 'keypress') {
-								const unifiedEv = ev.getUnified();
-								key.text = String.fromCharCode(unifiedEv.which);
+							var	functionKeys = 0,
+								charCode = ev.charCode,
+								scanCode = ev.keyCode;
 								
-							} else {
-								var	functionKeys = 0,
-									charCode = ev.charCode,
-									scanCode = ev.keyCode;
+							if (ev.shiftKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Shift;
+							};
+							if (ev.ctrlKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Ctrl;
+							};
+							if (ev.altKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Alt;
+							};
+							if (ev.metaKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Meta;
+							};
 								
-								if (ev.shiftKey) {
-									functionKeys |= io.KeyboardFunctionKeys.Shift;
-								};
-								if (ev.ctrlKey) {
-									functionKeys |= io.KeyboardFunctionKeys.Ctrl;
-								};
-								if (ev.altKey) {
-									functionKeys |= io.KeyboardFunctionKeys.Alt;
-								};
-								if (ev.metaKey) {
-									functionKeys |= io.KeyboardFunctionKeys.Meta;
-								};
-								
-								if (!functionKeys) {
-									if (charCode === 0) {
-										// TODO: Fix every other wrong char codes
-										if (scanCode === io.KeyboardScanCodes.Enter) {
-											charCode = 10; // "\n"
-										};
+							if (!functionKeys) {
+								if (charCode === 0) {
+									// TODO: Fix every other wrong char codes
+									if (scanCode === io.KeyboardScanCodes.Enter) {
+										charCode = 10; // "\n"
 									};
 								};
-
-								key.charCode = charCode;
-								key.scanCode = scanCode;
-								key.text = String.fromCharCode(charCode);
-								key.functionKeys = functionKeys;
 							};
+
+							key.charCode = charCode;
+							key.scanCode = scanCode;
+							key.text = String.fromCharCode(charCode);
+							key.functionKeys = functionKeys;
 
 							const data = new io.Data(key);
 
@@ -154,6 +142,26 @@ module.exports = {
 						};
 					})),
 					
+					onJsKeyPress: doodad.PROTECTED(doodad.JS_EVENT('keypress', function onJsKeyPress(context) {
+						if (this.__listening) {
+							const ev = context.event;
+
+							const key = {};
+
+							const unifiedEv = ev.getUnified();
+							key.text = String.fromCharCode(unifiedEv.which);
+
+							const data = new io.Data(key);
+
+							this.push(data);
+
+							if (data.event.prevent) {
+								ev.preventDefault();
+								return false;
+							};
+						};
+					})),
+
 					setOptions: doodad.OVERRIDE(function setOptions(options) {
 						types.getDefault(options, 'element', types.getIn(this.options, 'element', global.document));
 
@@ -181,7 +189,8 @@ module.exports = {
 							this.__listening = true;
 							this.onJsClick.attach(this.element);
 							this.onJsKeyDown.attach(this.element);
-							this.onListen(new doodad.Event());
+							this.onJsKeyPress.attach(this.element);
+							this.onListen();
 						};
 					}),
 
@@ -190,7 +199,8 @@ module.exports = {
 							this.__listening = false;
 							this.onJsClick.clear();
 							this.onJsKeyDown.clear();
-							this.onStopListening(new doodad.Event());
+							this.onJsKeyPress.clear();
+							this.onStopListening();
 						};
 					}),
 				}));
