@@ -872,25 +872,26 @@ module.exports = {
 								if (eof) {
 									this.submit(data);
 								} else {
-									const data2 = data;
-									data = new io.Data(io.EOF); // will returns Data(EOF)
+									const data2 = new io.Data(io.EOF);
 									data.chain(doodad.Callback(this, function(err) {
 										if (!err) {
-											this.submit(data);
+											this.submit(data2);
 										};
 									}));
-									this.submit(data2);
+									this.submit(data);
+									return data2; // will returns Data(EOF)
 								};
 							} else if (start) {
 								if (bof) {
 									this.submit(data);
 								} else {
-									data.chain(doodad.Callback(this, function(err) {
+									const data2 = new io.Data(io.BOF);
+									data2.chain(doodad.Callback(this, function(err) {
 										if (!err) {
 											this.submit(data);
 										};
 									}));
-									this.submit(new io.Data(io.BOF));
+									this.submit(data2);
 								};
 							} else {
 								this.submit(data);
