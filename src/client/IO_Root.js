@@ -389,7 +389,11 @@ module.exports = {
 						//	};
 						//};
 
-						stream.write(data.valueOf(), {eof: eof, bof: bof});
+						const raw = (this._implements(ioMixIns.TextTransformableOut) && !stream._implements(ioMixIns.TextTransformableIn) ? data.valueOf() : this.transformOut(data));
+						const data2 = stream.write(raw, {eof: eof, bof: bof});
+						if (!data2.consumed) {
+							data2.chain(data.defer());
+						};
 					}),
 					
 					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
