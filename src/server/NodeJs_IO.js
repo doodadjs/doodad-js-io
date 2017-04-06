@@ -688,7 +688,7 @@ module.exports = {
 						ev.preventDefault();
 
 						const eof = (data.raw === io.EOF);
-						let buf = data.valueOf();
+						let buf = this.transformOut(data);
 						const remaining = this.__remaining;
 						if (remaining) {
 							this.__remaining = null;
