@@ -390,9 +390,14 @@ module.exports = {
 						//};
 
 						const raw = (this._implements(ioMixIns.TextTransformableOut) && !stream._implements(ioMixIns.TextTransformableIn) ? data.valueOf() : this.transformOut(data));
-						const data2 = stream.write(raw, {eof: eof, bof: bof});
-						if (!data2.consumed) {
-							data2.chain(data.defer());
+						try {
+							const data2 = stream.write(raw, {eof: eof, bof: bof});
+							if (!data2.consumed) {
+								data2.chain(data.defer());
+							};
+						} catch(ex) {
+							this.unpipe(stream);
+							this.onError(ex);
 						};
 					}),
 					

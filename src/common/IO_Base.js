@@ -644,19 +644,25 @@ module.exports = {
 							data.attach(this);
 						};
 
+						const callback = types.get(options, 'callback');
 
 						let prevent = false;
 
 						if (!this._implements(ioMixIns.BufferedStreamBase)) {
 							const ev = new doodad.Event(data);
 
-							this.onReady(ev);
+							try {
+								this.onReady(ev);
+							} catch(ex) {
+								data.consume(ex);
+								callback && callback(ex);
+								throw ex;
+							};
 
 							prevent = ev.prevent;
 						};
 
 						if (prevent) {
-							const callback = types.get(options, 'callback');
 							if (data.consumed) {
 								callback && callback(null);
 							} else {
@@ -796,18 +802,25 @@ module.exports = {
 							data.attach(this);
 						};
 
+						const callback = types.get(options, 'callback');
+
 						let prevent = false;
 
 						if (!this._implements(ioMixIns.BufferedStreamBase)) {
 							const ev = new doodad.Event(data);
 
-							this.onData(ev);
+							try {
+								this.onData(ev);
+							} catch(ex) {
+								data.consume(ex);
+								callback && callback(ex);
+								throw ex;
+							};
 
 							prevent = ev.prevent;
 						};
 
 						if (prevent) {
-							const callback = types.get(options, 'callback');
 							if (data.consumed) {
 								callback && callback(null);
 							} else {
@@ -861,7 +874,13 @@ module.exports = {
 						};
 
 						const ev = new doodad.Event(data);
-						this.onWrite(ev);
+
+						try {
+							this.onWrite(ev);
+						} catch(ex) {
+							data.consume(ex);
+							throw ex;
+						};
 
 						if (ev.prevent) {
 							if (!data.consumed) {
@@ -1130,10 +1149,15 @@ module.exports = {
 
 											const ev = new doodad.Event(data);
 
-											if (isInput) {
-												this.onReady(ev);
-											} else {
-												this.onData(ev);
+											try {
+												if (isInput) {
+													this.onReady(ev);
+												} else {
+													this.onData(ev);
+												};
+											} catch(ex) {
+												data.consume(ex);
+												throw ex;
 											};
 
 											if (ev.prevent || purge) {

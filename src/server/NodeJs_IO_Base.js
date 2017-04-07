@@ -192,22 +192,34 @@ module.exports = {
 
 							if (eof) {
 								if (state.endDestination) {
-									if (types.isNothing(value)) {
-										destination.end(defer());
-									} else {
-										destination.end(value, defer());
+									try {
+										if (types.isNothing(value)) {
+											destination.end(defer());
+										} else {
+											destination.end(value, defer());
+										};
+									} catch(ex) {
+										state.errorCb(ex);
 									};
 								} else if (!types.isNothing(value)) {
-									const ok = destination.write(value);
-									if (!ok) {
-										destination.once('drain', defer());
+									try {
+										const ok = destination.write(value);
+										if (!ok) {
+											destination.once('drain', defer());
+										};
+									} catch(ex) {
+										state.errorCb(ex);
 									};
 								};
 							} else {
 								if (!types.isNothing(value)) {
-									const ok = destination.write(value);
-									if (!ok) {
-										destination.once('drain', defer());
+									try {
+										const ok = destination.write(value);
+										if (!ok) {
+											destination.once('drain', defer());
+										};
+									} catch(ex) {
+										state.errorCb(ex);
 									};
 								};
 							};

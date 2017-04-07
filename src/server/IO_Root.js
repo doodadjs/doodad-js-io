@@ -479,23 +479,38 @@ module.exports = {
 						if (isNodeJsStream) {
 							const raw = data.valueOf();
 							if (eof) {
-								if (types.isNothing(raw)) {
-									stream.end(data.defer());
-								} else {
-									stream.end(raw, data.defer());
+								try {
+									if (types.isNothing(raw)) {
+										stream.end(data.defer());
+									} else {
+										stream.end(raw, data.defer());
+									};
+								} catch(ex) {
+									this.unpipe(stream);
+									this.onError(ex);
 								};
 							} else if (!types.isNothing(raw)) {
 								const state = {ok: false};
-								const ok = state.ok = stream.write(raw);
-								if (!ok) {
-									this.__pipeNodeStreamOnDrain.attachOnce(stream, {consume: data.defer()});
+								try {
+									const ok = state.ok = stream.write(raw);
+									if (!ok) {
+										this.__pipeNodeStreamOnDrain.attachOnce(stream, {consume: data.defer()});
+									};
+								} catch(ex) {
+									this.unpipe(stream);
+									this.onError(ex);
 								};
 							};
 						} else {
 							const raw = (this._implements(ioMixIns.TextTransformableOut) && !stream._implements(ioMixIns.TextTransformableIn) ? data.valueOf() : this.transformOut(data));
-							const data2 = stream.write(raw, {eof: eof, bof: bof});
-							if (!data2.consumed) {
-								data2.chain(data.defer());
+							try {
+								const data2 = stream.write(raw, {eof: eof, bof: bof});
+								if (!data2.consumed) {
+									data2.chain(data.defer());
+								};
+							} catch(ex) {
+								this.unpipe(stream);
+								this.onError(ex);
 							};
 						};
 					}),
@@ -510,6 +525,8 @@ module.exports = {
 					}),
 						
 					__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
+						this.unpipe(ev.obj);
+
 						this.onError(ev);
 					}),
 
