@@ -311,13 +311,17 @@ module.exports = {
 								} catch(ex) {
 									throw ex;
 								} finally {
-									state.unpipeCb();
+									if (state.unpipeCb) {
+										state.unpipeCb();
+									};
 								};
 							});
 							destination.once('error', state.errorCb);
 
 							state.closeCb = doodad.Callback(this, function _closeCb() {
-								state.unpipeCb(this);
+								if (state.unpipeCb) {
+									state.unpipeCb(this);
+								};
 							});
 							destination.once('close', state.closeCb);
 							destination.once('destroy', state.closeCb);
