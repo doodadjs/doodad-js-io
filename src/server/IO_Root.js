@@ -536,10 +536,17 @@ module.exports = {
 					}),
 					
 					__pipeNodeStreamOnFinish: doodad.NODE_EVENT('finish', function __pipeNodeStreamOnFinish(context) {
+						// <PRB> Some Node.Js streams don't emit 'close' after 'finish'.
+
 						// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
 						this.__pipeNodeStreamOnDrain(context);
 
 						this.unpipe(context.emitter);
+
+						// <PRB> Some Node.js streams like ZLib can emit 'error' some ms AFTER been closed or finished. There is no way to know if an error will occur or not. We have to wait for DESTROY to free resources !!!
+						if (context.emitter._handle && context.emitter._handle.onerror) {
+							this.__pipeNodeStreamOnError.attachOnce(context.emitter);
+						};
 					}),
 					
 					__pipeNodeStreamOnClose: doodad.PROTECTED(doodad.NODE_EVENT('close', function __pipeNodeStreamOnClose(context) {
