@@ -79,7 +79,7 @@ module.exports = {
 				// Data objects
 				//=========================================
 
-				io.ADD('DeferCallback', function() {});
+				io.ADD('DeferCallback', function DeferCallback() {});
 
 				io.REGISTER(types.Type.$inherit(
 					/*typeProto*/

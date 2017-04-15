@@ -560,7 +560,7 @@ module.exports = {
 									mode: mode, 
 									Modes: Modes, 
 									text: value, 
-									valueOf: function() {
+									valueOf: function valueOf() {
 										return this.text;
 									},
 								};
