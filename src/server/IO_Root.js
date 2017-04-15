@@ -425,11 +425,22 @@ module.exports = {
 						if (istream) {
 							if (types.isEntrant(istream, 'onerror') && (istream.onerror.getCount() > 0)) {
 								// <PRB> Node.Js re-emits 'error'.
-								istream.onerror.attachOnce(null, function noop(err) {});
+								const noop = function noop(err) {};
 
-								const emitted = istream.onerror(ev.error);
-								if (emitted) {
-									ev.preventDefault();
+								istream.onerror.attachOnce(null, noop);
+
+								try {
+									const emitted = istream.onerror(ev.error);
+
+									if (emitted) {
+										ev.preventDefault();
+									};
+
+								} catch(ex) {
+									throw ex;
+
+								} finally {
+									istream.onerror.detach(null, noop);
 								};
 							};
 						};
