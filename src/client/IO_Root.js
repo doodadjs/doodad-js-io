@@ -566,7 +566,7 @@ module.exports = {
 							if (this.options.flushMode === 'auto') {
 								this.flush({callback: callback});
 							} else {
-								data.chain(callback);
+								callback && data.chain(callback);
 							};
 						} else {
 							callback && callback(null);
@@ -622,10 +622,6 @@ module.exports = {
 							throw new types.BufferOverflow();
 						};
 
-						if (callback) {
-							data.chain(callback);
-						};
-
 						if (next) {
 							buffer.unshift(data);
 						} else {
@@ -634,8 +630,12 @@ module.exports = {
 
 						if (buffer.length >= this.options.bufferSize) {
 							if (this.options.flushMode === 'auto') {
-								this.flush();
+								this.flush({callback: callback});
+							} else {
+								callback && data.chain(callback);
 							};
+						} else {
+							callback && callback(null);
 						};
 					}),
 
