@@ -146,8 +146,8 @@ module.exports = {
 										if (!this.consumed) {
 											// Data object looks like stalled.
 											debugger;
-											const err = new types.TimeoutError("Data object has not been consumed.");
 											try {
+												const err = new types.TimeoutError("Data object has not been consumed.");
 												this.consume(err);
 											} catch(o) {
 											};
@@ -155,6 +155,14 @@ module.exports = {
 									}, timeout, this, null, true);
 								};
 							};
+						},
+
+						detach: function detach() {
+							if (this.timeoutObj) {
+								this.timeoutObj.cancel();
+								this.timeoutObj = null;
+							};
+							this.stream = null;
 						},
 
 						defer: function defer() {
@@ -436,6 +444,12 @@ module.exports = {
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedStreamBaseMixIn')), true) */,
 
 					onFlush: doodad.EVENT(false), // function(ev)
+
+					destroy: doodad.OVERRIDE(function destroy() {
+						this.clearBuffer();
+
+						this._super();
+					}),
 
 					setOptions: doodad.OVERRIDE(function setOptions(options) {
 						types.getDefault(options, 'flushMode', types.getIn(this.options, 'flushMode', 'auto')); // 'auto', 'manual'
@@ -834,7 +848,7 @@ module.exports = {
 						};
 					}),
 
-					write: doodad.PUBLIC(function write(raw, /*optional*/options) {
+					write: doodad.PUBLIC(function write(/*optional*/raw, /*optional*/options) {
 						const callback = types.get(options, 'callback');
 
 						let end = types.get(options, 'eof'),
@@ -1087,6 +1101,9 @@ module.exports = {
 					}),
 
 					clearBuffer: doodad.REPLACE(function clearBuffer() {
+						tools.forEach(this.__buffer, function(data) {
+							data.detach();
+						});
 						this.__buffer = [];
 					}),
 
