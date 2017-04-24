@@ -507,7 +507,11 @@ module.exports = {
 						const data = host.write(chunk, {encoding: encoding, callback: callback});
 
 						if (!data.consumed) {
-							data.chain(doodad.AsyncCallback(this, this.ondrain));
+							data.chain(doodad.AsyncCallback(this, function doOnDrain(err) {
+								if (!err) {
+									this.ondrain();
+								};
+							}));
 						};
 
 						return data.consumed;
@@ -533,7 +537,11 @@ module.exports = {
 						const data = host.write(chunk, {eof: true, encoding: encoding, callback: callback});
 
 						if (!data.consumed) {
-							data.chain(doodad.AsyncCallback(this, this.ondrain));
+							data.chain(doodad.AsyncCallback(this, function doOnDrain(err) {
+								if (!err) {
+									this.ondrain();
+								};
+							}));
 						};
 
 						return data.consumed;
