@@ -565,7 +565,7 @@ module.exports = {
 									},
 								};
 								section.raw = section;
-								this.submit(new io.Data(section));
+								this.submit(new io.Data(section), {callback: data.defer()});
 
 								if (mode === Modes.Key) {
 									this.__mode = Modes.Value;
@@ -585,7 +585,7 @@ module.exports = {
 									Modes: Modes, 
 									text: decode(remaining), 
 								};
-								this.submit(new io.Data(section));
+								this.submit(new io.Data(section), {callback: data.defer()});
 							};
 							this.submit(new io.Data(io.EOF), {callback: data.defer()});
 						} else if (remaining) {
@@ -634,7 +634,7 @@ module.exports = {
 							if (chunkLen !== bufLen) {
 								this.__remaining = buf.slice(chunkLen);
 							};
-							this.submit(new io.BinaryData(chunk));
+							this.submit(new io.BinaryData(chunk), {callback: data.defer()});
 						};
 
 						if (eof) {
@@ -712,7 +712,7 @@ module.exports = {
 										if (index === start + 1) {
 											this.__headersCompiled = true;
 											start = index + 1;
-											this.submit(new io.Data(io.BOF, {headers: this.__headers}));
+											this.submit(new io.Data(io.BOF, {headers: this.__headers}), {callback: data.defer()});
 											break;
 										};
 										const str = buf.slice(start, index).toString('utf-8');  // Doing like Node.js (UTF-8). Normally it should be ASCII 7 bits.
@@ -731,7 +731,7 @@ module.exports = {
 										buf = buf.slice(start, end);
 									};
 									start = end;
-									this.submit(new io.BinaryData(buf));
+									this.submit(new io.BinaryData(buf), {callback: data.defer()});
 								};
 
 								return start;
