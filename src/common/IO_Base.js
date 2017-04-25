@@ -118,6 +118,7 @@ module.exports = {
 						trailing: null, // Trailing text/buffer on EOF. IMPORTANT: Must be a buffer if raw is a buffer, or a string if raw is a string
 						hasError: false,
 						callbacks: null,
+						deferFn: null,
 
 						_new: types.SUPER(function _new(/*optional*/raw, /*optional*/options) {
 							this._super();
@@ -172,9 +173,13 @@ module.exports = {
 								throw new types.NotAvailable("Data object has not been attached to its stream.");
 							} else {
 								this.deferred++;
-								const cb = types.INHERIT(io.DeferCallback, this.consume.bind(this));
-								cb.data = this;
-								return cb;
+								if (this.deferFn) {
+									return this.deferFn;
+								} else {
+									const cb = this.deferFn = types.INHERIT(io.DeferCallback, this.consume.bind(this));
+									cb.data = this;
+									return cb;
+								};
 							};
 						},
 
@@ -211,6 +216,7 @@ module.exports = {
 								this.raw = null; // Free memory
 								this.trailing = null; // Free memory
 								this.options = null; // Free memory
+								this.deferFn = null; // Free memory
 							};
 						},
 
