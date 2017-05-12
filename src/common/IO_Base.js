@@ -903,7 +903,7 @@ module.exports = {
 
 						if (ev.prevent) {
 							if (data.consumed) {
-								callback && callback();
+								callback && callback(null);
 							} else {
 								if (callback) {
 									data.chain(callback);
