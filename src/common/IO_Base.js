@@ -889,31 +889,43 @@ module.exports = {
 
 						data.attach(this);
 
-						if (callback) {
-							data.chain(callback);
-						};
-
 						const ev = new doodad.Event(data);
 
 						try {
 							this.onWrite(ev);
 						} catch(ex) {
+							if (callback) {
+								data.chain(callback);
+							};
 							data.consume(ex);
 							throw ex;
 						};
 
 						if (ev.prevent) {
-							if (!data.consumed) {
+							if (data.consumed) {
+								callback && callback();
+							} else {
+								if (callback) {
+									data.chain(callback);
+								};
 								data.consume();
 							};
 						} else {
 							if (end) {
 								if (eof) {
+									if (callback) {
+										data.chain(callback);
+									};
 									this.submit(data);
 								} else {
 									const data2 = new io.Data(io.EOF);
 									data.chain(doodad.Callback(this, function(err) {
-										if (!err) {
+										if (err) {
+											callback && callback(err);
+										} else {
+											if (callback) {
+												data2.chain(callback);
+											};
 											this.submit(data2);
 										};
 									}));
@@ -921,6 +933,9 @@ module.exports = {
 									return data2; // will returns Data(EOF)
 								};
 							} else if (start) {
+								if (callback) {
+									data.chain(callback);
+								};
 								if (bof) {
 									this.submit(data);
 								} else {
@@ -933,6 +948,9 @@ module.exports = {
 									this.submit(data2);
 								};
 							} else {
+								if (callback) {
+									data.chain(callback);
+								};
 								this.submit(data);
 							};
 						};
