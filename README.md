@@ -12,7 +12,7 @@ $ npm install doodad-js-io
 
 ## Features
 
-  -  EOF value.
+  -  Signal (BOF/EOF) values.
   -  Transforms.
   -  Pipes.
   -  Output and Input streams. Can be both.
