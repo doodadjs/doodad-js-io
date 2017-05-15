@@ -16,7 +16,8 @@ $ npm install doodad-js-io
   -  Transforms.
   -  Pipes.
   -  Output and Input streams. Can be both.
-  -  Binary or Text streams.
+  -  Buffered or non-buffered streams.
+  -  Binary/Text/Object streams.
   -  Keyboard input.
   -  Nested streams.
   -  HTML streams.
