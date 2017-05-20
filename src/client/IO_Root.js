@@ -205,7 +205,7 @@ module.exports = {
 							dta.trailing = trailing;
 							return dta;
 						} else {
-							if (encoding && (types.isArrayBuffer(raw) || types.isTypedArray(raw))) {
+							if (types.isArrayBuffer(raw) || types.isTypedArray(raw)) {
 								let text = '';
 								let decoder = this.__decoderIn;
 								const decoderEncoding = this.__decoderInEncoding;
@@ -275,7 +275,7 @@ module.exports = {
 								// Raw binary. We assume UTF-8 like Node.Js.
 								encoding = 'utf-8';
 							};
-							if (encoding && (types.isArrayBuffer(value) || types.isTypedArray(value))) {
+							if (types.isArrayBuffer(value) || types.isTypedArray(value)) {
 								let decoder = this.__decoderOut;
 								const decoderEncoding = this.__decoderOutEncoding;
 								let text = '';

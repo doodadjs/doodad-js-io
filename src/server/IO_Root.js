@@ -125,8 +125,7 @@ module.exports = {
 
 						$decode: function $decode(buf, encoding, /*optional*/options) {
 							// NOTE: You must call "$validateEncoding" before if not already done.
-							const isView = types.isTypedArray(buf);
-							if (isView || types.isArrayBuffer(buf)) {
+							if (types.isTypedArray(buf) || types.isArrayBuffer(buf)) {
 								if (nodeIConv) {
 									// iconv-lite
 									return nodeIConv.decode(buf, encoding, options);
@@ -136,7 +135,7 @@ module.exports = {
 									return decoder.end(buf);
 								};
 							} else {
-								throw new types.Error("Invalid 'raw' data.");
+								throw new types.Error("Invalid buffer.");
 							};
 						},
 					},
@@ -243,7 +242,7 @@ module.exports = {
 							dta.trailing = trailing;
 							return dta;
 						} else {
-							if (encoding && (types.isArrayBuffer(raw) || types.isTypedArray(raw))) {
+							if (types.isArrayBuffer(raw) || types.isTypedArray(raw)) {
 								let decoder = this.__decoderIn;
 								const decoderEncoding = this.__decoderInEncoding;
 								let text = '';
@@ -319,7 +318,7 @@ module.exports = {
 								// Raw binary. We assume UTF-8 like Node.Js.
 								encoding = 'utf-8';
 							};
-							if (encoding && (types.isArrayBuffer(value) || types.isTypedArray(value))) {
+							if (types.isArrayBuffer(value) || types.isTypedArray(value)) {
 								let decoder = this.__decoderOut;
 								const decoderEncoding = this.__decoderOutEncoding;
 								let text = '';
@@ -754,6 +753,23 @@ module.exports = {
 						return retval;
 					}),
 
+					onEOF: doodad.OVERRIDE(function onEOF(ev) {
+						const retval = this._super(ev);
+					
+						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
+						if (ireadable) {
+							if (ireadable.isPaused()) {
+								// Must be Async (function must return before the event)
+								if (!this._readableState.ended) {
+									this._readableState.ended = true;
+									tools.callAsync(ireadable.onend, -1, ireadable, null, null, _shared.SECRET);
+								};
+							};
+						};
+					
+						return retval;
+					}),
+
 					onStopListening: doodad.OVERRIDE(function onStopListening(ev) {
 						const retval = this._super(ev);
 						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
@@ -815,6 +831,23 @@ module.exports = {
 							ev.preventDefault();
 						};
 
+						return retval;
+					}),
+
+					onEOF: doodad.OVERRIDE(function onEOF(ev) {
+						const retval = this._super(ev);
+					
+						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
+						if (ireadable) {
+							if (ireadable.isPaused()) {
+								// Must be Async (function must return before the event)
+								if (!this._readableState.ended) {
+									this._readableState.ended = true;
+									tools.callAsync(ireadable.onend, -1, ireadable, null, null, _shared.SECRET);
+								};
+							};
+						};
+					
 						return retval;
 					}),
 

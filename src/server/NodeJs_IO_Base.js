@@ -380,14 +380,6 @@ module.exports = {
 							return data;
 						};
 
-						if (this.isPaused()) {
-							// Must be Async (function must return before the event)
-							if (!this._readableState.ended) {
-								this._readableState.ended = true;
-								tools.callAsync(this.onend, -1, this);
-							};
-						};
-
 						return null;
 					}),
 					
