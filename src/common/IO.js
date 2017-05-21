@@ -643,15 +643,21 @@ module.exports = {
 					
 					__streamOnData: doodad.PROTECTED(function __streamOnData(ev) {
 						if (!ev.data.options.flushElement) {
-							const cls = types.getType(this),
-								bufferTypes = cls.$__bufferTypes,
-								streamData = ev.handlerData[0],
-								value = ev.data.valueOf();
+							const streamData = ev.handlerData[0];
 								
-							if (streamData.raw[0] === bufferTypes.Stream) {
-								streamData.raw = [bufferTypes.Html, (types.isNothing(value) ? '' : value), ev.obj.options.identLines];
-							} else {
-								streamData.raw[1] += (types.isNothing(value) ? '' : value);
+							if (!streamData.consumed) {
+								const cls = types.getType(this),
+									bufferTypes = cls.$__bufferTypes,
+									value = ev.data.toString(),
+									streamValue = streamData.raw;
+
+								if (streamValue[0] === bufferTypes.Stream) {
+									streamValue[0] = bufferTypes.Html;
+									streamValue[1] = value || '';
+									streamValue[2] = ev.obj.options.identLines;
+								} else {
+									streamValue[1] += value || '';
+								};
 							};
 						};
 					}),
@@ -677,7 +683,9 @@ module.exports = {
 						
 						!noOpenClose && this.submit(new io.Data([bufferTypes.Open, tag, attrs]));
 
-						this.submit(new io.Data([bufferTypes.Stream, stream])); // <--- Will get replaced on flush
+						const streamData = new io.Data([bufferTypes.Stream, stream]); // <--- Will get replaced on flush
+
+						this.submit(streamData);
 
 						!noOpenClose && this.submit(new io.Data([bufferTypes.Close, tag]));
 						
@@ -932,8 +940,8 @@ module.exports = {
 				return function init(/*optional*/options) {
 					// NOTE: Every "std" must be a stream.
 					io.setStds({
-						stdout: (new io.ConsoleOutputStream({name: 'log', flushMode: 'half', bufferSize: 1024})),
-						stderr: (new io.ConsoleOutputStream({name: 'error', flushMode: 'half', bufferSize: 1024})),
+						stdout: (new io.ConsoleOutputStream({name: 'log'})),
+						stderr: (new io.ConsoleOutputStream({name: 'error'})),
 					});
 					
 					_shared.consoleHook = function consoleHook(level, message) {
