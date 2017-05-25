@@ -597,7 +597,7 @@ module.exports = {
 				ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.BinaryTransformableBase.$extend(
 				{
 					$TYPE_NAME: 'BinaryTransformableOut',
-					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryTransformableInMixIn')), true) */,
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryTransformableOutMixIn')), true) */,
 
 					transformOut: doodad.REPLACE(function transformOut(data, /*optional*/options) {
 						const value = data.valueOf();
