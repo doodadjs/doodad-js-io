@@ -198,6 +198,10 @@ module.exports = {
 									this.timeoutObj.cancel();
 									this.timeoutObj = null;  // Free memory
 								};
+								if (!_shared.DESTROYED(this.stream)) {
+									//this.stream.onError.detach(this);
+									this.stream.consumeData(this, err);
+								};
 								const cbChain = this.callbacks;
 								if (types.isArray(cbChain)) {
 									const len = cbChain.length;
@@ -207,12 +211,8 @@ module.exports = {
 								} else if (!types.isNothing(cbChain)) {
 									cbChain(err);
 								};
+								this.stream = null; // Free memory
 								this.callbacks = null; // Free memory
-								if (!_shared.DESTROYED(this.stream)) {
-									//this.stream.onError.detach(this);
-									this.stream.consumeData(this, err);
-									this.stream = null; // Free memory
-								};
 								this.raw = null; // Free memory
 								this.trailing = null; // Free memory
 								this.options = null; // Free memory
@@ -1155,14 +1155,23 @@ module.exports = {
 
 						if (this.__flushing) {
 							if (callback) {
-								let flushCb, errorCb;
-								this.onFlush.attachOnce(this, flushCb = function(ev) {
+								let flushCb, errorCb, destroyCb;
+								const cleanup = function _cleanup() {
+									this.onFlush.detach(this, flushCb);
 									this.onError.detach(this, errorCb);
+									this.onDestroy.detach(this, destroyCb);
+								};
+								this.onFlush.attachOnce(this, flushCb = function(ev) {
+									cleanup.call(this);
 									callback(null);
 								});
 								this.onError.attachOnce(this, errorCb = function(ev) {
-									this.onFlush.detach(this, flushCb);
+									cleanup.call(this);
 									callback(ev.error);
+								});
+								this.onDestroy.attachOnce(this, destroyCb = function(ev) {
+									cleanup.call(this);
+									callback(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 								});
 							};
 						} else if (listening && (count > 0)) {
