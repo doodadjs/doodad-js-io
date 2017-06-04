@@ -193,30 +193,59 @@ module.exports = {
 							};
 							if (!this.consumed && (err || (--this.deferred < 0))) {
 								this.consumed = true;
+
 								this.hasError = !!err;
+
 								if (this.timeoutObj) {
 									this.timeoutObj.cancel();
 									this.timeoutObj = null;  // Free memory
 								};
+
+								let failed = false;
+
 								if (!_shared.DESTROYED(this.stream)) {
 									//this.stream.onError.detach(this);
-									this.stream.consumeData(this, err);
+									try {
+										//this.stream.onError.detach(this);
+										this.stream.consumeData(this, err);
+									} catch(ex) {
+										err = ex;
+										failed = true;
+									};
 								};
+
 								const cbChain = this.callbacks;
 								if (types.isArray(cbChain)) {
 									const len = cbChain.length;
 									for (let i = 0; i < len; i++) {
-										cbChain[i](err);
+										try {
+											cbChain[i](err);
+										} catch(ex) {
+											err = ex;
+											failed = true;
+										};
 									};
 								} else if (!types.isNothing(cbChain)) {
-									cbChain(err);
+									try {
+										cbChain(err);
+									} catch(ex) {
+										err = ex;
+										failed = true;
+									};
 								};
-								this.stream = null; // Free memory
-								this.callbacks = null; // Free memory
-								this.raw = null; // Free memory
-								this.trailing = null; // Free memory
-								this.options = null; // Free memory
-								this.deferFn = null; // Free memory
+
+								// Free memory
+								this.stream = null;
+								this.callbacks = null;
+								this.raw = null;
+								this.trailing = null;
+								this.options = null;
+								this.deferFn = null;
+
+								if (failed) {
+									this.hasError = true;
+									throw err;
+								};
 							};
 						},
 
