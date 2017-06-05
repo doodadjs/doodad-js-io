@@ -760,8 +760,8 @@ module.exports = {
 						if (ireadable) {
 							if (ireadable.isPaused()) {
 								// Must be Async (function must return before the event)
-								if (!this._readableState.ended) {
-									this._readableState.ended = true;
+								if (ireadable._readableState && !ireadable._readableState.ended) {
+									ireadable._readableState.ended = true;
 									tools.callAsync(ireadable.onend, -1, ireadable, null, null, _shared.SECRET);
 								};
 							};
@@ -841,7 +841,7 @@ module.exports = {
 						if (ireadable) {
 							if (ireadable.isPaused()) {
 								// Must be Async (function must return before the event)
-								if (!ireadable._readableState.ended) {
+								if (ireadable._readableState && !ireadable._readableState.ended) {
 									ireadable._readableState.ended = true;
 									tools.callAsync(ireadable.onend, -1, ireadable, null, null, _shared.SECRET);
 								};
