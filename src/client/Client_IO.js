@@ -533,7 +533,7 @@ module.exports = {
 					if (!__Internal__.streamsSupported) {
 						throw new types.NotSupported("Streams are not supported.");
 					};
-					url = _shared.urlParser(url, types.get(options, 'parseOptions'));
+					url = files.parseUrl(url, types.get(options, 'parseOptions'));
 					root.DD_ASSERT && root.DD_ASSERT(url instanceof files.Url, "Invalid url.");
 					url = url.toString();
 					const encoding = types.get(options, 'encoding', null);

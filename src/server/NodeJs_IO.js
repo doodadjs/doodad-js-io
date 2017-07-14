@@ -791,7 +791,7 @@ module.exports = {
 
 
 				files.ADD('openFile', function openFile(path, /*optional*/options) {
-					path = _shared.pathParser(path, types.get(options, 'parseOptions'));
+					path = files.parsePath(path, types.get(options, 'parseOptions'));
 					
 					root.DD_ASSERT && root.DD_ASSERT((path instanceof files.Path) || ((path instanceof files.Url) && (path.protocol === 'file')), "Invalid path.")
 					
