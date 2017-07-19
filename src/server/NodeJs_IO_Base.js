@@ -460,9 +460,11 @@ module.exports = {
 					
 					__defaultEncoding: doodad.PROTECTED(null),
 
+					__drainingData: doodad.PROTECTED(null),
+
 					writable: doodad.PUBLIC(true),
 					_writableState: doodad.PUBLIC({
-						needDrain: false,
+						needDrain: false, // Needed for Node.Js, must stay to "false"
 					}),
 
 					getDefaultEncoding: doodad.PUBLIC(function getDefaultEncoding() {
@@ -493,13 +495,22 @@ module.exports = {
 						if (types.isNothing(encoding)) {
 							encoding = this.getDefaultEncoding();
 						};
+
+						if (this.__drainingData) {
+							// Previously we have returned 'false', the customer didn't wait... so we throw !
+							throw new types.BufferOverflow();
+						};
 						
 						const host = this[doodad.HostSymbol];
 
 						const data = host.write(chunk, {encoding: encoding, callback: callback});
 
 						if (!data.consumed) {
+							this.__drainingData = data;
+
 							data.chain(doodad.AsyncCallback(this, function doOnDrain(err) {
+								this.__drainingData = null;
+
 								if (!err) {
 									this.ondrain();
 								};
@@ -522,6 +533,16 @@ module.exports = {
 
 						if (types.isNothing(encoding)) {
 							encoding = this.getDefaultEncoding();
+						};
+						
+						if (this.__drainingData) {
+							// <PRB> Node.Js never waits before calling 'end'. So we have to chain.
+							this.__drainingData.chain(doodad.AsyncCallback(this, function doOnDrain(err) {
+								if (!err) {
+									this.end(chunk, encoding, callback);
+								};
+							}));
+							return false;
 						};
 						
 						const host = this[doodad.HostSymbol];
