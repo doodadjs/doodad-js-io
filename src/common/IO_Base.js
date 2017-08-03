@@ -146,7 +146,7 @@ module.exports = {
 										this.timeoutObj = null;
 										if (!this.consumed) {
 											// Data object looks like stalled.
-											debugger;
+											types.DEBUGGER();
 											try {
 												const err = new types.TimeoutError("Data object has not been consumed.");
 												this.consume(err);
