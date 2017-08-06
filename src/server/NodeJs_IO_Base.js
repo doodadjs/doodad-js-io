@@ -237,7 +237,7 @@ module.exports = {
 
 					isPaused: doodad.PUBLIC(function isPaused() {
 						const host = this[doodad.HostSymbol];
-						return host.isListening();
+						return !host.isListening();
 					}),
 					
 					pause: doodad.PUBLIC(function pause() {
