@@ -296,8 +296,10 @@ module.exports = {
 					streamOnPipeDrain: doodad.NODE_EVENT('drain', function streamOnPipeDrain(context) {
 						// <PRB> Some Node.Js streams don't wait after pipes before emitting 'finish'.
 
+						this.streamOnPipeDrain.detach(context.emitter);
 						this.streamOnPipeFinish.detach(context.emitter);
 						this.streamOnPipeClose.detach(context.emitter);
+						this.streamOnPipeUnpipe.detach(context.emitter);
 
 						if (--context.data.count === 0) {
 							this.__lastWriteOk = true;
@@ -314,6 +316,12 @@ module.exports = {
 					streamOnPipeClose: doodad.NODE_EVENT('close', function streamOnPipeClose(context) {
 						// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
 						this.streamOnPipeFinish(context);
+					}),
+
+					streamOnPipeUnpipe: doodad.NODE_EVENT('unpipe', function streamOnPipeUnpipe(context, source) {
+						if (source === this.stream) {
+							this.streamOnPipeDrain(context);
+						};
 					}),
 
 					streamOnDrain: doodad.NODE_EVENT('drain', function streamOnDrain(context) {
@@ -363,6 +371,7 @@ module.exports = {
 						this.streamOnPipeDrain.clear();
 						this.streamOnPipeFinish.clear();
 						this.streamOnPipeClose.clear();
+						this.streamOnPipeUnpipe.clear();
 
 						this._super();
 					}),
@@ -426,6 +435,7 @@ module.exports = {
 										this.streamOnPipeDrain.attachOnce(rs.pipes, context, true);
 										this.streamOnPipeFinish.attachOnce(rs.pipes, context, true);
 										this.streamOnPipeClose.attachOnce(rs.pipes, context, true);
+										this.streamOnPipeUnpipe.attachOnce(rs.pipes, context, true);
 									} else if (ok && eof) {
 										data.consume();
 									} else {
