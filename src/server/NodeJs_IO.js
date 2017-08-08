@@ -801,21 +801,19 @@ module.exports = {
 
 
 				files.ADD('openFile', function openFile(path, /*optional*/options) {
-					path = files.parsePath(path, types.get(options, 'parseOptions'));
-					
-					root.DD_ASSERT && root.DD_ASSERT((path instanceof files.Path) || ((path instanceof files.Url) && (path.protocol === 'file')), "Invalid path.")
-					
-					if (path instanceof files.Url) {
-						path = files.Path.parse(path);
-					};
-					
-					path = path.toString();
-					
-					const encoding = types.get(options, 'encoding'),
-						Promise = types.getPromise();
-						
+					const Promise = types.getPromise();
 					return Promise.try(function() {
+						path = files.parseLocation(path);
+					
+						if (path instanceof files.Url) {
+							path = files.Path.parse(path);
+						};
+					
+						path = path.toString();
+					
+						const encoding = types.get(options, 'encoding');
 						const nodeStream = nodeFs.createReadStream(path, {autoClose: true});
+
 						if (encoding) {
 							return new nodejsIO.TextInputStream({nodeStream: nodeStream, encoding: encoding});
 						} else {
