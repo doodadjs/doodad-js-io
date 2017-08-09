@@ -181,10 +181,12 @@ module.exports = {
 
 						} else {
 							const defer = function defer() {
-								state.consumeCb = data.defer();
-								data.chain(function(err) {
-									state.consumeCb = null;
-								});
+								if (!state.consumeCb) {
+									state.consumeCb = data.defer();
+									data.chain(function(err) {
+										state.consumeCb = null;
+									});
+								};
 								return state.consumeCb;
 							};
 
@@ -324,7 +326,7 @@ module.exports = {
 									throw ex;
 								} finally {
 									if (state.unpipeCb) {
-										state.unpipeCb();
+										state.unpipeCb(this);
 									};
 								};
 							});
