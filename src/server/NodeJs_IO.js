@@ -92,8 +92,9 @@ module.exports = {
 								} else {
 									this.__waiting = false;
 									if (this.__ended) {
-										this.stopListening();
-										this.push(new io.BinaryData(io.EOF));
+										this.push(new io.BinaryData(io.EOF), {callback: doodad.Callback(this, function() {
+											this.stopListening();
+										})});
 									} else {
 										this.stream.resume();
 										this.streamOnData.attach(this.stream);
@@ -117,8 +118,9 @@ module.exports = {
 					streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
 						this.__ended = true;
 						if (!this.__waiting) {
-							this.stopListening();
-							this.push(new io.BinaryData(io.EOF));
+							this.push(new io.BinaryData(io.EOF), {callback: doodad.Callback(this, function() {
+								this.stopListening();
+							})});
 						};
 					}),
 
