@@ -108,11 +108,17 @@ module.exports = {
 							};
 						})
 
-						this.__waiting = true;
-						this.stream.pause();
-						this.streamOnData.clear();
+						const data = new io.BinaryData(chunk);
 
-						this.push(new io.BinaryData(chunk), {callback: __pushCb});
+						this.push(data);
+
+						if (!data.consumed) {
+							this.__waiting = true;
+							this.stream.pause();
+							this.streamOnData.clear();
+							//this.stream.removeAllListeners('data');
+							data.chain(__pushCb);
+						};
 					}),
 					
 					streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
@@ -129,8 +135,6 @@ module.exports = {
 							this.__ended = true;
 							this.push(new io.BinaryData(io.EOF));
 						};
-						const istream = this.getInterface(nodejsIOInterfaces.IStream);
-						istream.destroy();
 					}),
 					
 					streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
