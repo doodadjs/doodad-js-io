@@ -370,7 +370,41 @@ module.exports = {
 				})));
 				
 
+				__Internal__.BufferTypes = {
+					Deleted: -1,
+					Html: 0,
+					Open: 1,
+					Close: 2,
+					Stream: 3,
+					Flush: 4,
+				};
 
+				io.REGISTER(io.Data.$inherit(
+					/*typeProto*/
+					{
+						$TYPE_NAME: 'HtmlData',
+						$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryData')), true) */,
+					},
+					/*instanceProto*/
+					{
+						valueOf: function valueOf() {
+							const raw = this.raw;
+							if (raw[0] === __Internal__.BufferTypes.Html) {
+								return raw[1];
+							};
+							return null;
+						},
+
+						toString: function toString() {
+							const raw = this.raw;
+							if (raw[0] === __Internal__.BufferTypes.Html) {
+								return types.toString(raw[1]);
+							};
+							return '';
+						},
+					}
+				));
+				
 				io.REGISTER(io.BufferedTextOutputStream.$extend(
 									ioMixIns.NestedStream,
 									ioMixIns.TextTransformableIn,
@@ -381,14 +415,7 @@ module.exports = {
 					
 					__tags: doodad.PROTECTED(null),
 					
-					$__bufferTypes: doodad.TYPE(doodad.ATTRIBUTE({
-						Deleted: -1,
-						Html: 0,
-						Open: 1,
-						Close: 2,
-						Stream: 3,
-						Flush: 4,
-					}, extenders.ExtendObject, {maxDepth: 0})),
+					$__bufferTypes: doodad.TYPE(doodad.ATTRIBUTE(__Internal__.BufferTypes, extenders.ExtendObject, {maxDepth: 0})),
 
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super(options);
@@ -425,7 +452,9 @@ module.exports = {
 									itemValue = firstItem && firstItem.valueOf();
 									
 								if (!firstItem || (itemValue[0] !== bufferTypes.Html)) {
-									newData = new io.Data([bufferTypes.Html, value, false]);
+									newData = new io.HtmlData([bufferTypes.Html, value, false]);
+									newData.attach(this);
+									buffer.unshift(newData);
 								} else {
 									itemValue[1] = value + firstItem[1];
 								};
@@ -434,32 +463,30 @@ module.exports = {
 									itemValue = lastItem && lastItem.valueOf();
 									
 								if (!lastItem || (itemValue[0] !== bufferTypes.Html)) {
-									newData = new io.Data([bufferTypes.Html, value, false]);
+									newData = new io.HtmlData([bufferTypes.Html, value, false]);
+									newData.attach(this);
+									buffer.push(newData);
 								} else {
 									itemValue[1] += value;
 								};
 							};
 
-							if (newData) {
-								newData.attach(this);
-								newData.chain(data.consume.bind(data));
+							const callback = types.get(options, 'callback');
 
-								this._super(newData, options);
-
-							} else {
-								const callback = types.get(options, 'callback');
-
-								if (callback) {
-									data.chain(callback);
-								};
-
-								data.consume();
-
-								this.overrideSuper();
+							if (callback) {
+								data.chain(callback);
 							};
 
-						} else {
+							data.consume();
+
+							this.overrideSuper();
+
+						} else if (types._instanceof(data, io.HtmlData)) {
 							this._super(data, options);
+
+						} else {
+							throw types.TypeError("Invalid data object.");
+
 						};
 					}),
 
@@ -618,7 +645,7 @@ module.exports = {
 							// Replace everything after the "Open" chunk by the "Flush" chunk.
 							state.flushElementChunk[1] = state.html;
 
-							const data = new io.Data(state.flushElementChunk);
+							const data = new io.HtmlData(state.flushElementChunk);
 							data.attach(this);
 
 							const datas = buffer.splice(bufferStart + 1, buffer.length - bufferStart - 1, data);
@@ -681,13 +708,13 @@ module.exports = {
 							
 						const noOpenClose = types.get(options, 'noOpenClose', false);
 						
-						!noOpenClose && this.submit(new io.Data([bufferTypes.Open, tag, attrs]));
+						!noOpenClose && this.submit(new io.HtmlData([bufferTypes.Open, tag, attrs]));
 
-						const streamData = new io.Data([bufferTypes.Stream, stream]); // <--- Will get replaced on flush
+						const streamData = new io.HtmlData([bufferTypes.Stream, stream]); // <--- Will get replaced on flush
 
 						this.submit(streamData);
 
-						!noOpenClose && this.submit(new io.Data([bufferTypes.Close, tag]));
+						!noOpenClose && this.submit(new io.HtmlData([bufferTypes.Close, tag]));
 						
 						stream.onData.attach(this, this.__streamOnData, 50, [streamData]);
 
@@ -712,7 +739,7 @@ module.exports = {
 						const cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
-						this.submit(new io.Data([bufferTypes.Open, tag, attrs]));
+						this.submit(new io.HtmlData([bufferTypes.Open, tag, attrs]));
 					}),
 					
 					closeElement: doodad.PUBLIC(function closeElement() {
@@ -723,7 +750,7 @@ module.exports = {
 						const cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
 						
-						this.submit(new io.Data([bufferTypes.Close, tags.pop()[0]]));
+						this.submit(new io.HtmlData([bufferTypes.Close, tags.pop()[0]]));
 					}),
 					
 					reset: doodad.OVERRIDE(function reset() {
