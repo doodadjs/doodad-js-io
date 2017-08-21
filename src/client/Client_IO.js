@@ -260,7 +260,7 @@ module.exports = {
 					$TYPE_NAME: 'DomOutputStream',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('DomOutputStream')), true) */,
 					
-					element: doodad.READ_ONLY(null),
+					element: doodad.PUBLIC(doodad.READ_ONLY(null)),
 
 					__div: doodad.PROTECTED(null),
 					
