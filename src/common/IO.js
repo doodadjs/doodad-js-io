@@ -387,18 +387,12 @@ module.exports = {
 					},
 					/*instanceProto*/
 					{
-						valueOf: function valueOf() {
-							const raw = this.raw;
-							if (raw[0] === __Internal__.BufferTypes.Html) {
-								return raw[1];
-							};
-							return null;
-						},
-
 						toString: function toString() {
 							const raw = this.raw;
-							if (raw[0] === __Internal__.BufferTypes.Html) {
-								return types.toString(raw[1]);
+							if (!types._instanceof(raw, io.Signal)) {
+								if (raw[0] === __Internal__.BufferTypes.Html) {
+									return types.toString(raw[1]);
+								};
 							};
 							return '';
 						},
@@ -485,7 +479,7 @@ module.exports = {
 							this._super(data, options);
 
 						} else {
-							throw types.TypeError("Invalid data object.");
+							throw new types.TypeError("Invalid data object.");
 
 						};
 					}),
