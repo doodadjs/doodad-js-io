@@ -79,7 +79,15 @@ module.exports = {
 				// Data objects
 				//=========================================
 
-				io.ADD('DeferCallback', function DeferCallback() {});
+				io.ADD('DeferCallback', types.INHERIT(types.Callback, function DeferCallback(data) {
+					//return types.INHERIT(io.DeferCallback, function consume(err) {
+					//	data.consume(err);
+					//});
+					const cb = types.INHERIT(io.DeferCallback, data.consume.bind(data));
+					_shared.setAttribute(cb, _shared.BoundObjectSymbol, data, {});
+					//_shared.setAttribute(cb, _shared.OriginalValueSymbol, data.consume, {});
+					return cb;
+				}));
 
 				io.REGISTER(types.Type.$inherit(
 					/*typeProto*/
@@ -176,7 +184,7 @@ module.exports = {
 								if (this.deferFn) {
 									return this.deferFn;
 								} else {
-									const cb = this.deferFn = types.INHERIT(io.DeferCallback, this.consume.bind(this));
+									const cb = this.deferFn = io.DeferCallback(this);
 									cb.data = this;
 									return cb;
 								};
@@ -513,7 +521,15 @@ module.exports = {
 					
 					getCount: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function getCount()
 
-					flush: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function flush(/*optional*/options)
+					flush: doodad.PUBLIC(doodad.CALL_FIRST(doodad.MUST_OVERRIDE(function flush(/*optional*/options) {
+						const callback = types.get(options, 'callback', null);
+
+						if (callback) {
+							options = types.extend(options, {callback: this.makeOutside(callback)});
+						};
+
+						return this._super(options);
+					}))),
 
 					flushAsync: doodad.PUBLIC(doodad.ASYNC(function flushAsync(/*optional*/options) {
 						const Promise = types.getPromise();
@@ -813,8 +829,33 @@ module.exports = {
 					})),
 				}))));
 				
+				ioMixIns.REGISTER(doodad.MIX_IN(doodad.Class.$extend(
+				{
+					$TYPE_NAME: 'OutputBase',
+
+					submit: doodad.PUBLIC(doodad.CALL_FIRST(doodad.MUST_OVERRIDE(function submit(data, /*optional*/options) {
+						const callback = types.get(options, 'callback', null);
+
+						if (callback) {
+							options = types.extend(options, {callback: this.makeOutside(callback)});
+						};
+
+						return this._super(data, options);
+					}))),
+
+					write: doodad.PUBLIC(doodad.CALL_FIRST(doodad.MUST_OVERRIDE(function write(/*optional*/raw, /*optional*/options) {
+						const callback = types.get(options, 'callback', null);
+
+						if (callback) {
+							options = types.extend(options, {callback: this.makeOutside(callback)});
+						};
+
+						return this._super(raw, options);
+					}))),
+				})));
 				
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
+											ioMixIns.OutputBase,
 				{
 					$TYPE_NAME: 'OutputStreamBase',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamBaseMixIn')), true) */,
@@ -840,7 +881,7 @@ module.exports = {
 						data.consume();
 					}),
 
-					submit: doodad.PUBLIC(function submit(data, /*optional*/options) {
+					submit: doodad.REPLACE(function submit(data, /*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types._instanceof(data, io.Data), "Invalid Data object.");
 
 						if (data.consumed) {
@@ -883,7 +924,7 @@ module.exports = {
 						};
 					}),
 
-					write: doodad.PUBLIC(function write(/*optional*/raw, /*optional*/options) {
+					write: doodad.REPLACE(function write(/*optional*/raw, /*optional*/options) {
 						const callback = types.get(options, 'callback');
 
 						let end = types.get(options, 'eof'),
