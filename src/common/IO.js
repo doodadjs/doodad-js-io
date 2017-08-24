@@ -447,7 +447,6 @@ module.exports = {
 									
 								if (!firstItem || (itemValue[0] !== bufferTypes.Html)) {
 									newData = new io.HtmlData([bufferTypes.Html, value, false]);
-									newData.attach(this);
 									buffer.unshift(newData);
 								} else {
 									itemValue[1] = value + firstItem[1];
@@ -458,7 +457,6 @@ module.exports = {
 									
 								if (!lastItem || (itemValue[0] !== bufferTypes.Html)) {
 									newData = new io.HtmlData([bufferTypes.Html, value, false]);
-									newData.attach(this);
 									buffer.push(newData);
 								} else {
 									itemValue[1] += value;
@@ -640,13 +638,14 @@ module.exports = {
 							state.flushElementChunk[1] = state.html;
 
 							const data = new io.HtmlData(state.flushElementChunk);
-							data.attach(this);
 
 							const datas = buffer.splice(bufferStart + 1, buffer.length - bufferStart - 1, data);
 
 							tools.forEach(datas, function(dta) {
+								dta.attach(this);
+
 								dta.consume();
-							});
+							}, this);
 
 							const callback = types.get(options, 'callback');
 							if (callback) {
