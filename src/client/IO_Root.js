@@ -345,13 +345,14 @@ module.exports = {
 						this._super();
 					}),
 
-					onError: doodad.OVERRIDE(function onError(ev) {
-						const cancelled = this._super(ev);
+					// NOTE: Commented out to give a chance to the error to propagate.
+					//onError: doodad.OVERRIDE(function onError(ev) {
+					//	const cancelled = this._super(ev);
 
-						this.unpipe();
+					//	this.unpipe();
 
-						return cancelled;
-					}),
+					//	return cancelled;
+					//}),
 
 					__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
 						const stream = ev.handlerData[0],
@@ -556,6 +557,8 @@ module.exports = {
 							throw new types.BufferOverflow();
 						};
 
+						data.detach();
+
 						if (next) {
 							buffer.unshift(data);
 						} else {
@@ -589,6 +592,8 @@ module.exports = {
 							data = buffer.shift();
 						};
 
+						data.attach(this);
+
 						return data;
 					}),
 				})));
@@ -621,6 +626,8 @@ module.exports = {
 						if (buffer.length >= this.options.bufferSize) {
 							throw new types.BufferOverflow();
 						};
+
+						data.detach();
 
 						if (next) {
 							buffer.unshift(data);

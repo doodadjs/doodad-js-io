@@ -444,7 +444,8 @@ module.exports = {
 							};
 						};
 
-						this.unpipe();
+						// NOTE: Commented out to give a chance to the error to propagate.
+						//this.unpipe();
 
 						return cancelled;
 					}),
@@ -864,6 +865,8 @@ module.exports = {
 							throw new types.BufferOverflow();
 						};
 
+						data.detach();
+
 						if (next) {
 							buffer.unshift(data);
 						} else {
@@ -903,6 +906,8 @@ module.exports = {
 						} else {
 							data = buffer.shift();
 						};
+
+						data.attach(this);
 
 						return data;
 					}),
@@ -969,6 +974,8 @@ module.exports = {
 						if (buffer.length >= this.options.bufferSize) {
 							throw new types.BufferOverflow();
 						};
+
+						data.detach();
 
 						if (next) {
 							buffer.unshift(data);

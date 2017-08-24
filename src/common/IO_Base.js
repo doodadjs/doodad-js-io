@@ -147,6 +147,15 @@ module.exports = {
 								//	//ev.preventDefault();
 								//	this.consume(ev.error);
 								//});
+								stream.onDestroy.attachOnce(this, function() {
+									try {
+										if (!this.consumed) {
+											this.stream = null;
+											this.consume(new types.CanceledError());
+										};
+									} catch(o) {
+									};
+								});
 								this.stream = stream;
 								const timeout = types.get(stream.options, 'timeout', (root.getOptions().debug ? 120000 : Infinity));
 								if (types.isFinite(timeout) && (timeout >= 1000)) {
@@ -171,6 +180,7 @@ module.exports = {
 								this.timeoutObj.cancel();
 								this.timeoutObj = null;
 							};
+							this.stream.onDestroy.detach(this);
 							this.stream = null;
 						},
 
@@ -211,8 +221,9 @@ module.exports = {
 
 								let failed = false;
 
-								if (!_shared.DESTROYED(this.stream)) {
+								if (!types.DESTROYED(this.stream)) {
 									//this.stream.onError.detach(this);
+									this.stream.onDestroy.detach(this);
 									try {
 										//this.stream.onError.detach(this);
 										this.stream.consumeData(this, err);
@@ -1196,7 +1207,15 @@ module.exports = {
 
 					clearBuffer: doodad.REPLACE(function clearBuffer() {
 						tools.forEach(this.__buffer, function(data) {
-							data.detach();
+							if (!data.consumed) {
+								try {
+									data.consume(new types.CanceledError());
+								} catch (o) {
+									if (root.getOptions().debug) {
+										types.DEBUGGER();
+									};
+								};
+							};
 						});
 						this.__buffer = [];
 					}),
@@ -1255,6 +1274,8 @@ module.exports = {
 									for (let i = 0; i < MAX_LOOP_COUNT; i++) {
 										if ((state.count++ < count) && (buffer.length > 0)) {
 											const data = buffer.shift();
+
+											data.attach(this);
 
 											let continueCb = null;
 
