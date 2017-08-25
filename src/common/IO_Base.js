@@ -284,7 +284,7 @@ module.exports = {
 											this.callbacks = cbChain = [cbChain];
 										};
 										if (root.DD_ASSERT) {
-											root.DD_ASSERT(tools.findItem(cbChain, callback, null, true) === null, "Callback has already been chained.");
+											root.DD_ASSERT(tools.indexOf(cbChain, callback) < 0, "Callback has already been chained.");
 										};
 										cbChain.push(callback);
 									};
