@@ -428,8 +428,8 @@ module.exports = {
 
 
 				ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(doodad.Class.$extend(
-									mixIns.Creatable,
 									mixIns.Events,
+									mixIns.Creatable,
 									ioMixIns.TransformableBase,
 				{
 					$TYPE_NAME: 'StreamBase',
@@ -437,7 +437,6 @@ module.exports = {
 
 					options: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
-					onDestroy: doodad.EVENT(false), // function(ev)
 					onError: doodad.ERROR_EVENT(), // function onError(ev)
 					onBOF: doodad.EVENT(false), // function(ev)
 					onEOF: doodad.EVENT(false), // function(ev)
@@ -454,12 +453,6 @@ module.exports = {
 						};
 
 						this.reset();
-					}),
-
-					destroy: doodad.OVERRIDE(function destroy(/*optional*/options) {
-						this.onDestroy();
-
-						this._super();
 					}),
 
 					setOptions: doodad.PUBLIC(function setOptions(options) {
