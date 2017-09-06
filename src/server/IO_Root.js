@@ -58,7 +58,7 @@ module.exports = {
 				} catch(ex) {
 				};
 
-				types.complete(_shared.Natives, {
+				tools.complete(_shared.Natives, {
 					windowUint8Array: global.Uint8Array,
 
 					globalBuffer: global.Buffer,
@@ -71,7 +71,7 @@ module.exports = {
 				// Data objects (continued)
 				//=========================================
 
-				io.ADD('EncodingAliases', types.freezeObject(types.nullObject({
+				io.ADD('EncodingAliases', types.freezeObject(tools.nullObject({
 					// TODO: Add other aliases.
 					'utf8': 'utf-8',
 					//'latin1': 'iso-8859-1',

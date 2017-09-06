@@ -57,7 +57,7 @@ module.exports = {
 				// Enums
 				//=========================================
 					
-				io.ADD('KeyboardFunctionKeys', types.freezeObject(types.nullObject({
+				io.ADD('KeyboardFunctionKeys', types.freezeObject(tools.nullObject({
 					Shift: 1,
 					Ctrl: 2,
 					Alt: 4,
@@ -65,7 +65,7 @@ module.exports = {
 				})));
 				
 				// Source: http://www.cambiaresearch.com/articles/15/javascript-char-codes-key-codes
-				io.ADD('KeyboardScanCodes', types.freezeObject(types.nullObject({
+				io.ADD('KeyboardScanCodes', types.freezeObject(tools.nullObject({
 					Backspace: 8,
 					Tab: 9,
 					Enter: 13,
@@ -685,7 +685,7 @@ module.exports = {
 					openStream: doodad.OVERRIDE(function openStream(/*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						
-						options = types.extend({}, this.options, options);
+						options = tools.extend({}, this.options, options);
 						
 						const tag = types.get(options, 'tag', null),
 							attrs = types.get(options, 'attrs', null);
@@ -717,7 +717,7 @@ module.exports = {
 					openElement: doodad.PUBLIC(function openElement(/*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						
-						options = types.extend({}, this.options, options);
+						options = tools.extend({}, this.options, options);
 
 						const tag = types.get(options, 'tag', null),
 							attrs = types.get(options, 'attrs', null);

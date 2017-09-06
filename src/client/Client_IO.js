@@ -51,7 +51,7 @@ module.exports = {
 					ioMixIns = io.MixIns;
 				
 
-				types.complete(_shared.Natives, {
+				tools.complete(_shared.Natives, {
 					windowFile: (types.isNativeFunction(global.File) ? global.File : undefined),
 					windowBlob: (types.isNativeFunction(global.Blob) ? global.Blob : undefined),
 					windowFetch: (types.isNativeFunction(global.fetch) ? global.fetch : undefined),
@@ -349,7 +349,7 @@ module.exports = {
 					openStream: doodad.OVERRIDE(function openStream(/*optional*/options) {
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 						
-						options = types.extend({}, this.options, options);
+						options = tools.extend({}, this.options, options);
 
 						const bufferTypes = types.getType(this).$__bufferTypes;
 							tag = types.get(options, 'tag', null);
@@ -375,7 +375,7 @@ module.exports = {
 						
 						container.innerHTML = '';
 
-						return this._super(types.extend({}, options, {noOpenClose: true}));
+						return this._super(tools.extend({}, options, {noOpenClose: true}));
 					}),
 
 					openElement: doodad.OVERRIDE(function openElement(/*optional*/options) {

@@ -55,7 +55,7 @@ module.exports = {
 					nodeCluster = require('cluster');
 
 
-				types.complete(_shared.Natives, {
+				tools.complete(_shared.Natives, {
 					windowUnescape: global.unescape,
 					globalBuffer: global.Buffer,
 				});
@@ -690,7 +690,7 @@ module.exports = {
 					reset: doodad.OVERRIDE(function reset() {
 						this._super();
 
-						this.__headers = types.nullObject();
+						this.__headers = tools.nullObject();
 						this.__headersCompiled = false;
 						this.__inPart = false;
 						this.__remaining = null;
@@ -767,7 +767,7 @@ module.exports = {
 											start = __parseHeaders.call(this, buf, start, index);
 											if (this.__headersCompiled && (start >= index)) {
 												this.submit(new io.Data(io.EOF), {callback: data.defer()});
-												this.__headers = types.nullObject();
+												this.__headers = tools.nullObject();
 												this.__headersCompiled = false;
 												if ((cr !== 0x0D) && (lf !== 0x0A)) { // "\r\n"
 													// Latest boundary

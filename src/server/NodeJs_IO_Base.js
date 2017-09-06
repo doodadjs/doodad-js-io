@@ -301,7 +301,7 @@ module.exports = {
 
 									const rs = this._readableState;
 									if (types.isArray(rs.pipes)) {
-										types.popItem(rs.pipes, state.destination);
+										tools.popItem(rs.pipes, state.destination);
 										rs.pipesCount = rs.pipes.length;
 									} else if (state.destination === rs.pipes) {
 										rs.pipes = null;

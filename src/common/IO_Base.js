@@ -47,7 +47,7 @@ module.exports = {
 				//const __Internal__ = {
 				//};
 				
-				types.complete(_shared.Natives, {
+				tools.complete(_shared.Natives, {
 					windowUint8Array: global.Uint8Array,
 				});
 
@@ -133,7 +133,7 @@ module.exports = {
 							const type = types.getType(this);
 							const encoding = type.$validateEncoding(types.get(options, 'encoding') || 'raw');
 							this.raw = raw;
-							this.options = types.nullObject(options);
+							this.options = tools.nullObject(options);
 							this.options.encoding = encoding;
  						}),
 
@@ -296,7 +296,7 @@ module.exports = {
 							if (!this.consumed && !types.isNothing(callback)) {
 								let cbChain = this.callbacks;
 								if (types.isArray(cbChain)) {
-									types.popItem(cbChain, callback);
+									tools.popItem(cbChain, callback);
 									if (!cbChain.length) {
 										this.callbacks = null;
 									};
@@ -460,7 +460,7 @@ module.exports = {
 
 						types.getDefault(options, 'encoding', types.getIn(this.options, 'encoding', 'raw'));
 
-						_shared.setAttribute(this, 'options', types.freezeObject(types.nullObject(this.options, options)));
+						_shared.setAttribute(this, 'options', types.freezeObject(tools.nullObject(this.options, options)));
 					}),
 					
 					consumeData: doodad.PUBLIC(function consumeData(data, /*optional*/err) {
@@ -529,7 +529,7 @@ module.exports = {
 						const callback = types.get(options, 'callback', null);
 
 						if (callback) {
-							options = types.extend(options, {callback: this.makeOutside(callback)});
+							options = tools.extend(options, {callback: this.makeOutside(callback)});
 						};
 
 						return this._super(options);
@@ -555,7 +555,7 @@ module.exports = {
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
-							this.flush(types.extend({}, options, {callback: doodad.Callback(this, function(err) {
+							this.flush(tools.extend({}, options, {callback: doodad.Callback(this, function(err) {
 								cleanup.call(this);
 								callback && callback(err);
 								if (err) {
@@ -841,7 +841,7 @@ module.exports = {
 						const callback = types.get(options, 'callback', null);
 
 						if (callback) {
-							options = types.extend(options, {callback: this.makeOutside(callback)});
+							options = tools.extend(options, {callback: this.makeOutside(callback)});
 						};
 
 						return this._super(data, options);
@@ -851,7 +851,7 @@ module.exports = {
 						const callback = types.get(options, 'callback', null);
 
 						if (callback) {
-							options = types.extend(options, {callback: this.makeOutside(callback)});
+							options = tools.extend(options, {callback: this.makeOutside(callback)});
 						};
 
 						return this._super(raw, options);
@@ -1051,7 +1051,7 @@ module.exports = {
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
-							const data = this.write(raw, types.extend({}, options, {callback: doodad.AsyncCallback(this, function(err) {
+							const data = this.write(raw, tools.extend({}, options, {callback: doodad.AsyncCallback(this, function(err) {
 								cleanup.call(this);
 								if (err) {
 									reject(err);
@@ -1099,7 +1099,7 @@ module.exports = {
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
-							this.writeText(text, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
+							this.writeText(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err) {
 								cleanup.call(this);
 								if (err) {
 									reject(err);
@@ -1129,7 +1129,7 @@ module.exports = {
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
-							this.writeLine(text, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
+							this.writeLine(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err) {
 								cleanup.call(this);
 								if (err) {
 									reject(err);
@@ -1159,7 +1159,7 @@ module.exports = {
 							};
 							this.onError.attachOnce(this, errorHandler);
 							this.onDestroy.attachOnce(this, destroyHandler);
-							this.print(text, types.extend({}, options, {callback: doodad.Callback(this, function(err) {
+							this.print(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err) {
 								cleanup.call(this);
 								if (err) {
 									reject(err);
