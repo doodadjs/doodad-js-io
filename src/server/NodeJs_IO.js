@@ -24,10 +24,25 @@
 //	limitations under the License.
 //! END_REPLACE()
 
-// TODO: Convert the following to MJS
-const nodeStream = require('stream'),
-	nodeFs = require('fs'),
-	nodeCluster = require('cluster');
+
+//! IF_SET("mjs")
+	//! INJECT("import {default as nodeStream} from 'stream';")
+	//! INJECT("import {default as nodeFs} from 'fs';")
+	//! INJECT("import {default as nodeCluster} from 'cluster';")
+//! ELSE()
+	const nodeStream = require('stream'),
+		nodeFs = require('fs'),
+		nodeCluster = require('cluster');
+//! END_IF()
+
+const nodeStreamReadable = nodeStream.Readable,
+	nodeStreamWritable = nodeStream.Writable,
+	nodeStreamDuplex = nodeStream.Duplex,
+	nodeStreamTransform = nodeStream.Transform,
+
+	nodeFsCreateReadStream = nodeFs.createReadStream,
+
+	nodeClusterIsMaster = nodeCluster.isMaster;
 
 
 exports.add = function add(DD_MODULES) {
@@ -147,7 +162,7 @@ exports.add = function add(DD_MODULES) {
 				create: doodad.OVERRIDE(function create(/*optional*/options) {
 					const stream = types.get(options, 'nodeStream');
 
-					root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStream.Readable, nodeStream.Duplex, nodeStream.Transform]), "Invalid node.js stream object.");
+					root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamReadable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
 						
 					this._super(options);
 						
@@ -358,7 +373,7 @@ exports.add = function add(DD_MODULES) {
 					const stream = types.get(options, 'nodeStream');
 
 					// FIXME: Figure out the object model of NodeJS to make the assertion because it fails with an http.ServerResponse object
-					//root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStream.Writable, nodeStream.Duplex, nodeStream.Transform]), "Invalid node.js stream object.");
+					//root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamWritable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
 						
 					this._super(options);
 
@@ -819,7 +834,7 @@ exports.add = function add(DD_MODULES) {
 					path = path.toString();
 					
 					const encoding = types.get(options, 'encoding');
-					const nodeStream = nodeFs.createReadStream(path, {autoClose: true});
+					const nodeStream = nodeFsCreateReadStream(path, {autoClose: true});
 
 					if (encoding) {
 						return new nodejsIO.TextInputStream({nodeStream: nodeStream, encoding: encoding});

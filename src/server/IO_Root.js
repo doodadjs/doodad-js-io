@@ -24,15 +24,24 @@
 //	limitations under the License.
 //! END_REPLACE()
 
-// TODO: Convert the following to MJS
-let nodeIConv = null;
-try {
-	nodeIConv = require('iconv-lite');
-} catch(ex) {
-};
 
-// TODO: Convert the following to MJS
-const nodeStringDecoder = require('string_decoder').StringDecoder;
+//! IF_SET("mjs")
+	// TODO: Make "iconv-lite" optional... For the moment, we can't !
+	//! INJECT("import {default as nodeIConv} from 'iconv-lite';")
+
+	//! INJECT("import {default as nodeStringDecoder} from 'string_decoder';")
+//! ELSE()
+	let nodeIConv = null;
+	try {
+		nodeIConv = require('iconv-lite');
+	} catch(ex) {
+	};
+
+	const nodeStringDecoder = require('string_decoder');
+//! END_IF()
+
+
+const nodeStringDecoderStringDecoder = nodeStringDecoder.StringDecoder;
 
 
 exports.add = function add(DD_MODULES) {
@@ -134,7 +143,7 @@ exports.add = function add(DD_MODULES) {
 								return nodeIConv.decode(buf, encoding, options);
 							} else {
 								// StringDecoder
-								const decoder = new nodeStringDecoder(encoding);
+								const decoder = new nodeStringDecoderStringDecoder(encoding);
 								return decoder.end(buf);
 							};
 						} else {
@@ -173,7 +182,7 @@ exports.add = function add(DD_MODULES) {
 								decoder = nodeIConv.getDecoder(encoding);
 							} else {
 								// StringDecoder
-								decoder = new nodeStringDecoder(encoding);
+								decoder = new nodeStringDecoderStringDecoder(encoding);
 							};
 							let text = decoder.write(buf) || '';
 							text += decoder.end() || '';
@@ -260,7 +269,7 @@ exports.add = function add(DD_MODULES) {
 									decoder = nodeIConv.getDecoder(encoding);
 								} else {
 									// StringDecoder
-									decoder = new nodeStringDecoder(encoding);
+									decoder = new nodeStringDecoderStringDecoder(encoding);
 								};
 								this.__decoderIn = decoder;
 								this.__decoderInEncoding = encoding;
@@ -336,7 +345,7 @@ exports.add = function add(DD_MODULES) {
 									decoder = nodeIConv.getDecoder(encoding);
 								} else {
 									// StringDecoder
-									decoder = new nodeStringDecoder(encoding);
+									decoder = new nodeStringDecoderStringDecoder(encoding);
 								};
 								if (!eof) {
 									this.__decoderOut = decoder;
