@@ -95,7 +95,7 @@ exports.add = function add(DD_MODULES) {
 						if (host.onError.getCount() > 0) {
 							const ev = new doodad.ErrorEvent(err);
 
-							host.onError(ev);
+							_shared.invoke(host, host.onError, [ev], _shared.SECRET);
 
 							if (ev.prevent) {
 								err.trapped = true;
