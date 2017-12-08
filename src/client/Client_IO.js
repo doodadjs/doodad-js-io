@@ -51,17 +51,17 @@ exports.add = function add(DD_MODULES) {
 				
 
 			tools.complete(_shared.Natives, {
-				windowFile: (types.isNativeFunction(global.File) ? global.File : undefined),
-				windowBlob: (types.isNativeFunction(global.Blob) ? global.Blob : undefined),
-				windowFetch: (types.isNativeFunction(global.fetch) ? global.fetch : undefined),
-				windowHeaders: (types.isNativeFunction(global.Headers) ? global.Headers : undefined),
-				windowFileReader: (types.isNativeFunction(global.FileReader) ? global.FileReader : undefined),
+				windowFile: (types.isFunction(global.File) ? global.File : null),
+				windowBlob: (types.isFunction(global.Blob) ? global.Blob : null),
+				windowFetch: (types.isFunction(global.fetch) ? global.fetch : null),
+				windowHeaders: (types.isFunction(global.Headers) ? global.Headers : null),
+				windowFileReader: (types.isFunction(global.FileReader) ? global.FileReader : null),
 			});
 				
 				
 			const __Internal__ = {
-				streamsSupported: (_shared.Natives.windowFile && types.isNativeFunction(_shared.Natives.windowFile.prototype.slice)) && 
-								(_shared.Natives.windowBlob && types.isNativeFunction(_shared.Natives.windowBlob.prototype.slice)) &&
+				streamsSupported: (_shared.Natives.windowFile && types.isFunction(_shared.Natives.windowFile.prototype.slice)) && 
+								(_shared.Natives.windowBlob && types.isFunction(_shared.Natives.windowBlob.prototype.slice)) &&
 								(_shared.Natives.windowFetch && _shared.Natives.windowHeaders && _shared.Natives.windowFileReader),
 			};
 
