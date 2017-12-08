@@ -44,8 +44,8 @@ exports.add = function add(DD_MODULES) {
 				ioMixIns = io.MixIns;
 				
 			tools.complete(_shared.Natives, {
-				windowTextEncoder: (types.isNativeFunction(global.TextEncoder) ? global.TextEncoder : undefined),
-				windowTextDecoder: (types.isNativeFunction(global.TextDecoder) ? global.TextDecoder : undefined),
+				windowTextEncoder: (types.isFunction(global.TextEncoder) ? global.TextEncoder : null),
+				windowTextDecoder: (types.isFunction(global.TextDecoder) ? global.TextDecoder : null),
 			});
 				
 				
@@ -358,14 +358,14 @@ exports.add = function add(DD_MODULES) {
 						transform = ev.handlerData[1],
 						end = ev.handlerData[2],  // 'true' permits EOF. 'false' just write the trailing data if there are.
 						isBuffered = ev.handlerData[3],
-						isInput = ev.handlerData[4];
+						isInputOnly = ev.handlerData[4];
 
-					if (stream && _shared.DESTROYED(stream)) {
+					if (_shared.DESTROYED(stream)) {
 						this.unpipe(stream);
 						return;
 					};
 
-					if (isInput || isBuffered) {
+					if (isInputOnly || isBuffered) {
 						ev.preventDefault();
 					};
 
@@ -432,11 +432,13 @@ exports.add = function add(DD_MODULES) {
 						end = types.get(options, 'end', true),
 						autoListen = types.get(options, 'autoListen', true),
 						isListener = this._implements(ioMixIns.Listener),
-						isInput = this._implements(ioMixIns.InputStreamBase) && !this._implements(ioMixIns.OutputStreamBase),
+						isInput = this._implements(ioMixIns.InputStreamBase),
+						isOutput = this._implements(ioMixIns.OutputStreamBase),
+						isInputOnly = isInput && !isOutput,
 						isBuffered = this._implements(ioMixIns.BufferedStreamBase);
 
 					if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-						let datas = [stream, transform, end, isBuffered, isInput];
+						let datas = [stream, transform, end, isBuffered, isInputOnly];
 						if (isInput) {
 							this.onReady.attach(this, this.__pipeOnData, 40, datas);
 						} else {
@@ -474,7 +476,9 @@ exports.add = function add(DD_MODULES) {
 						};
 					};
 					const isListener = this._implements(ioMixIns.Listener),
-						isInput = this._implements(ioMixIns.InputStreamBase) && !this._implements(ioMixIns.OutputStreamBase),
+						isInput = this._implements(ioMixIns.InputStreamBase),
+						//isOutput = this._implements(ioMixIns.OutputStreamBase),
+						//isInputOnly = isInput && !isOutput,
 						isBuffered = this._implements(ioMixIns.BufferedStreamBase);
 					if (isListener) {
 						this.stopListening();

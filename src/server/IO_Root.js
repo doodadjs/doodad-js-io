@@ -467,15 +467,15 @@ exports.add = function add(DD_MODULES) {
 						transform = ev.handlerData[1],
 						end = ev.handlerData[2],  // 'true' permits EOF. 'false' just writes the trailing data when there is.
 						isBuffered = ev.handlerData[3],
-						isInput = ev.handlerData[4],
+						isInputOnly = ev.handlerData[4],
 						isNodeJsStream = ev.handlerData[5];
 						
-					if (stream && _shared.DESTROYED(stream)) {
+					if (_shared.DESTROYED(stream)) {
 						this.unpipe(stream);
 						return;
 					};
 
-					if (isInput || isBuffered) {
+					if (isInputOnly || isBuffered) {
 						ev.preventDefault();
 					};
 
@@ -599,28 +599,37 @@ exports.add = function add(DD_MODULES) {
 						// Stream already piped
 						return stream;
 					};
+
 					const transform = types.get(options, 'transform'),
 						end = types.get(options, 'end', true),
 						autoListen = types.get(options, 'autoListen', true),
 						isListener = this._implements(ioMixIns.Listener),
-						isInput = this._implements(ioMixIns.InputStreamBase) && !this._implements(ioMixIns.OutputStreamBase),
+						isInput = this._implements(ioMixIns.InputStreamBase),
+						isOutput = this._implements(ioMixIns.OutputStreamBase),
+						isInputOnly = isInput && !isOutput,
 						isBuffered = this._implements(ioMixIns.BufferedStreamBase);
+
 					if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-						let datas = [stream, transform, end, isBuffered, isInput, false];
+						let datas = [stream, transform, end, isBuffered, isInputOnly, false];
+
 						if (isInput) {
 							this.onReady.attach(this, this.__pipeOnData, 40, datas);
 						} else {
 							this.onData.attach(this, this.__pipeOnData, 40, datas);
 						};
+
 						if (isBuffered && stream._implements(ioMixIns.BufferedStreamBase)) {
 							this.onFlush.attach(this, this.__pipeOnFlush, 40, [stream]);
 						};
+
 						stream.onError.attachOnce(this, this.__pipeStreamOnError);
 						stream.onDestroy.attachOnce(this, this.__pipeStreamOnDestroy);
+
 						if (isListener && stream._implements(ioMixIns.Listener)) {
 							stream.onListen.attach(this, this.__pipeStreamOnListen);
 							stream.onStopListening.attach(this, this.__pipeStreamOnStopListening);
 						};
+
 					} else if (types.isWritableStream(stream)) { // Node streams
 						if (this._implements(nodejsIOInterfaces.IReadable)) {
 							if (transform) {
@@ -629,7 +638,7 @@ exports.add = function add(DD_MODULES) {
 							const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 							ireadable.pipe(stream);
 						} else {
-							let datas = [stream, transform, end, isBuffered, isInput, true];
+							let datas = [stream, transform, end, isBuffered, isInputOnly, true];
 							if (isInput) {
 								this.onReady.attach(this, this.__pipeOnData, 40, datas);
 							} else {
@@ -639,18 +648,24 @@ exports.add = function add(DD_MODULES) {
 							this.__pipeNodeStreamOnFinish.attachOnce(stream);
 							this.__pipeNodeStreamOnClose.attachOnce(stream);
 						};
+
 					} else {
 						throw new types.TypeError("'stream' must implement 'Doodad.IO.MixIns.OutputStreamBase' or be a Node.Js writable/duplex/transform stream.");
+
 					};
+
 					this.__pipes[this.__pipes.length] = stream;
+
 					if (autoListen && isListener) {
 						this.listen();
 					};
+
 					return stream;
 				}),
 					
 				unpipe: doodad.REPLACE(function unpipe(/*optional*/stream) {
 					let pos = -1;
+
 					if (stream) {
 						pos = tools.indexOf(this.__pipes, stream);
 						if (pos < 0) {
@@ -658,29 +673,39 @@ exports.add = function add(DD_MODULES) {
 							return this;
 						};
 					};
+
 					const isListener = this._implements(ioMixIns.Listener),
-						isInput = this._implements(ioMixIns.InputStreamBase) && !this._implements(ioMixIns.OutputStreamBase),
+						isInput = this._implements(ioMixIns.InputStreamBase),
+						//isOutput = this._implements(ioMixIns.OutputStreamBase),
+						//isInputOnly = isInput && !isOutput,
 						isBuffered = this._implements(ioMixIns.BufferedStreamBase);
+
 					if (isListener) {
 						this.stopListening();
 					};
+
 					if (stream) {
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
 							let datas = [stream];
+
 							if (isInput) {
 								this.onReady.detach(this, this.__pipeOnData, datas);
 							} else {
 								this.onData.detach(this, this.__pipeOnData, datas);
 							};
+
 							if (isBuffered && stream._implements(ioMixIns.BufferedStreamBase)) {
 								this.onFlush.detach(this, this.__pipeOnFlush, datas);
 							};
+
 							stream.onError.detach(this, this.__pipeStreamOnError);
 							stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
+
 							if (isListener && stream._implements(ioMixIns.Listener)) {
 								stream.onListen.detach(this, this.__pipeStreamOnListen);
 								stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
 							};
+
 						} else if (types.isWritableStream(stream)) { // Node streams
 							if (this._implements(nodejsIOInterfaces.IReadable)) {
 								const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
@@ -693,44 +718,53 @@ exports.add = function add(DD_MODULES) {
 									this.onData.detach(this, this.__pipeOnData, datas);
 								};
 							};
+
 							this.__pipeNodeStreamOnError.detach(stream);
 							this.__pipeNodeStreamOnFinish.detach(stream);
 							this.__pipeNodeStreamOnClose.detach(stream);
 							this.__pipeNodeStreamOnDrain.detach(stream);
 						};
+
 					} else {
 						if (isInput) {
 							this.onReady.detach(this, this.__pipeOnData);
 						} else {
 							this.onData.detach(this, this.__pipeOnData);
 						};
+
 						if (isBuffered) {
 							this.onFlush.detach(this, this.__pipeOnFlush);
 						};
+
 						if (this._implements(nodejsIOInterfaces.IReadable)) {
 							const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 							ireadable.unpipe();
 						};
+
 						tools.forEach(this.__pipes, function(stream) {
 							if (types._implements(stream, ioMixIns.OutputStreamBase)) {
 								stream.onError.detach(this, this.__pipeStreamOnError);
 								stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
 							};
+
 							if (isListener && types._implements(stream, ioMixIns.Listener)) {
 								stream.onListen.detach(this, this.__pipeStreamOnListen);
 								stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
 							};
 						}, this);
+
 						this.__pipeNodeStreamOnError.clear();
 						this.__pipeNodeStreamOnFinish.clear();
 						this.__pipeNodeStreamOnClose.clear();
 						this.__pipeNodeStreamOnDrain.clear();
 					};
+
 					if (pos >= 0) {
 						this.__pipes.splice(pos, 1);
 					} else {
 						this.__pipes = [];
 					};
+
 					return this;
 				}),
 					
@@ -750,9 +784,11 @@ exports.add = function add(DD_MODULES) {
 					let emitted = false;
 					if (ireadable) {
 						if (!ireadable.isPaused()) {
-							const buf = this.transformOut(ev.data);
-							if (!types.isNothing(buf)) {
-								emitted = ireadable.ondata(buf);
+							if (ireadable.ondata.getCount() > 0) {
+								const buf = this.transformOut(ev.data);
+								if (!types.isNothing(buf)) {
+									emitted = ireadable.ondata(buf);
+								};
 							};
 							if (ev.data.raw === io.EOF) {
 								emitted = ireadable.onend() || emitted;
@@ -831,9 +867,11 @@ exports.add = function add(DD_MODULES) {
 					let emitted = false;
 					if (ireadable) {
 						if (!ireadable.isPaused()) {
-							const buf = this.transformOut(ev.data);
-							if (!types.isNothing(buf)) {
-								emitted = ireadable.ondata(buf);
+							if (ireadable.ondata.getCount() > 0) {
+								const buf = this.transformOut(ev.data);
+								if (!types.isNothing(buf)) {
+									emitted = ireadable.ondata(buf);
+								};
 							};
 							if (ev.data.raw === io.EOF) {
 								emitted = ireadable.onend() || emitted;

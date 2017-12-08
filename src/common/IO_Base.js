@@ -43,8 +43,8 @@ exports.add = function add(DD_MODULES) {
 				extenders = doodad.Extenders;
 
 
-			//const __Internal__ = {
-			//};
+			const __Internal__ = {
+			};
 				
 			tools.complete(_shared.Natives, {
 				windowUint8Array: global.Uint8Array,
@@ -832,9 +832,9 @@ exports.add = function add(DD_MODULES) {
 				})),
 			}))));
 				
-			ioMixIns.REGISTER(doodad.MIX_IN(doodad.Class.$extend(
+			__Internal__.__OutputBase = types.INIT(doodad.MIX_IN(doodad.Class.$extend(
 			{
-				$TYPE_NAME: 'OutputBase',
+				$TYPE_NAME: '__OutputBase',
 
 				submit: doodad.PUBLIC(doodad.CALL_FIRST(doodad.MUST_OVERRIDE(function submit(data, /*optional*/options) {
 					const callback = types.get(options, 'callback', null);
@@ -858,7 +858,7 @@ exports.add = function add(DD_MODULES) {
 			})));
 				
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
-										ioMixIns.OutputBase,
+								__Internal__.__OutputBase,
 			{
 				$TYPE_NAME: 'OutputStreamBase',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamBaseMixIn')), true) */,
@@ -1033,23 +1033,28 @@ exports.add = function add(DD_MODULES) {
 					
 				writeAsync: doodad.PUBLIC(doodad.ASYNC(function writeAsync(raw, /*optional*/options) {
 					const Promise = types.getPromise();
+
 					return Promise.create(function writeAsyncPromise(resolve, reject) {
 						let errorHandler, destroyHandler;
 						const cleanup = function cleanup() {
 							this.onError.detach(this, errorHandler);
 							this.onDestroy.detach(this, destroyHandler);
 						};
+
 						errorHandler = function errorHandler(ev) {
 							cleanup.call(this);
 							ev.preventDefault();
 							reject(ev.error);
 						};
+
 						destroyHandler = function destroyHandler(ev) {
 							cleanup.call(this);
 							reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 						};
+
 						this.onError.attachOnce(this, errorHandler);
 						this.onDestroy.attachOnce(this, destroyHandler);
+
 						const data = this.write(raw, tools.extend({}, options, {callback: doodad.AsyncCallback(this, function(err) {
 							cleanup.call(this);
 							if (err) {
@@ -1062,7 +1067,6 @@ exports.add = function add(DD_MODULES) {
 				})),
 
 			}))));
-				
 				
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.OutputStreamBase.$extend(
 								ioMixIns.TextStreamBase,
@@ -1081,23 +1085,28 @@ exports.add = function add(DD_MODULES) {
 					
 				writeTextAsync: doodad.PUBLIC(doodad.ASYNC(function writeTextAsync(text, /*optional*/options) {
 					const Promise = types.getPromise();
+
 					return Promise.create(function writeTextAsyncPromise(resolve, reject) {
 						let errorHandler, destroyHandler;
 						const cleanup = function cleanup() {
 							this.onError.detach(this, errorHandler);
 							this.onDestroy.detach(this, destroyHandler);
 						};
+
 						errorHandler = function errorHandler(ev) {
 							cleanup.call(this);
 							ev.preventDefault();
 							reject(ev.error);
 						};
+
 						destroyHandler = function destroyHandler(ev) {
 							cleanup.call(this);
 							reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 						};
+
 						this.onError.attachOnce(this, errorHandler);
 						this.onDestroy.attachOnce(this, destroyHandler);
+
 						this.writeText(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err) {
 							cleanup.call(this);
 							if (err) {
@@ -1111,23 +1120,29 @@ exports.add = function add(DD_MODULES) {
 					
 				writeLineAsync: doodad.PUBLIC(doodad.ASYNC(function writeLineAsync(text, /*optional*/options) {
 					const Promise = types.getPromise();
+
 					return Promise.create(function writeLineAsyncPromise(resolve, reject) {
 						let errorHandler, destroyHandler;
+
 						const cleanup = function cleanup() {
 							this.onError.detach(this, errorHandler);
 							this.onDestroy.detach(this, destroyHandler);
 						};
+
 						errorHandler = function errorHandler(ev) {
 							cleanup.call(this);
 							ev.preventDefault();
 							reject(ev.error);
 						};
+
 						destroyHandler = function destroyHandler(ev) {
 							cleanup.call(this);
 							reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 						};
+
 						this.onError.attachOnce(this, errorHandler);
 						this.onDestroy.attachOnce(this, destroyHandler);
+
 						this.writeLine(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err) {
 							cleanup.call(this);
 							if (err) {
@@ -1141,23 +1156,29 @@ exports.add = function add(DD_MODULES) {
 					
 				printAsync: doodad.PUBLIC(doodad.ASYNC(function printAsync(text, /*optional*/options) {
 					const Promise = types.getPromise();
+
 					return Promise.create(function printAsyncPromise(resolve, reject) {
 						let errorHandler, destroyHandler;
+
 						const cleanup = function cleanup() {
 							this.onError.detach(this, errorHandler);
 							this.onDestroy.detach(this, destroyHandler);
 						};
+
 						errorHandler = function errorHandler(ev) {
 							cleanup.call(this);
 							ev.preventDefault();
 							reject(ev.error);
 						};
+
 						destroyHandler = function destroyHandler(ev) {
 							cleanup.call(this);
 							reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 						};
+
 						this.onError.attachOnce(this, errorHandler);
 						this.onDestroy.attachOnce(this, destroyHandler);
+
 						this.print(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err) {
 							cleanup.call(this);
 							if (err) {
@@ -1169,7 +1190,16 @@ exports.add = function add(DD_MODULES) {
 					}, this);
 				})),
 			}))));
-				
+
+
+			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
+								ioMixIns.InputStreamBase,
+								ioMixIns.OutputStreamBase,
+			{
+				$TYPE_NAME: 'InputOutputStreamBase',
+				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputOutputStreamBaseMixIn')), true) */,
+			}))));
+
 
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.BufferedStreamBase.$extend(
 			{
@@ -1256,7 +1286,9 @@ exports.add = function add(DD_MODULES) {
 							});
 						};
 					} else if (listening && (count > 0)) {
-						const isInput = this._implements(ioMixIns.InputStreamBase) && !this._implements(ioMixIns.OutputStreamBase);
+						const isInput = this._implements(ioMixIns.InputStreamBase);
+							//isOutput = this._implements(ioMixIns.OutputStreamBase),
+							//isInputOnly = isInput && !isOutput;
 						const state = {count: 0, deferred: false, error: null};
 						let __flushCbSync, __flushCbAsync;
 						const __flush = function flush() {

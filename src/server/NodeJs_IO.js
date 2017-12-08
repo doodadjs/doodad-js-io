@@ -71,6 +71,10 @@ exports.add = function add(DD_MODULES) {
 				nodejsIOInterfaces = nodejsIO.Interfaces;
 					
 
+			const __Internal__ = {
+			};
+
+
 			tools.complete(_shared.Natives, {
 				windowUnescape: global.unescape,
 				globalBuffer: global.Buffer,
@@ -80,16 +84,47 @@ exports.add = function add(DD_MODULES) {
 			//=====================================================
 			// Stream objects
 			//=====================================================
-				
+
+			__Internal__.__NodeJsStream = types.INIT(doodad.MIX_IN(ioMixIns.Stream.$extend(
+			{
+				$TYPE_NAME: '__NodeJsStream',
+
+				stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
+
+				streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
+					if (types.isEntrant(this, 'onError')) {
+						this.onError(new doodad.ErrorEvent(ex));
+					};
+				}),
+
+				streamOnClose: doodad.NODE_EVENT('close'),
+
+				create: doodad.OVERRIDE(function create(stream, /*optional*/options) {
+					//////root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamReadable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
+
+					this._super(options);
+
+					this.streamOnError.attach(stream);
+					this.streamOnClose.attach(stream);
+
+					_shared.setAttribute(this, 'stream', stream);
+				}),
+
+				destroy: doodad.OVERRIDE(function destroy() {
+					this.streamOnClose.clear();
+					this.streamOnError.clear();
+
+					this._super();
+				}),
+			})));
+
 			nodejsIO.REGISTER(io.InputStream.$extend(
-									mixIns.NodeEvents,
-									ioMixIns.BinaryTransformableIn,
-									ioMixIns.BinaryTransformableOut,
+							__Internal__.__NodeJsStream,
+							ioMixIns.BinaryTransformableIn,
+							ioMixIns.BinaryTransformableOut,
 			{
 				$TYPE_NAME: 'BinaryInputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryInputStreamNodeJs')), true) */,
-					
-				stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
 					
 				__ended: doodad.PROTECTED(false),
 				__waiting: doodad.PROTECTED(false),
@@ -146,29 +181,15 @@ exports.add = function add(DD_MODULES) {
 					};
 				}),
 
-				streamOnClose: doodad.NODE_EVENT('close', function streamOnClose(context) {
+				streamOnClose: doodad.OVERRIDE(function streamOnClose(context) {
+					this._super(context);
+
 					if (!this.__ended) {
 						this.__ended = true;
 						this.push(new io.BinaryData(io.EOF));
 					};
 				}),
-					
-				streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
-					if (types.isEntrant(this, 'onError')) {
-						this.onError(new doodad.ErrorEvent(ex));
-					};
-				}),
-					
-				create: doodad.OVERRIDE(function create(/*optional*/options) {
-					const stream = types.get(options, 'nodeStream');
 
-					root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamReadable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
-						
-					this._super(options);
-						
-					_shared.setAttribute(this, 'stream', stream);
-				}),
-					
 				__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
 					const size = types.get(options, 'size');
 
@@ -186,7 +207,7 @@ exports.add = function add(DD_MODULES) {
 
 					};
 				}),
-					
+
 				__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
 					const next = types.get(options, 'next', false);
 
@@ -200,11 +221,12 @@ exports.add = function add(DD_MODULES) {
 
 					data.consume();
 				}),
-					
+
 				clear: doodad.OVERRIDE(function clear() {
 					this._super();
 
 					while (this.stream.read()) {
+						// Do nothing !
 					};
 				}),
 					
@@ -248,8 +270,8 @@ exports.add = function add(DD_MODULES) {
 							
 							this.streamOnData.attach(stream);
 							this.streamOnEnd.attach(stream);
-							this.streamOnClose.attach(stream);
-							this.streamOnError.attach(stream);
+							//this.streamOnClose.attach(stream);
+							//this.streamOnError.attach(stream);
 							
 							stream.resume();
 
@@ -265,8 +287,8 @@ exports.add = function add(DD_MODULES) {
 						if (!this.__waiting) {
 							this.streamOnData.clear();
 							this.streamOnEnd.clear();
-							this.streamOnClose.clear();
-							this.streamOnError.clear();
+							//this.streamOnClose.clear();
+							//this.streamOnError.clear();
 							
 							this.stream.pause();
 
@@ -278,28 +300,39 @@ exports.add = function add(DD_MODULES) {
 				
 				
 			nodejsIO.REGISTER(nodejsIO.BinaryInputStream.$extend(
-								ioMixIns.TextInput,
-								ioMixIns.TextTransformableOut,
+							ioMixIns.TextInput,
+							ioMixIns.TextTransformableOut,
 			{
 				$TYPE_NAME: 'TextInputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamNodeJs')), true) */,
 
 				__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
 					const size = types.get(options, 'size');
+
 					const raw = this.stream.read(size);
-					const data = raw && new io.TextData(raw, options);
-					if (data) {
-						data.attach(this);
+
+					if (raw) {
+						const data = new io.TextData(raw, options);
+
+						if (data) {
+							data.attach(this);
+						};
+
+						return data;
+
+					} else {
+						return null;
+
 					};
-					return data;
+
 				}),
 			}));
 				
 				
 			nodejsIO.REGISTER(io.OutputStream.$extend(
-								mixIns.NodeEvents,
-								ioMixIns.BinaryTransformableIn,
-								ioMixIns.BinaryTransformableOut,
+							__Internal__.__NodeJsStream,
+							ioMixIns.BinaryTransformableIn,
+							ioMixIns.BinaryTransformableOut,
 			{
 				$TYPE_NAME: 'BinaryOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryOutputStreamNodeJs')), true) */,
@@ -309,12 +342,6 @@ exports.add = function add(DD_MODULES) {
 				__lastWriteOk: doodad.PROTECTED(true),
 				__finished: doodad.PROTECTED(false),
 
-				streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
-					if (types.isEntrant(this, 'onError')) {
-						this.onError(new doodad.ErrorEvent(ex));
-					};
-				}),
-					
 				streamOnPipeDrain: doodad.NODE_EVENT('drain', function streamOnPipeDrain(context) {
 					// <PRB> Some Node.Js streams don't wait after pipes before emitting 'finish'.
 
@@ -363,31 +390,25 @@ exports.add = function add(DD_MODULES) {
 					iwritable.onfinish();
 				}),
 					
-				streamOnClose: doodad.NODE_EVENT('close', function streamOnClose(context) {
+				streamOnClose: doodad.OVERRIDE(function streamOnClose(context) {
+					this._super(context);
+
 					// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
 					this.streamOnFinish(context);
 				}),
-					
-					
-				create: doodad.OVERRIDE(function create(/*optional*/options) {
-					const stream = types.get(options, 'nodeStream');
 
+
+				create: doodad.OVERRIDE(function create(stream, /*optional*/options) {
 					// FIXME: Figure out the object model of NodeJS to make the assertion because it fails with an http.ServerResponse object
 					//root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamWritable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
 						
-					this._super(options);
+					this._super(stream, options);
 
 					this.streamOnFinish.attach(stream);
-					this.streamOnError.attach(stream);
-					this.streamOnClose.attach(stream);
-						
-					_shared.setAttribute(this, 'stream', stream);
 				}),
 					
 				destroy: doodad.OVERRIDE(function destroy() {
 					this.streamOnFinish.clear();
-					this.streamOnError.clear();
-					this.streamOnClose.clear();
 					this.streamOnDrain.clear();
 						
 					this.streamOnPipeDrain.clear();
@@ -489,8 +510,8 @@ exports.add = function add(DD_MODULES) {
 				
 				
 			nodejsIO.REGISTER(nodejsIO.BinaryOutputStream.$extend(
-								ioMixIns.TextOutput,
-								ioMixIns.TextTransformableIn,
+							ioMixIns.TextOutput,
+							ioMixIns.TextTransformableIn,
 			{
 				$TYPE_NAME: 'TextOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamNodeJs')), true) */,
@@ -515,10 +536,46 @@ exports.add = function add(DD_MODULES) {
 			}));
 				
 				
+
+			nodejsIO.REGISTER(io.InputOutputStream.$extend(
+							nodejsIO.BinaryInputStream,
+							nodejsIO.BinaryOutputStream,
+			{
+				$TYPE_NAME: 'BinaryInputOutputStream',
+				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryInputOutputStreamNodeJs')), true) */,
+
+				__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
+					const next = types.get(options, 'next', false);
+					if (next) {
+						throw new types.NotAvailable("The option 'next' is not available.");
+					};
+
+					//const itransform = this.getInterface(nodejsIOInterfaces.ITransform);
+					//const raw = this.transformOut(data, options);
+
+					//itransform.emit('data', raw);
+
+					data.consume();
+				}),
+			}));
+
+
+
+			// TODO: Complete when needed
+			//nodejsIO.REGISTER(io.TextInputOutputStream.$extend(
+			//				nodejsIO.TextInputStream,
+			//				nodejsIO.TextOutputStream,
+			//{
+			//	$TYPE_NAME: 'TextInputOutputStream',
+			//	$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputOutputStreamNodeJs')), true) */,
+			//}));
+
+
+
 			io.REGISTER(io.Stream.$extend(
-								io.BufferedOutputStream,
-								ioMixIns.TextTransformableIn,
-								ioMixIns.ObjectTransformableOut,
+							io.BufferedOutputStream,
+							ioMixIns.TextTransformableIn,
+							ioMixIns.ObjectTransformableOut,
 			{
 				$TYPE_NAME: 'UrlDecoderStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('UrlDecoderStreamNodeJs')), true) */,
@@ -630,9 +687,9 @@ exports.add = function add(DD_MODULES) {
 
 
 			io.REGISTER(io.Stream.$extend(
-								io.BufferedOutputStream,
-								ioMixIns.TextTransformableIn,
-								ioMixIns.BinaryTransformableOut,
+							io.BufferedOutputStream,
+							ioMixIns.TextTransformableIn,
+							ioMixIns.BinaryTransformableOut,
 			{
 				$TYPE_NAME: 'Base64DecoderStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('Base64DecoderStreamNodeJs')), true) */,
@@ -679,9 +736,9 @@ exports.add = function add(DD_MODULES) {
 
 
 			io.REGISTER(io.Stream.$extend(
-								io.BufferedOutputStream,
-								ioMixIns.BinaryTransformableIn,
-								ioMixIns.BinaryTransformableOut,
+							io.BufferedOutputStream,
+							ioMixIns.BinaryTransformableIn,
+							ioMixIns.BinaryTransformableOut,
 			{
 				$TYPE_NAME: 'FormMultipartDecoderStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('FormMultipartDecoderStreamNodeJs')), true) */,
@@ -837,14 +894,15 @@ exports.add = function add(DD_MODULES) {
 					const nodeStream = nodeFsCreateReadStream(path, {autoClose: true});
 
 					if (encoding) {
-						return new nodejsIO.TextInputStream({nodeStream: nodeStream, encoding: encoding});
+						return new nodejsIO.TextInputStream(nodeStream, {encoding: encoding});
 					} else {
-						return new nodejsIO.BinaryInputStream({nodeStream: nodeStream});
+						return new nodejsIO.BinaryInputStream(nodeStream);
 					};
 				});
 			});
-				
-				
+
+
+
 			//===================================
 			// Init
 			//===================================
@@ -853,13 +911,13 @@ exports.add = function add(DD_MODULES) {
 				// <PRB> Since Node version 5.6.0 or 5.7.0, children of a cluster are taking control of 'stdin'. So we must have this condition...
 				if (nodeCluster.isMaster) {
 					io.setStds({
-						stdin: new nodejsIO.TextInputStream({nodeStream: process.stdin}),
+						stdin: new nodejsIO.TextInputStream(process.stdin),
 					});
 				};
-				const stdout = new nodejsIO.TextOutputStream({nodeStream: process.stdout, flushMode: 'half', bufferSize: 1024});
+				const stdout = new nodejsIO.TextOutputStream(process.stdout, {flushMode: 'half', bufferSize: 1024});
 				io.setStds({
 					stdout: stdout,
-					stderr: ((process.stderr === process.stdout) ? stdout : new nodejsIO.TextOutputStream({nodeStream: process.stderr})),
+					stderr: ((process.stderr === process.stdout) ? stdout : new nodejsIO.TextOutputStream(process.stderr)),
 				});
 			};
 		},

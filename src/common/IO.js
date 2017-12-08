@@ -181,11 +181,11 @@ exports.add = function add(DD_MODULES) {
 			// Basic implementations (continued)
 			//=====================================================
 				
-			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextInputStreamBase.$extend(
+			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.TextInputStreamBase.$extend(
 								ioMixIns.TextTransformableOut,
 			{
 				$TYPE_NAME: 'TextInputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamMixIn')), true) */,
+				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamMixInBase')), true) */,
 					
 				// Non-formatted text
 				readText: doodad.OVERRIDE(function readText(/*optional*/options) {
@@ -246,7 +246,7 @@ exports.add = function add(DD_MODULES) {
 						
 					return line || null;
 				}),
-			})));
+			}))));
 
 				
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.TextOutputStreamBase.$extend(
@@ -274,12 +274,18 @@ exports.add = function add(DD_MODULES) {
 				}),
 			}))));
 				
-				
 
 			//=====================================================
 			// Complete implementations
 			//=====================================================
 				
+			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
+								ioMixIns.InputOutputStreamBase,
+			{
+				$TYPE_NAME: 'InputOutputStream',
+				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputOutputStreamMixIn')), true) */,
+			})));
+
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.InputStream.$extend(
 								ioMixIns.TextInputStream,
 			{
@@ -299,7 +305,7 @@ exports.add = function add(DD_MODULES) {
 				$TYPE_NAME: 'TextOutput',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputMixIn')), true) */,
 			})));
-				
+
 
 			//=====================================================
 			// Stream objects
@@ -367,7 +373,40 @@ exports.add = function add(DD_MODULES) {
 				$TYPE_NAME: 'BufferedTextOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedTextOutputStreamBase')), true) */,
 			})));
-				
+
+			io.REGISTER(doodad.BASE(io.Stream.$extend(
+								ioMixIns.InputOutputStream,
+			{
+				$TYPE_NAME: 'InputOutputStream',
+				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputOutputStreamBase')), true) */,
+			})));
+
+			// TODO: Complete when needed
+			//io.REGISTER(doodad.BASE(io.Stream.$extend(
+			//					ioMixIns.BufferedInputOutputStream,
+			//{
+			//	$TYPE_NAME: 'BufferedInputOutputStream',
+			//	$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputOutputStreamBase')), true) */,
+			//})));
+
+			// TODO: Complete when needed
+			//io.REGISTER(doodad.BASE(io.InputOutputStream.$extend(
+			//					ioMixIns.TextInput,
+			//					ioMixIns.TextOutput,
+			//{
+			//	$TYPE_NAME: 'TextInputOutputStream',
+			//	$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputOutputStreamBase')), true) */,
+			//})));
+
+			// TODO: Complete when needed
+			//io.REGISTER(doodad.BASE(io.BufferedInputOutputStream.$extend(
+			//					ioMixIns.TextInput,
+			//					ioMixIns.TextOutput,
+			//{
+			//	$TYPE_NAME: 'BufferedTextInputOutputStream',
+			//	$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedTextInputOutputStreamBase')), true) */,
+			//})));
+
 
 			__Internal__.BufferTypes = {
 				Deleted: -1,
