@@ -21,7 +21,6 @@
     "TextOutputStreamBaseMixIn": "6915ad38-14cd-4d0b-8dfd-d0d6eeb8c1a3",
     "BufferedStreamMixIn": "2e990738-45bc-4934-9c69-98f48be0edd5",
     "NestedStreamMixIn": "92b5bba4-1f65-4683-912e-a9df58444039",
-    "TextInputStreamMixIn": "33ce6889-9f0d-4731-b740-2fba0429f85d",
     "TextOutputStreamMixInBase": "7e4355fb-6dc1-4502-96d1-35cb37d92145",
     "TextInputMixIn": "44bd4887-12e8-4c92-ad80-2613702afcfe",
     "KeyboardInputMixIn": "57944ded-635f-4dd8-b31e-7bcc6204a2c1",
@@ -62,5 +61,12 @@
     "FormMultipartDecoderStreamNodeJs": "de0dbe67-8129-4f68-84d3-407b4b705dff",
     "KeyboardInputStream": "2a617f4f-d892-404e-a49b-44225335054e",
     "DomOutputStream": "3df7b434-1be8-4fa6-82d8-9fd134b69951",
-    "BinaryTransformableOutMixIn": "502a405a-3883-41c2-930a-17125a47b727"
+    "BinaryTransformableOutMixIn": "502a405a-3883-41c2-930a-17125a47b727",
+    "InputOutputStreamBaseMixIn": "85820b18-8c4f-44be-b358-165cc2858653",
+    "TextInputStreamMixInBase": "00b66651-e1fd-42a9-b21b-917fc8e400ae",
+    "InputOutputStreamBase": "1f0ee5d2-ef39-4b9b-8d37-f4ce496c7e88",
+    "BufferedInputOutputStreamBase": "7a084f44-7ac0-4e12-8ddf-85c563d0110a",
+    "InputOutputStreamMixIn": "ff9ec3e5-11a3-4cb0-a7cc-72c5a77afe5a",
+    "BufferedInputOutputStreamMixIn": "1cb7536b-6d47-4bfa-982a-11841bd123ee",
+    "BinaryInputOutputStreamNodeJs": "7e2319ad-b79c-43e1-ae9f-b6b0beec2ea4"
 }
