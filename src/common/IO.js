@@ -279,13 +279,6 @@ exports.add = function add(DD_MODULES) {
 			// Complete implementations
 			//=====================================================
 				
-			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
-								ioMixIns.InputOutputStreamBase,
-			{
-				$TYPE_NAME: 'InputOutputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputOutputStreamMixIn')), true) */,
-			})));
-
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.InputStream.$extend(
 								ioMixIns.TextInputStream,
 			{
@@ -310,7 +303,7 @@ exports.add = function add(DD_MODULES) {
 			//=====================================================
 			// Stream objects
 			//=====================================================
-				
+
 			io.REGISTER(doodad.BASE(doodad.Object.$extend(
 								ioMixIns.Stream,
 			{
@@ -324,14 +317,14 @@ exports.add = function add(DD_MODULES) {
 				$TYPE_NAME: 'InputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputStreamBase')), true) */,
 			})));
-				
+
 			io.REGISTER(doodad.BASE(io.Stream.$extend(
 								ioMixIns.BufferedInputStream,
 			{
 				$TYPE_NAME: 'BufferedInputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputStreamBase')), true) */,
 			})));
-				
+
 			io.REGISTER(doodad.BASE(io.Stream.$extend(
 								ioMixIns.OutputStream,
 			{
@@ -381,14 +374,13 @@ exports.add = function add(DD_MODULES) {
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputOutputStreamBase')), true) */,
 			})));
 
-			// TODO: Complete when needed
-			//io.REGISTER(doodad.BASE(io.Stream.$extend(
-			//					ioMixIns.BufferedInputOutputStream,
-			//{
-			//	$TYPE_NAME: 'BufferedInputOutputStream',
-			//	$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputOutputStreamBase')), true) */,
-			//})));
-
+			io.REGISTER(doodad.BASE(io.Stream.$extend(
+								ioMixIns.BufferedInputOutputStream,
+			{
+				$TYPE_NAME: 'BufferedInputOutputStream',
+				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputOutputStreamBase')), true) */,
+			})));
+				
 			// TODO: Complete when needed
 			//io.REGISTER(doodad.BASE(io.InputOutputStream.$extend(
 			//					ioMixIns.TextInput,

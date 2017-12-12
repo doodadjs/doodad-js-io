@@ -655,6 +655,40 @@ exports.add = function add(DD_MODULES) {
 			})));
 
 
+			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
+								ioMixIns.InputOutputStreamBase,
+			{
+				$TYPE_NAME: 'InputOutputStream',
+				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputOutputStreamMixIn')), true) */,
+			})));
+
+			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.InputOutputStream.$extend(
+								ioMixIns.BufferedInputStream,
+								ioMixIns.BufferedOutputStream,
+			{
+				$TYPE_NAME: 'BufferedInputOutputStream',
+				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputOutputStreamMixIn')), true) */,
+
+				__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
+					const callback = types.get(options, 'callback'),
+						next = types.get(options, 'next', false);
+
+					if (next) {
+						throw new types.NotAvailable("The option 'next' is not available.");
+					};
+
+					if (callback) {
+						data.chain(callback);
+					};
+
+					data.consume();
+				}),
+
+				__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
+				}),
+			})));
+
+
 			//===================================
 			// Init
 			//===================================
