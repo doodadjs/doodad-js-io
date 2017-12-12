@@ -1336,6 +1336,7 @@ exports.add = function add(DD_MODULES) {
 											};
 										} else {
 											data.unchain(continueCb);
+											data.detach();
 											buffer.unshift(data);
 											finished = true;
 											break;
