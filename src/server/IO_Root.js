@@ -456,9 +456,6 @@ exports.add = function add(DD_MODULES) {
 						};
 					};
 
-					// NOTE: Commented out to give a chance to the error to propagate.
-					//this.unpipe();
-
 					return cancelled;
 				}),
 
@@ -471,7 +468,6 @@ exports.add = function add(DD_MODULES) {
 						isNodeJsStream = ev.handlerData[5];
 						
 					if (_shared.DESTROYED(stream)) {
-						this.unpipe(stream);
 						return;
 					};
 
@@ -509,7 +505,6 @@ exports.add = function add(DD_MODULES) {
 									stream.end(raw, data.defer());
 								};
 							} catch(ex) {
-								this.unpipe(stream);
 								this.onError(ex);
 							};
 						} else if (!types.isNothing(raw)) {
@@ -520,7 +515,6 @@ exports.add = function add(DD_MODULES) {
 									this.__pipeNodeStreamOnDrain.attachOnce(stream, {consume: data.defer()});
 								};
 							} catch(ex) {
-								this.unpipe(stream);
 								this.onError(ex);
 							};
 						};
@@ -532,7 +526,6 @@ exports.add = function add(DD_MODULES) {
 								data2.chain(data.defer());
 							};
 						} catch(ex) {
-							this.unpipe(stream);
 							this.onError(ex);
 						};
 					};
@@ -548,8 +541,6 @@ exports.add = function add(DD_MODULES) {
 				}),
 						
 				__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
-					this.unpipe(ev.obj);
-
 					this.onError(ev);
 				}),
 
@@ -566,8 +557,6 @@ exports.add = function add(DD_MODULES) {
 				}),
 
 				__pipeNodeStreamOnError: doodad.PROTECTED(doodad.NODE_EVENT('error', function __pipeNodeStreamOnError(context, err) {
-					this.unpipe(context.emitter);
-
 					this.onError(new doodad.ErrorEvent(err));
 				})),
 

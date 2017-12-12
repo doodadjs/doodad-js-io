@@ -344,15 +344,6 @@ exports.add = function add(DD_MODULES) {
 					this._super();
 				}),
 
-				// NOTE: Commented out to give a chance to the error to propagate.
-				//onError: doodad.OVERRIDE(function onError(ev) {
-				//	const cancelled = this._super(ev);
-
-				//	this.unpipe();
-
-				//	return cancelled;
-				//}),
-
 				__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
 					const stream = ev.handlerData[0],
 						transform = ev.handlerData[1],
@@ -361,7 +352,6 @@ exports.add = function add(DD_MODULES) {
 						isInputOnly = ev.handlerData[4];
 
 					if (_shared.DESTROYED(stream)) {
-						this.unpipe(stream);
 						return;
 					};
 
@@ -396,7 +386,6 @@ exports.add = function add(DD_MODULES) {
 							data2.chain(data.defer());
 						};
 					} catch(ex) {
-						this.unpipe(stream);
 						this.onError(ex);
 					};
 				}),
