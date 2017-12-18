@@ -813,10 +813,10 @@ exports.add = function add(DD_MODULES) {
 				}),
 
 				__submitInternal: doodad.REPLACE(function __submitInternal(data, /*optional*/options) {
-					const value = data.valueOf();
+					const text = data.toString();
 
-					if (!types.isNothing(value)) {
-						global.console[this.__fn](value);
+					if (!types.isNothing(text)) {
+						global.console[this.__fn](text);
 					};
 
 					const callback = types.get(options, 'callback');
@@ -1009,10 +1009,18 @@ exports.add = function add(DD_MODULES) {
 							fn = 'log';
 						};
 						_interface[fn](message);
-					} else if (types._implements(io.stderr, ioMixIns.TextOutput)) {
-						io.stderr.writeLine(message);
-					} else if (types._implements(io.stderr, ioMixIns.OutputStream)) {
-						io.stderr.write(message);
+					} else if ((level === tools.LogLevels.Warning) || (level === tools.LogLevels.Error)) {
+						if (types._implements(io.stderr, ioMixIns.TextOutput)) {
+							io.stderr.writeLine(message);
+						} else if (types._implements(io.stderr, ioMixIns.OutputStream)) {
+							io.stderr.write(message);
+						};
+					} else {
+						if (types._implements(io.stdout, ioMixIns.TextOutput)) {
+							io.stdout.writeLine(message);
+						} else if (types._implements(io.stdout, ioMixIns.OutputStream)) {
+							io.stdout.write(message + '\n');
+						};
 					};
 				};
 			};
