@@ -45,6 +45,14 @@ exports.add = function add(DD_MODULES) {
 				extenders = doodad.Extenders;
 
 					
+			tools.complete(_shared.Natives, {
+				consoleInfo: (global.console.info ? global.console.info.bind(global.console) : null),
+				consoleWarn: (global.console.warn ? global.console.warn.bind(global.console) : null),
+				consoleException: (global.console.exception ? global.console.exception.bind(global.console) : null),
+				consoleError: (global.console.error ? global.console.error.bind(global.console) : null),
+				consoleLog: global.console.log.bind(global.console),
+			});
+
 					
 			const __Internal__ = {
 				stdin: null,
@@ -799,13 +807,13 @@ exports.add = function add(DD_MODULES) {
 						
 					const name = types.get(this.options, 'name');
 						
-					if ((name === 'info') && global.console.info) {
+					if ((name === 'info') && _shared.Natives.consoleInfo) {
 						this.__fn = 'info';
-					} else if ((name === 'warn') && global.console.warn) {
+					} else if ((name === 'warn') && _shared.Natives.consoleWarn) {
 						this.__fn = 'warn';
-					} else if ((name === 'error') && global.console.error) {
+					} else if ((name === 'error') && _shared.Natives.consoleError) {
 						this.__fn = 'error';
-					} else if ((name === 'error') && global.console.exception) {
+					} else if ((name === 'error') && _shared.Natives.consoleException) {
 						this.__fn = 'exception';
 					} else {
 						this.__fn = 'log';
@@ -830,70 +838,24 @@ exports.add = function add(DD_MODULES) {
 
 				// Console hook
 				log: doodad.OVERRIDE(ioInterfaces.IConsole, function log(raw, /*optional*/options) {
-					if (global.console) {
-						//! BEGIN_REMOVE()
-							if ((typeof process === 'object') && (typeof module === 'object')) {
-								global.console.warn(raw); // force stderr
-							} else {
-						//! END_REMOVE()
-							
-						//! IF_UNSET("serverSide")
-								global.console.log(raw);
-						//! END_IF()
-								
-						//! BEGIN_REMOVE()
-							};
-						//! END_REMOVE()
-							
-						//! IF_SET("serverSide")
-							//! INJECT("global.console.warn(raw)") // force stderr
-						//! END_IF()
-					};
+					//! IF_SET("serverSide")
+						_shared.Natives.consoleWarn(raw); // force stderr
+					//! ELSE()
+						//! INJECT("_shared.Natives.consoleLog(raw);") // force stderr
+					//! END_IF()
 				}),
 				info: doodad.OVERRIDE(ioInterfaces.IConsole, function info(raw, /*optional*/options) {
-					if (global.console) {
-						//! BEGIN_REMOVE()
-							if ((typeof process === 'object') && (typeof module === 'object')) {
-								global.console.warn(raw); // force stderr
-							} else {
-						//! END_REMOVE()
-							
-						//! IF_UNSET("serverSide")
-								if (global.console.info) {
-									global.console.info(raw);
-								} else {
-									global.console.log(raw);
-								};
-						//! END_IF()
-								
-						//! BEGIN_REMOVE()
-							};
-						//! END_REMOVE()
-							
-						//! IF_SET("serverSide")
-							//! INJECT("global.console.warn(raw)") // force stderr
-						//! END_IF()
-					};
+					//! IF_SET("serverSide")
+						_shared.Natives.consoleWarn(raw); // force stderr
+					//! ELSE()
+						//! INJECT("(_shared.Natives.consoleInfo || _shared.Natives.consoleLog)(raw);") // force stderr
+					//! END_IF()
 				}),
 				warn: doodad.OVERRIDE(ioInterfaces.IConsole, function warn(raw, /*optional*/options) {
-					if (global.console) {
-						if (global.console.warn) {
-							global.console.warn(raw);
-						} else {
-							global.console.log(raw);
-						};
-					};
+					(_shared.Natives.consoleWarn || _shared.Natives.consoleLog)(raw);
 				}),
 				error: doodad.OVERRIDE(ioInterfaces.IConsole, function error(raw, /*optional*/options) {
-					if (global.console) {
-						if (global.console.error) {
-							global.console.error(raw);
-						} else if (global.console.exception) {
-							global.console.exception(raw);
-						} else {
-							global.console.log(raw);
-						};
-					};
+					(_shared.Natives.consoleError || _shared.Natives.consoleException || _shared.Natives.consoleLog)(raw);
 				}),
 					
 			}));
@@ -996,27 +958,32 @@ exports.add = function add(DD_MODULES) {
 					
 				_shared.consoleHook = function consoleHook(level, message) {
 					// NOTE: Every "std" must be a stream.
-					if (types._implements(io.stderr, ioInterfaces.IConsole)) {
-						const _interface = io.stderr.getInterface(ioInterfaces.IConsole);
-						let fn;
-						if (level === tools.LogLevels.Info) {
-							fn = 'info';
-						} else if (level === tools.LogLevels.Warning) {
-							fn = 'warn';
-						} else if (level === tools.LogLevels.Error) {
-							fn = 'error';
-						} else {
-							fn = 'log';
-						};
-						_interface[fn](message);
-					} else if ((level === tools.LogLevels.Warning) || (level === tools.LogLevels.Error)) {
-						if (types._implements(io.stderr, ioMixIns.TextOutput)) {
+					if ((level === tools.LogLevels.Warning) || (level === tools.LogLevels.Error)) {
+						if (types._implements(io.stderr, ioInterfaces.IConsole)) {
+							const _interface = io.stderr.getInterface(ioInterfaces.IConsole);
+							let fn;
+							if (level === tools.LogLevels.Warning) {
+								fn = 'warn';
+							} else {
+								fn = 'error';
+							};
+							_interface[fn](message);
+						} else if (types._implements(io.stderr, ioMixIns.TextOutput)) {
 							io.stderr.writeLine(message);
 						} else if (types._implements(io.stderr, ioMixIns.OutputStream)) {
 							io.stderr.write(message);
 						};
 					} else {
-						if (types._implements(io.stdout, ioMixIns.TextOutput)) {
+						if (types._implements(io.stdout, ioInterfaces.IConsole)) {
+							const _interface = io.stdout.getInterface(ioInterfaces.IConsole);
+							let fn;
+							if (level === tools.LogLevels.Info) {
+								fn = 'info';
+							} else {
+								fn = 'log';
+							};
+							_interface[fn](message);
+						} else if (types._implements(io.stdout, ioMixIns.TextOutput)) {
 							io.stdout.writeLine(message);
 						} else if (types._implements(io.stdout, ioMixIns.OutputStream)) {
 							io.stdout.write(message + '\n');
