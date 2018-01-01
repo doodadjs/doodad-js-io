@@ -515,7 +515,7 @@ exports.add = function add(DD_MODULES) {
 						this._super(data, options);
 
 					} else {
-						throw new types.TypeError("Invalid data object.");
+						throw new types.ValueError("Invalid data object.");
 
 					};
 				}),

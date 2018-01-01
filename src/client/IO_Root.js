@@ -443,7 +443,7 @@ exports.add = function add(DD_MODULES) {
 							stream.onStopListening.attach(this, this.__pipeStreamOnStopListening);
 						};
 					} else {
-						throw new types.TypeError("'stream' must implement 'Doodad.IO.MixIns.OutputStreamBase'.");
+						throw new types.ValueError("'stream' must implement 'Doodad.IO.MixIns.OutputStreamBase'.");
 					};
 
 					this.__pipes[this.__pipes.length] = stream;

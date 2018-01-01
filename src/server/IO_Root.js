@@ -639,7 +639,7 @@ exports.add = function add(DD_MODULES) {
 						};
 
 					} else {
-						throw new types.TypeError("'stream' must implement 'Doodad.IO.MixIns.OutputStreamBase' or be a Node.Js writable/duplex/transform stream.");
+						throw new types.ValueError("'stream' must implement 'Doodad.IO.MixIns.OutputStreamBase' or be a Node.Js writable/duplex/transform stream.");
 
 					};
 
