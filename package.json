@@ -1,5 +1,5 @@
 {
-  "name": "doodad-js-io",
+  "name": "@doodad-js/io",
   "description": "I/O streams (alpha)",
   "version": "0.0.0",
   "files": [
