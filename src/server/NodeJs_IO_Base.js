@@ -39,16 +39,16 @@ exports.add = function add(DD_MODULES) {
 			const doodad = root.Doodad,
 				types = doodad.Types,
 				tools = doodad.Tools,
-				files = tools.Files,
-				mixIns = doodad.MixIns,
+				//files = tools.Files,
+				//mixIns = doodad.MixIns,
 				io = doodad.IO,
 				ioMixIns = io.MixIns,
 				ioInterfaces = io.Interfaces,
 				nodejs = doodad.NodeJs,
-				nodejsMixIns = nodejs.MixIns,
+				//nodejsMixIns = nodejs.MixIns,
 				nodejsInterfaces = nodejs.Interfaces,
 				nodejsIO = nodejs.IO,
-				nodejsIOMixIns = nodejsIO.MixIns,
+				//nodejsIOMixIns = nodejsIO.MixIns,
 				nodejsIOInterfaces = nodejsIO.Interfaces;
 
 			//=====================================================
@@ -162,7 +162,7 @@ exports.add = function add(DD_MODULES) {
 				}),
 
 				__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
-					const host = this[doodad.HostSymbol];
+					//const host = this[doodad.HostSymbol];
 
 					const data = ev.data;
 					const eof = (data.raw === io.EOF);
@@ -255,7 +255,7 @@ exports.add = function add(DD_MODULES) {
 
 					const rs = this._readableState;
 
-					const found = (types.isArray(rs.pipes) ? (tools.indexOf(rs.pipes, destination) >= 0) : (rs.pipes === destination))
+					const found = (types.isArray(rs.pipes) ? (tools.indexOf(rs.pipes, destination) >= 0) : (rs.pipes === destination));
 					if (!found) {
 						const state = {
 							isInput: host._implements(ioMixIns.InputStreamBase) && !host._implements(ioMixIns.OutputStreamBase),
@@ -317,6 +317,7 @@ exports.add = function add(DD_MODULES) {
 								try {
 									state.consumeCb(err);
 								} catch(o) {
+									// Do nothing
 								};
 							};
 							try {

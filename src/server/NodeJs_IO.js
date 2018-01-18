@@ -26,19 +26,19 @@
 
 
 //! IF_SET("mjs")
-	//! INJECT("import {default as nodeStream} from 'stream';")
+	// //! INJECT("import {default as nodeStream} from 'stream';")
 	//! INJECT("import {default as nodeFs} from 'fs';")
 	//! INJECT("import {default as nodeCluster} from 'cluster';")
 //! ELSE()
-	const nodeStream = require('stream'),
+	const //nodeStream = require('stream'),
 		nodeFs = require('fs'),
 		nodeCluster = require('cluster');
 //! END_IF()
 
-const nodeStreamReadable = nodeStream.Readable,
-	nodeStreamWritable = nodeStream.Writable,
-	nodeStreamDuplex = nodeStream.Duplex,
-	nodeStreamTransform = nodeStream.Transform,
+const //nodeStreamReadable = nodeStream.Readable,
+	//nodeStreamWritable = nodeStream.Writable,
+	//nodeStreamDuplex = nodeStream.Duplex,
+	//nodeStreamTransform = nodeStream.Transform,
 
 	nodeFsCreateReadStream = nodeFs.createReadStream,
 
@@ -60,14 +60,14 @@ exports.add = function add(DD_MODULES) {
 				types = doodad.Types,
 				tools = doodad.Tools,
 				files = tools.Files,
-				mixIns = doodad.MixIns,
+				//mixIns = doodad.MixIns,
 				io = doodad.IO,
 				ioMixIns = io.MixIns,
 				nodejs = doodad.NodeJs,
-				nodejsMixIns = nodejs.MixIns,
-				nodejsInterfaces = nodejs.Interfaces,
+				//nodejsMixIns = nodejs.MixIns,
+				//nodejsInterfaces = nodejs.Interfaces,
 				nodejsIO = nodejs.IO,
-				nodejsIOMixIns = nodejsIO.MixIns,
+				//nodejsIOMixIns = nodejsIO.MixIns,
 				nodejsIOInterfaces = nodejsIO.Interfaces;
 					
 
@@ -157,7 +157,7 @@ exports.add = function add(DD_MODULES) {
 							this.__listening = true;
 							this.stopListening();
 						};
-					})
+					});
 
 					const data = new io.BinaryData(chunk);
 
@@ -535,7 +535,6 @@ exports.add = function add(DD_MODULES) {
 				}),
 			}));
 				
-				
 
 			nodejsIO.REGISTER(io.InputOutputStream.$extend(
 							nodejsIO.BinaryInputStream,
@@ -560,7 +559,6 @@ exports.add = function add(DD_MODULES) {
 			}));
 
 
-
 			// TODO: Complete when needed
 			//nodejsIO.REGISTER(io.TextInputOutputStream.$extend(
 			//				nodejsIO.TextInputStream,
@@ -569,7 +567,6 @@ exports.add = function add(DD_MODULES) {
 			//	$TYPE_NAME: 'TextInputOutputStream',
 			//	$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputOutputStreamNodeJs')), true) */,
 			//}));
-
 
 
 			io.REGISTER(io.Stream.$extend(
@@ -632,10 +629,11 @@ exports.add = function add(DD_MODULES) {
 
 					const url = remaining + value;
 
-					const delimiters = /\=|\&/g;
+					const delimiters = /=|&/g;
 
 					let last = 0,
 						result;
+					/* eslint no-cond-assign: "off" */
 					while (result = delimiters.exec(url)) {
 						const chr = result[0];
 						if ((this.__mode === Modes.Value) && (chr === '=')) {
@@ -797,6 +795,7 @@ exports.add = function add(DD_MODULES) {
 
 							if (!this.__headersCompiled) {
 								let index;
+								/* eslint no-cond-assign: "off" */
 								while ((start < end) && ((index = buf.indexOf(0x0A, start)) >= 0)) { // "\n"
 									if (index === start + 1) {
 										this.__headersCompiled = true;
@@ -878,7 +877,6 @@ exports.add = function add(DD_MODULES) {
 			}));
 
 
-
 			files.ADD('openFile', function openFile(path, /*optional*/options) {
 				const Promise = types.getPromise();
 				return Promise.try(function() {
@@ -902,14 +900,13 @@ exports.add = function add(DD_MODULES) {
 			});
 
 
-
 			//===================================
 			// Init
 			//===================================
 			return function init(/*optional*/options) {
 				// NOTE: Every "std" must be a stream.
 				// <PRB> Since Node version 5.6.0 or 5.7.0, children of a cluster are taking control of 'stdin'. So we must have this condition...
-				if (nodeCluster.isMaster) {
+				if (nodeClusterIsMaster) {
 					io.setStds({
 						stdin: new nodejsIO.TextInputStream(process.stdin),
 					});

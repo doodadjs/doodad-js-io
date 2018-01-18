@@ -38,9 +38,9 @@ exports.add = function add(DD_MODULES) {
 			const doodad = root.Doodad,
 				types = doodad.Types,
 				tools = doodad.Tools,
-				mixIns = doodad.MixIns,
+				//mixIns = doodad.MixIns,
 				io = doodad.IO,
-				ioInterfaces = io.Interfaces,
+				//ioInterfaces = io.Interfaces,
 				ioMixIns = io.MixIns;
 				
 			tools.complete(_shared.Natives, {
@@ -116,7 +116,7 @@ exports.add = function add(DD_MODULES) {
 							throw new types.Error("Invalid encoding for text data.");
 						};
 						this._super(raw, options);
- 					}),
+					}),
 
 					toString: function toString() {
 						const buf = (types._instanceof(this.raw, io.Signal) ? this.trailing : this.raw);
@@ -300,9 +300,10 @@ exports.add = function add(DD_MODULES) {
 							const text = (types.isNothing(value) ? null : types.toString(value) || null);
 							return text;
 						};
-					} else if (types._instanceof(raw, io.Data)) {
+					} else if (types._instanceof(data, io.Data)) {
 						return data.toString() || null;
 					};
+					return undefined;
 				}),
 
 				clear: doodad.OVERRIDE(function clear() {
@@ -346,7 +347,7 @@ exports.add = function add(DD_MODULES) {
 
 				__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
 					const stream = ev.handlerData[0],
-						transform = ev.handlerData[1],
+						//transform = ev.handlerData[1],
 						end = ev.handlerData[2],  // 'true' permits EOF. 'false' just write the trailing data if there are.
 						isBuffered = ev.handlerData[3],
 						isInputOnly = ev.handlerData[4];
@@ -360,8 +361,8 @@ exports.add = function add(DD_MODULES) {
 					};
 
 					const data = ev.data;
-					let eof = end && (data.raw === io.EOF);
-					let bof = !eof && (data.raw === io.BOF);
+					const eof = end && (data.raw === io.EOF);
+					const bof = !eof && (data.raw === io.BOF);
 
 					// TODO: Re-Implement
 					//if (transform) {
@@ -427,7 +428,7 @@ exports.add = function add(DD_MODULES) {
 						isBuffered = this._implements(ioMixIns.BufferedStreamBase);
 
 					if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-						let datas = [stream, transform, end, isBuffered, isInputOnly];
+						const datas = [stream, transform, end, isBuffered, isInputOnly];
 						if (isInput) {
 							this.onReady.attach(this, this.__pipeOnData, 40, datas);
 						} else {
@@ -474,7 +475,7 @@ exports.add = function add(DD_MODULES) {
 					};
 					if (stream) {
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-							let datas = [stream];
+							const datas = [stream];
 							if (isInput) {
 								this.onReady.detach(this, this.__pipeOnData, datas);
 							} else {

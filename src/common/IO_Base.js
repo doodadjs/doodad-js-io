@@ -39,8 +39,7 @@ exports.add = function add(DD_MODULES) {
 				tools = doodad.Tools,
 				io = doodad.IO,
 				ioMixIns = io.MixIns,
-				ioInterfaces = io.Interfaces,
-				extenders = doodad.Extenders;
+				ioInterfaces = io.Interfaces;
 
 
 			const __Internal__ = {
@@ -134,7 +133,7 @@ exports.add = function add(DD_MODULES) {
 						this.raw = raw;
 						this.options = tools.nullObject(options);
 						this.options.encoding = encoding;
- 					}),
+					}),
 
 					attach: function attach(stream) {
 						if (this.consumed) {
@@ -153,6 +152,7 @@ exports.add = function add(DD_MODULES) {
 										this.consume(new types.CanceledError());
 									};
 								} catch(o) {
+									// Do nothing
 								};
 							});
 							this.stream = stream;
@@ -167,6 +167,7 @@ exports.add = function add(DD_MODULES) {
 											const err = new types.TimeoutError("Data object has not been consumed.");
 											this.consume(err);
 										} catch(o) {
+											// Do nothing
 										};
 									};
 								}, timeout, this, null, true);
@@ -293,7 +294,7 @@ exports.add = function add(DD_MODULES) {
 
 					unchain: function chain(callback) {
 						if (!this.consumed && !types.isNothing(callback)) {
-							let cbChain = this.callbacks;
+							const cbChain = this.callbacks;
 							if (types.isArray(cbChain)) {
 								tools.popItem(cbChain, callback);
 								if (!cbChain.length) {
@@ -538,17 +539,18 @@ exports.add = function add(DD_MODULES) {
 					const Promise = types.getPromise();
 					const callback = types.get(options, 'callback');
 					return Promise.create(function flushAsyncPromise(resolve, reject) {
-						let errorHandler, destroyHandler;
-						const cleanup = function cleanup() {
+						let errorHandler,
+							destroyHandler;
+						const cleanup = function _cleanup() {
 							this.onError.detach(this, errorHandler);
 							this.onDestroy.detach(this, destroyHandler);
 						};
-						errorHandler = function errorHandler(ev) {
+						errorHandler = function _errorHandler(ev) {
 							cleanup.call(this);
 							ev.preventDefault();
 							reject(ev.error);
 						};
-						destroyHandler = function destroyHandler(ev) {
+						destroyHandler = function _destroyHandler(ev) {
 							cleanup.call(this);
 							reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 						};
@@ -777,7 +779,7 @@ exports.add = function add(DD_MODULES) {
 				}),
 					
 				readAsync: doodad.PUBLIC(doodad.ASYNC(function readAsync(/*optional*/options) {
-					const Promise = types.getPromise();
+					//const Promise = types.getPromise();
 					const result = this.read(options);
 					if (!types.isNothing(result)) {
 						return result;
@@ -806,7 +808,7 @@ exports.add = function add(DD_MODULES) {
 				readLine: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 					
 				readTextAsync: doodad.PUBLIC(doodad.ASYNC(function readTextAsync(/*optional*/options) {
-					const Promise = types.getPromise();
+					//const Promise = types.getPromise();
 					const result = this.readText(options);
 					if (!types.isNothing(result)) {
 						return result;
@@ -816,10 +818,11 @@ exports.add = function add(DD_MODULES) {
 								return this.readText(options);
 							});
 					};
+					return undefined;
 				})),
 						
 				readLineAsync: doodad.PUBLIC(doodad.ASYNC(function readLineAsync(/*optional*/options) {
-					const Promise = types.getPromise();
+					//const Promise = types.getPromise();
 					const result = this.readLine(options);
 					if (!types.isNothing(result)) {
 						return result;
@@ -829,6 +832,7 @@ exports.add = function add(DD_MODULES) {
 								return this.readLine(options);
 							});
 					};
+					return undefined;
 				})),
 			}))));
 				
@@ -947,7 +951,7 @@ exports.add = function add(DD_MODULES) {
 					};
 
 					if ((!end && eof) || (!start && bof)) {
-						return;
+						return undefined;
 					};
 
 					if (types.isNothing(raw)) {
@@ -1035,19 +1039,21 @@ exports.add = function add(DD_MODULES) {
 					const Promise = types.getPromise();
 
 					return Promise.create(function writeAsyncPromise(resolve, reject) {
-						let errorHandler, destroyHandler;
-						const cleanup = function cleanup() {
+						let errorHandler,
+							destroyHandler;
+
+						const cleanup = function _cleanup() {
 							this.onError.detach(this, errorHandler);
 							this.onDestroy.detach(this, destroyHandler);
 						};
 
-						errorHandler = function errorHandler(ev) {
+						errorHandler = function _errorHandler(ev) {
 							cleanup.call(this);
 							ev.preventDefault();
 							reject(ev.error);
 						};
 
-						destroyHandler = function destroyHandler(ev) {
+						destroyHandler = function _destroyHandler(ev) {
 							cleanup.call(this);
 							reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 						};
@@ -1087,19 +1093,21 @@ exports.add = function add(DD_MODULES) {
 					const Promise = types.getPromise();
 
 					return Promise.create(function writeTextAsyncPromise(resolve, reject) {
-						let errorHandler, destroyHandler;
-						const cleanup = function cleanup() {
+						let errorHandler,
+							destroyHandler;
+
+						const cleanup = function _cleanup() {
 							this.onError.detach(this, errorHandler);
 							this.onDestroy.detach(this, destroyHandler);
 						};
 
-						errorHandler = function errorHandler(ev) {
+						errorHandler = function _errorHandler(ev) {
 							cleanup.call(this);
 							ev.preventDefault();
 							reject(ev.error);
 						};
 
-						destroyHandler = function destroyHandler(ev) {
+						destroyHandler = function _destroyHandler(ev) {
 							cleanup.call(this);
 							reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 						};
@@ -1122,20 +1130,21 @@ exports.add = function add(DD_MODULES) {
 					const Promise = types.getPromise();
 
 					return Promise.create(function writeLineAsyncPromise(resolve, reject) {
-						let errorHandler, destroyHandler;
+						let errorHandler,
+							destroyHandler;
 
-						const cleanup = function cleanup() {
+						const cleanup = function _cleanup() {
 							this.onError.detach(this, errorHandler);
 							this.onDestroy.detach(this, destroyHandler);
 						};
 
-						errorHandler = function errorHandler(ev) {
+						errorHandler = function _errorHandler(ev) {
 							cleanup.call(this);
 							ev.preventDefault();
 							reject(ev.error);
 						};
 
-						destroyHandler = function destroyHandler(ev) {
+						destroyHandler = function _destroyHandler(ev) {
 							cleanup.call(this);
 							reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 						};
@@ -1158,20 +1167,21 @@ exports.add = function add(DD_MODULES) {
 					const Promise = types.getPromise();
 
 					return Promise.create(function printAsyncPromise(resolve, reject) {
-						let errorHandler, destroyHandler;
+						let errorHandler,
+							destroyHandler;
 
-						const cleanup = function cleanup() {
+						const cleanup = function _cleanup() {
 							this.onError.detach(this, errorHandler);
 							this.onDestroy.detach(this, destroyHandler);
 						};
 
-						errorHandler = function errorHandler(ev) {
+						errorHandler = function _errorHandler(ev) {
 							cleanup.call(this);
 							ev.preventDefault();
 							reject(ev.error);
 						};
 
-						destroyHandler = function destroyHandler(ev) {
+						destroyHandler = function _destroyHandler(ev) {
 							cleanup.call(this);
 							reject(new types.ScriptInterruptedError("Target object is about to be destroyed."));
 						};
@@ -1266,7 +1276,9 @@ exports.add = function add(DD_MODULES) {
 
 					if (this.__flushing) {
 						if (callback) {
-							let flushCb, errorCb, destroyCb;
+							let flushCb,
+								errorCb,
+								destroyCb;
 							const cleanup = function _cleanup() {
 								this.onFlush.detach(this, flushCb);
 								this.onError.detach(this, errorCb);
@@ -1289,11 +1301,26 @@ exports.add = function add(DD_MODULES) {
 						const isInput = this._implements(ioMixIns.InputStreamBase);
 							//isOutput = this._implements(ioMixIns.OutputStreamBase),
 							//isInputOnly = isInput && !isOutput;
-						const state = {count: 0, deferred: false, error: null};
-						let __flushCbSync, __flushCbAsync;
+						const state = {
+							count: 0,
+							deferred: false,
+							error: null,
+						};
+						let __flushCbSync,
+							__flushCbAsync;
 						const __flush = function flush() {
 							let finished = false;
 							try {
+								const createContinueCallback = function _createContinueCallback(callback, state) {
+									return function continueCallback(err) {
+										if (err) {
+											callback && callback(err);
+										} else if (state.deferred) {
+											state.deferred = false;
+											__flushCbSync();
+										};
+									};
+								};
 								const buffer = this.__buffer;
 								for (let i = 0; i < MAX_LOOP_COUNT; i++) {
 									if ((state.count++ < count) && (buffer.length > 0)) {
@@ -1303,14 +1330,7 @@ exports.add = function add(DD_MODULES) {
 
 										let continueCb = null;
 
-										data.chain(continueCb = function continueFlush(err) {
-											if (err) {
-												callback && callback(err);
-											} else if (state.deferred) {
-												state.deferred = false;
-												__flushCbSync();
-											};
-										});
+										data.chain(continueCb = createContinueCallback(callback, state));
 
 										const ev = new doodad.Event(data);
 
@@ -1383,7 +1403,6 @@ exports.add = function add(DD_MODULES) {
 					};
 				}),
 			}))));
-
 
 				
 			//return function init(/*optional*/options) {

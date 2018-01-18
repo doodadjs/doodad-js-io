@@ -36,7 +36,7 @@ exports.add = function add(DD_MODULES) {
 			"use strict";
 
 			const doodad = root.Doodad,
-				mixIns = doodad.MixIns,
+				//mixIns = doodad.MixIns,
 				types = doodad.Types,
 				tools = doodad.Tools,
 				io = doodad.IO,
@@ -203,7 +203,8 @@ exports.add = function add(DD_MODULES) {
 					let text = '';
 						
 					let data;
-						
+					
+					/* eslint no-cond-assign: "off" */
 					while (data = this.read(options)) {
 						text += types.toString(data);
 					};
@@ -456,7 +457,7 @@ exports.add = function add(DD_MODULES) {
 				}),
 					
 				setOptions: doodad.OVERRIDE(function setOptions(options) {
-					types.getDefault(options, 'printTag', types.getIn(this.options, 'printTag', 'div')),
+					types.getDefault(options, 'printTag', types.getIn(this.options, 'printTag', 'div'));
 					types.getDefault(options, 'identStr', types.getIn(this.options, 'identStr', '\t'));
 						
 					this._super(options);
@@ -861,7 +862,6 @@ exports.add = function add(DD_MODULES) {
 			}));
 				
 				
-				
 			io.REGISTER(io.OutputStream.$extend(
 			{
 				$TYPE_NAME: 'NullOutputStream',
@@ -884,7 +884,6 @@ exports.add = function add(DD_MODULES) {
 					return null;
 				}),
 			}));
-
 				
 				
 			io.REGISTER(io.TextOutputStream.$extend(
@@ -894,7 +893,6 @@ exports.add = function add(DD_MODULES) {
 				$TYPE_NAME: 'TextDecoderStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextDecoderStreamNodeJs')), true) */,
 			}));
-
 
 				
 			io.ADD('setStds', function setStds(stds) {

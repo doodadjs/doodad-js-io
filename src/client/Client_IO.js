@@ -42,7 +42,7 @@ exports.add = function add(DD_MODULES) {
 			const doodad = root.Doodad,
 				types = doodad.Types,
 				tools = doodad.Tools,
-				files = tools.Files,
+				//files = tools.Files,
 				client = doodad.Client,
 				clientIO = client.IO,
 				mixIns = doodad.MixIns,
@@ -50,20 +50,20 @@ exports.add = function add(DD_MODULES) {
 				ioMixIns = io.MixIns;
 				
 
-			tools.complete(_shared.Natives, {
-				windowFile: (types.isFunction(global.File) ? global.File : null),
-				windowBlob: (types.isFunction(global.Blob) ? global.Blob : null),
-				windowFetch: (types.isFunction(global.fetch) ? global.fetch : null),
-				windowHeaders: (types.isFunction(global.Headers) ? global.Headers : null),
-				windowFileReader: (types.isFunction(global.FileReader) ? global.FileReader : null),
-			});
-				
-				
-			const __Internal__ = {
-				streamsSupported: (_shared.Natives.windowFile && types.isFunction(_shared.Natives.windowFile.prototype.slice)) && 
-								(_shared.Natives.windowBlob && types.isFunction(_shared.Natives.windowBlob.prototype.slice)) &&
-								(_shared.Natives.windowFetch && _shared.Natives.windowHeaders && _shared.Natives.windowFileReader),
-			};
+			//tools.complete(_shared.Natives, {
+			//	windowFile: (types.isFunction(global.File) ? global.File : null),
+			//	windowBlob: (types.isFunction(global.Blob) ? global.Blob : null),
+			//	windowFetch: (types.isFunction(global.fetch) ? global.fetch : null),
+			//	windowHeaders: (types.isFunction(global.Headers) ? global.Headers : null),
+			//	windowFileReader: (types.isFunction(global.FileReader) ? global.FileReader : null),
+			//});
+
+
+			//const __Internal__ = {
+			//	streamsSupported: (_shared.Natives.windowFile && types.isFunction(_shared.Natives.windowFile.prototype.slice)) && 
+			//					(_shared.Natives.windowBlob && types.isFunction(_shared.Natives.windowBlob.prototype.slice)) &&
+			//					(_shared.Natives.windowFetch && _shared.Natives.windowHeaders && _shared.Natives.windowFileReader),
+			//};
 
 				
 			clientIO.REGISTER(io.TextInputStream.$extend(
@@ -99,7 +99,7 @@ exports.add = function add(DD_MODULES) {
 
 						const key = {};
 
-						var	functionKeys = 0,
+						let	functionKeys = 0,
 							charCode = ev.charCode,
 							scanCode = ev.keyCode;
 								
@@ -139,6 +139,8 @@ exports.add = function add(DD_MODULES) {
 							return false;
 						};
 					};
+
+					return undefined;
 				})),
 					
 				onJsKeyPress: doodad.PROTECTED(doodad.JS_EVENT('keypress', function onJsKeyPress(context) {
@@ -159,6 +161,8 @@ exports.add = function add(DD_MODULES) {
 							return false;
 						};
 					};
+
+					return undefined;
 				})),
 
 				setOptions: doodad.OVERRIDE(function setOptions(options) {
@@ -290,13 +294,15 @@ exports.add = function add(DD_MODULES) {
 						
 					data = data.valueOf();
 						
-					var	type = data[0],
-						container,
+					const type = data[0];
+
+					let container,
 						element;
 						
 					if (type === state.bufferTypes.Html) {
 						container = this.__div;
 						container.innerHTML = html;
+						/* eslint no-cond-assign: "off" */
 						while (element = container.firstChild) {
 							state.parent.appendChild(element);
 						};
@@ -322,6 +328,7 @@ exports.add = function add(DD_MODULES) {
 					} else if (type === state.bufferTypes.Flush) {
 						container = data[2];
 						if (container && !container.parentNode) {
+							/* eslint no-cond-assign: "off" */
 							while (element = container.firstChild) {
 								state.parent.appendChild(element);
 							};
@@ -350,8 +357,7 @@ exports.add = function add(DD_MODULES) {
 						
 					options = tools.extend({}, this.options, options);
 
-					const bufferTypes = types.getType(this).$__bufferTypes;
-						tag = types.get(options, 'tag', null);
+					const tag = types.get(options, 'tag', null);
 
 					let attrs = types.get(options, 'attrs', null);
 						
