@@ -100,8 +100,9 @@ exports.add = function add(DD_MODULES) {
 						const key = {};
 
 						let	functionKeys = 0,
-							charCode = ev.charCode,
-							scanCode = ev.keyCode;
+							charCode = ev.charCode;
+
+						const scanCode = ev.keyCode;
 								
 						if (ev.shiftKey) {
 							functionKeys |= io.KeyboardFunctionKeys.Shift;
