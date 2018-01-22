@@ -30,6 +30,8 @@
 	//! INJECT("import {default as nodeFs} from 'fs';")
 	//! INJECT("import {default as nodeCluster} from 'cluster';")
 //! ELSE()
+	"use strict";
+
 	const //nodeStream = require('stream'),
 		nodeFs = require('fs'),
 		nodeCluster = require('cluster');
@@ -54,8 +56,6 @@ exports.add = function add(DD_MODULES) {
 		],
 			
 		create: function create(root, /*optional*/_options, _shared) {
-			"use strict";
-				
 			const doodad = root.Doodad,
 				types = doodad.Types,
 				tools = doodad.Tools,

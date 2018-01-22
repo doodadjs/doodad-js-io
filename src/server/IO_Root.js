@@ -31,6 +31,8 @@
 
 	//! INJECT("import {default as nodeStringDecoder} from 'string_decoder';")
 //! ELSE()
+	"use strict";
+
 	let nodeIConv = null;
 	try {
 		/* eslint import/no-extraneous-dependencies: "off" */  // Can we have optional dependencies ???
@@ -56,8 +58,6 @@ exports.add = function add(DD_MODULES) {
 		],
 			
 		create: function create(root, /*optional*/_options, _shared) {
-			"use strict";
-				
 			const doodad = root.Doodad,
 				types = doodad.Types,
 				tools = doodad.Tools,
