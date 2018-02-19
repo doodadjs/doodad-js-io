@@ -85,8 +85,8 @@ exports.add = function add(DD_MODULES) {
 				//	data.consume(err);
 				//});
 				const cb = types.INHERIT(io.DeferCallback, data.consume.bind(data));
-				_shared.setAttribute(cb, _shared.BoundObjectSymbol, data, {});
-				//_shared.setAttribute(cb, _shared.OriginalValueSymbol, data.consume, {});
+				types.setAttribute(cb, _shared.BoundObjectSymbol, data, {});
+				//types.setAttribute(cb, _shared.OriginalValueSymbol, data.consume, {});
 				return cb;
 			}));
 
@@ -463,7 +463,7 @@ exports.add = function add(DD_MODULES) {
 
 					types.getDefault(options, 'encoding', types.getIn(this.options, 'encoding', 'raw'));
 
-					_shared.setAttribute(this, 'options', types.freezeObject(tools.nullObject(this.options, options)));
+					types.setAttribute(this, 'options', types.freezeObject(tools.nullObject(this.options, options)));
 				}),
 					
 				consumeData: doodad.PUBLIC(function consumeData(data, /*optional*/err) {

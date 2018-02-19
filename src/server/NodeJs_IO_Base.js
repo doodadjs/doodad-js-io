@@ -98,7 +98,7 @@ exports.add = function add(DD_MODULES) {
 						if (host.onError.getCount() > 0) {
 							const ev = new doodad.ErrorEvent(err);
 
-							_shared.invoke(host, host.onError, [ev], _shared.SECRET);
+							types.invoke(host, host.onError, [ev], _shared.SECRET);
 
 							if (ev.prevent) {
 								err.trapped = true;
@@ -123,7 +123,7 @@ exports.add = function add(DD_MODULES) {
 
 						this.removeAllListeners();
 
-						_shared.setAttribute(this, 'destroyed', true);
+						types.setAttribute(this, 'destroyed', true);
 
 						// NOTE: Should calls "IReadable.unpipe".
 						const host = this[doodad.HostSymbol];

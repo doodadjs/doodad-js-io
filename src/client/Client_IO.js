@@ -178,7 +178,7 @@ exports.add = function add(DD_MODULES) {
 						root.DD_ASSERT(types.isNothing(this.options.element) || client.isElement(this.options.element) || client.isDocument(this.options.element), "Invalid element.");
 					};
 
-					_shared.setAttribute(this, 'element', this.options.element);
+					types.setAttribute(this, 'element', this.options.element);
 				}),
 
 				destroy: doodad.OVERRIDE(function destroy() {
@@ -240,7 +240,7 @@ exports.add = function add(DD_MODULES) {
 						};
 					};
 
-					_shared.setAttribute(this, 'document', this.options.document);
+					types.setAttribute(this, 'document', this.options.document);
 				}),
 
 				destroy: doodad.OVERRIDE(function destroy() {
@@ -280,7 +280,7 @@ exports.add = function add(DD_MODULES) {
 						
 					this.__div = this.options.element.ownerDocument.createElement('div');
 						
-					_shared.setAttribute(this, 'element', this.options.element);
+					types.setAttribute(this, 'element', this.options.element);
 				}),
 					
 				prepareFlushState: doodad.OVERRIDE(function prepareFlushState(options) {
@@ -314,7 +314,7 @@ exports.add = function add(DD_MODULES) {
 						if (state.flushElement) {
 							state.flushElement = false;
 							state.flushElementChunk[2] = element = this.element.ownerDocument.createElement('div');
-							_shared.setAttribute(this, 'element', element);
+							types.setAttribute(this, 'element', element);
 							html = null;
 						} else {
 							container = this.__div;
@@ -404,13 +404,13 @@ exports.add = function add(DD_MODULES) {
 
 					this._super();
 						
-					_shared.setAttribute(this, 'element', element);
+					types.setAttribute(this, 'element', element);
 				}),
 
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
 						
-					_shared.setAttribute(this, 'element', this.options.element);
+					types.setAttribute(this, 'element', this.options.element);
 				}),
 
 				clear: doodad.OVERRIDE(function clear() {

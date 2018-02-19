@@ -107,7 +107,7 @@ exports.add = function add(DD_MODULES) {
 					this.streamOnError.attach(stream);
 					this.streamOnClose.attach(stream);
 
-					_shared.setAttribute(this, 'stream', stream);
+					types.setAttribute(this, 'stream', stream);
 				}),
 
 				destroy: doodad.OVERRIDE(function destroy() {
@@ -383,7 +383,7 @@ exports.add = function add(DD_MODULES) {
 					// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
 					this.streamOnDrain(context);
 
-					//_shared.setAttribute(this, 'stream', null);
+					//types.setAttribute(this, 'stream', null);
 					this.__finished = true;
 
 					const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
