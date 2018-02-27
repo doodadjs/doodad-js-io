@@ -868,10 +868,15 @@ exports.add = function add(DD_MODULES) {
 			io.REGISTER(io.OutputStream.$extend(
 			{
 				$TYPE_NAME: 'NullOutputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('NullOutputStream')), true) */,
+				$TYPE_UUID: /* REPLACE_BY(TO_SOURCE(UUID('NullOutputStream')), true) */ '' /* END_REPLACE() */,
 					
-				$isValidEncoding: doodad.OVERRIDE(function $isValidEncoding(encoding) {
-					return true;
+				$isValidEncoding: doodad.OVERRIDE(function(encoding) {
+					if (io.Data.$validateEncoding(encoding, true) !== null) {
+						this.overrideSuper();
+						return true;
+					} else {
+						return this._super(encoding);
+					};
 				}),
 
 				onData: doodad.OVERRIDE(function onData(ev) {
@@ -881,6 +886,35 @@ exports.add = function add(DD_MODULES) {
 
 				transformIn: doodad.REPLACE(function transformIn(raw, /*optional*/options) {
 					return new io.Data(raw, options);
+				}),
+
+				transformOut: doodad.REPLACE(function transformOut(data, /*optional*/options) {
+					return null;
+				}),
+			}));
+				
+				
+			io.REGISTER(io.TextOutputStream.$extend(
+			{
+				$TYPE_NAME: 'NullTextOutputStream',
+				$TYPE_UUID: /* REPLACE_BY(TO_SOURCE(UUID('NullTextOutputStream')), true) */ '' /* END_REPLACE() */,
+
+				$isValidEncoding: doodad.OVERRIDE(function(encoding) {
+					if (io.TextData.$validateEncoding(encoding, true) !== null) {
+						this.overrideSuper();
+						return true;
+					} else {
+						return this._super(encoding);
+					};
+				}),
+
+				onData: doodad.OVERRIDE(function onData(ev) {
+					ev.preventDefault();
+					return this._super(ev);
+				}),
+
+				transformIn: doodad.REPLACE(function transformIn(raw, /*optional*/options) {
+					return new io.TextData(raw, options);
 				}),
 
 				transformOut: doodad.REPLACE(function transformOut(data, /*optional*/options) {
