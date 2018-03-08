@@ -269,7 +269,7 @@ exports.add = function add(DD_MODULES) {
 					
 				// Non-formatted text
 				writeText: doodad.OVERRIDE(function writeText(text, /*optional*/options) {
-					this.write(types.toString(text), options);
+					return this.write(types.toString(text), options);
 				}),
 					
 				// Non-formatted text + newline
@@ -277,12 +277,12 @@ exports.add = function add(DD_MODULES) {
 					if (types.isNothing(text)) {
 						text = '';
 					};
-					this.writeText(types.toString(text) + this.options.newLine, options);
+					return this.writeText(types.toString(text) + this.options.newLine, options);
 				}),
 					
 				// Formatted text + newline
 				print: doodad.OVERRIDE(function print(text, /*optional*/options) {
-					this.writeLine(tools.format(types.toString(text), types.get(options, 'params')), options);
+					return this.writeLine(tools.format(types.toString(text), types.get(options, 'params')), options);
 				}),
 			}))));
 				

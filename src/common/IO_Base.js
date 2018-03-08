@@ -241,7 +241,8 @@ exports.add = function add(DD_MODULES) {
 								const len = cbChain.length;
 								for (let i = 0; i < len; i++) {
 									try {
-										cbChain[i](err);
+										const cb = cbChain[i];
+										cb(err, this);
 									} catch(ex) {
 										err = ex;
 										failed = true;
@@ -249,7 +250,7 @@ exports.add = function add(DD_MODULES) {
 								};
 							} else if (!types.isNothing(cbChain)) {
 								try {
-									cbChain(err);
+									cbChain(err, this);
 								} catch(ex) {
 									err = ex;
 									failed = true;
@@ -1064,7 +1065,7 @@ exports.add = function add(DD_MODULES) {
 						this.onError.attachOnce(this, errorHandler);
 						this.onDestroy.attachOnce(this, destroyHandler);
 
-						const data = this.write(raw, tools.extend({}, options, {callback: doodad.AsyncCallback(this, function(err) {
+						this.write(raw, tools.extend({}, options, {callback: doodad.AsyncCallback(this, function(err, data) {
 							cleanup.call(this);
 							if (err) {
 								reject(err);
@@ -1118,12 +1119,12 @@ exports.add = function add(DD_MODULES) {
 						this.onError.attachOnce(this, errorHandler);
 						this.onDestroy.attachOnce(this, destroyHandler);
 
-						this.writeText(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err) {
+						this.writeText(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err, data) {
 							cleanup.call(this);
 							if (err) {
 								reject(err);
 							} else {
-								resolve(this);
+								resolve(data);
 							};
 						})}));
 					}, this);
@@ -1155,12 +1156,12 @@ exports.add = function add(DD_MODULES) {
 						this.onError.attachOnce(this, errorHandler);
 						this.onDestroy.attachOnce(this, destroyHandler);
 
-						this.writeLine(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err) {
+						this.writeLine(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err, data) {
 							cleanup.call(this);
 							if (err) {
 								reject(err);
 							} else {
-								resolve(this);
+								resolve(data);
 							};
 						})}));
 					}, this);
