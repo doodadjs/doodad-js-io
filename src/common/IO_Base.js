@@ -1193,12 +1193,12 @@ exports.add = function add(DD_MODULES) {
 						this.onError.attachOnce(this, errorHandler);
 						this.onDestroy.attachOnce(this, destroyHandler);
 
-						this.print(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err) {
+						this.print(text, tools.extend({}, options, {callback: doodad.Callback(this, function(err, data) {
 							cleanup.call(this);
 							if (err) {
 								reject(err);
 							} else {
-								resolve(this);
+								resolve(data);
 							};
 						})}));
 					}, this);
