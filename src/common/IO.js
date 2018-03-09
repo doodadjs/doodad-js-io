@@ -542,7 +542,7 @@ exports.add = function add(DD_MODULES) {
 						
 					html += ('>' + tools.escapeHtml(tools.format(text, types.get(options, 'params'))) + '</' + this.options.printTag + '>');
 						
-					this.writeLine(html);
+					return this.writeLine(html);
 				}),
 					
 				prepareFlushState: doodad.PROTECTED(function prepareFlushState(options) {
