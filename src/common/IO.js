@@ -529,19 +529,21 @@ exports.add = function add(DD_MODULES) {
 						root.DD_ASSERT(types.isString(text), "Invalid text.");
 						root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 					};
-						
+
 					const attrs = types.get(options, 'attrs', null);
-						
-					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(attrs) || types.isString(attrs), "Invalid attributes.");
-						
+
+					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(attrs) || types.isJsObject(attrs), "Invalid attributes.");
+
 					let html = ('<' + this.options.printTag);
 
 					if (attrs) {
-						html += (' ' + tools.trim(attrs));
+						html += tools.reduce(attrs, function(result, value, key) {
+							return result + ' ' + tools.escapeHtml(key, true) + '="' + tools.escapeHtml(value, false) + '"';
+						}, '');
 					};
-						
-					html += ('>' + tools.escapeHtml(tools.format(text, types.get(options, 'params'))) + '</' + this.options.printTag + '>');
-						
+
+					html += ('>' + tools.escapeHtml(tools.format(text, types.get(options, 'params')), true) + '</' + this.options.printTag + '>');
+
 					return this.writeLine(html);
 				}),
 					
@@ -569,12 +571,11 @@ exports.add = function add(DD_MODULES) {
 						html = data[1];
 						state.idented = data[2];
 					} else if (type === state.bufferTypes.Open) {
-						let attrs = data[2];
+						const attrs = data[2];
 						if (attrs) {
-							attrs = tools.trim(attrs);
-						};
-						if (attrs && attrs.length) {
-							html = ('<' + data[1] + ' ' + attrs + '>' + this.options.newLine);
+							html = ('<' + data[1] + tools.reduce(attrs, function(result, value, key) {
+								return result + ' ' + tools.escapeHtml(key, true) + '="' + tools.escapeHtml(value, false) + '"';
+							}, '') + '>' + this.options.newLine);
 						} else {
 							html = ('<' + data[1] + '>' + this.options.newLine);
 						};
@@ -734,7 +735,7 @@ exports.add = function add(DD_MODULES) {
 						
 					if (root.DD_ASSERT) {
 						root.DD_ASSERT(types.isStringAndNotEmptyTrim(tag), "Invalid tag.");
-						root.DD_ASSERT(types.isNothing(attrs) || types.isString(attrs), "Invalid attributes.");
+						root.DD_ASSERT(types.isNothing(attrs) || types.isJsObject(attrs), "Invalid attributes.");
 					};
 
 					const cls = types.getType(this),
@@ -766,7 +767,7 @@ exports.add = function add(DD_MODULES) {
 						
 					if (root.DD_ASSERT) {
 						root.DD_ASSERT(types.isStringAndNotEmptyTrim(tag), "Invalid tag.");
-						root.DD_ASSERT(types.isNothing(attrs) || types.isString(attrs), "Invalid attributes.");
+						root.DD_ASSERT(types.isNothing(attrs) || types.isJsObject(attrs), "Invalid attributes.");
 					};
 
 					this.__tags.push([tag]);
@@ -868,7 +869,7 @@ exports.add = function add(DD_MODULES) {
 			io.REGISTER(io.OutputStream.$extend(
 			{
 				$TYPE_NAME: 'NullOutputStream',
-				$TYPE_UUID: /* REPLACE_BY(TO_SOURCE(UUID('NullOutputStream')), true) */ '' /* END_REPLACE() */,
+				$TYPE_UUID: /*! REPLACE_BY(TO_SOURCE(UUID('NullOutputStream')), true) */ '' /*! END_REPLACE() */,
 					
 				$isValidEncoding: doodad.OVERRIDE(function(encoding) {
 					if (io.Data.$validateEncoding(encoding, true) !== null) {
