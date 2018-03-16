@@ -327,8 +327,9 @@ exports.add = function add(DD_MODULES) {
 						};
 						state.parent = element;
 					} else if (type === state.bufferTypes.Close) {
-						state.parent = state.parent.parentElement;
-						root.DD_ASSERT && root.DD_ASSERT(state.parent);
+						const parent = state.parent.parentElement;
+						root.DD_ASSERT && root.DD_ASSERT(parent, "Parent is missong.");
+						state.parent = parent;
 					} else if (type === state.bufferTypes.Flush) {
 						container = data[2];
 						if (container && !container.parentNode) {
