@@ -47,9 +47,9 @@ const //nodeStreamReadable = nodeStream.Readable,
 	nodeClusterIsMaster = nodeCluster.isMaster;
 
 
-exports.add = function add(DD_MODULES) {
-	DD_MODULES = (DD_MODULES || {});
-	DD_MODULES['Doodad.NodeJs.IO/root'] = {
+exports.add = function add(modules) {
+	modules = (modules || {});
+	modules['Doodad.NodeJs.IO/root'] = {
 		version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE()*/,
 		dependencies: [
 			'Doodad.IO/common',
@@ -919,7 +919,7 @@ exports.add = function add(DD_MODULES) {
 			};
 		},
 	};
-	return DD_MODULES;
+	return modules;
 };
 
 //! END_MODULE()
