@@ -34,9 +34,9 @@ exports.add = function add(modules) {
 	modules['Doodad.Client.IO'] = {
 		version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE()*/,
 		dependencies: [
-			'Doodad.IO/common', 
+			'Doodad.IO/common',
 		],
-			
+
 		create: function create(root, /*optional*/_options, _shared) {
 			//===================================
 			// Get namespaces
@@ -51,7 +51,7 @@ exports.add = function add(modules) {
 				mixIns = doodad.MixIns,
 				io = doodad.IO,
 				ioMixIns = io.MixIns;
-				
+
 
 			//tools.complete(_shared.Natives, {
 			//	windowFile: (types.isFunction(global.File) ? global.File : null),
@@ -63,12 +63,12 @@ exports.add = function add(modules) {
 
 
 			//const __Internal__ = {
-			//	streamsSupported: (_shared.Natives.windowFile && types.isFunction(_shared.Natives.windowFile.prototype.slice)) && 
+			//	streamsSupported: (_shared.Natives.windowFile && types.isFunction(_shared.Natives.windowFile.prototype.slice)) &&
 			//					(_shared.Natives.windowBlob && types.isFunction(_shared.Natives.windowBlob.prototype.slice)) &&
 			//					(_shared.Natives.windowFetch && _shared.Natives.windowHeaders && _shared.Natives.windowFileReader),
 			//};
 
-				
+
 			clientIO.REGISTER(io.TextInputStream.$extend(
 									ioMixIns.KeyboardInput,
 									mixIns.JsEvents,
@@ -77,9 +77,9 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'KeyboardInputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('KeyboardInputStream')), true) */,
-					
+
 				element: doodad.READ_ONLY(null),
-					
+
 				__listening: doodad.PROTECTED(false),
 				__buffer: doodad.PROTECTED(null),
 
@@ -95,7 +95,7 @@ exports.add = function add(modules) {
 						this.element.focus();
 					};
 				})),
-					
+
 				onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT('keydown', function onJsKeyDown(context) {
 					if (this.__listening) {
 						const ev = context.event;
@@ -106,7 +106,7 @@ exports.add = function add(modules) {
 							charCode = ev.charCode;
 
 						const scanCode = ev.keyCode;
-								
+
 						if (ev.shiftKey) {
 							functionKeys |= io.KeyboardFunctionKeys.Shift;
 						};
@@ -119,7 +119,7 @@ exports.add = function add(modules) {
 						if (ev.metaKey) {
 							functionKeys |= io.KeyboardFunctionKeys.Meta;
 						};
-								
+
 						if (!functionKeys) {
 							if (charCode === 0) {
 								// TODO: Fix every other wrong char codes
@@ -146,7 +146,7 @@ exports.add = function add(modules) {
 
 					return undefined;
 				})),
-					
+
 				onJsKeyPress: doodad.PROTECTED(doodad.JS_EVENT('keypress', function onJsKeyPress(context) {
 					if (this.__listening) {
 						const ev = context.event;
@@ -183,10 +183,10 @@ exports.add = function add(modules) {
 
 				destroy: doodad.OVERRIDE(function destroy() {
 					this.stopListening();
-						
+
 					this._super();
 				}),
-					
+
 				isListening: doodad.OVERRIDE(function isListening() {
 					return this.__listening;
 				}),
@@ -212,26 +212,26 @@ exports.add = function add(modules) {
 				}),
 			}));
 
-				
+
 			/* TODO: Complete and Test
 			clientIO.REGISTER(io.HtmlOutputStream.$extend(
 			{
 				$TYPE_NAME: 'DocumentOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('DocumentOutputStream')), true) * /,
-					
+
 				document: doodad.READ_ONLY(null),
-					
+
 				setOptions: doodad.OVERRIDE(function setOptions(options) {
 					types.getDefault(options, 'document', types.getIn(this.options, 'document', global.document)),
 					types.getDefault(options, 'mimeType', types.getIn(this.options, 'mimeType', 'text/html')),
 					types.getDefault(options, 'openNew', types.getIn(this.options, 'openNew', false)),
 					types.getDefault(options, 'replace', types.getIn(this.options, 'replace', false));
-						
+
 					this._super(options);
 
 					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(this.options.mimeType) || types.isString(this.options.mimeType), "Invalid mime type.");
 					root.DD_ASSERT && root.DD_ASSERT(client.isDocument(this.options.document), "Invalid document.");
-						
+
 					if (this.options.openNew) {
 						if (this.options.replace) {
 							this.options.document.open(this.options.mimeType, 'replace');
@@ -247,10 +247,10 @@ exports.add = function add(modules) {
 					if (this.options.openNew) {
 						this.document.close();
 					};
-						
+
 					this._super();
 				}),
-					
+
 				onFlushData: doodad.OVERRIDE(function onFlushData(ev) {
 					const retval = this._super(ev);
 					if (ev.data.raw !== io.EOF) {
@@ -266,43 +266,43 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'DomOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('DomOutputStream')), true) */,
-					
+
 				element: doodad.PUBLIC(doodad.READ_ONLY(null)),
 
 				__div: doodad.PROTECTED(null),
-					
+
 				setOptions: doodad.OVERRIDE(function setOptions(options) {
 					types.getDefault(options, 'element', types.getIn(this.options, 'element', global.document && global.document.body));
-						
+
 					this._super(options);
 
 					root.DD_ASSERT && root.DD_ASSERT(client.isElement(this.options.element), "Invalid element.");
-						
+
 					this.__div = this.options.element.ownerDocument.createElement('div');
-						
+
 					types.setAttribute(this, 'element', this.options.element);
 				}),
-					
+
 				prepareFlushState: doodad.OVERRIDE(function prepareFlushState(options) {
 					const state = this._super(options);
-						
+
 					const element = this.element;
 					root.DD_ASSERT && root.DD_ASSERT(element);
 					state.parent = element;
-						
+
 					return state;
 				}),
-					
+
 				handleBufferData: doodad.SUPER(function handleBufferData(data, state) {
 					let html = this._super(data, state);
-						
+
 					data = data.valueOf();
-						
+
 					const type = data[0];
 
 					let container,
 						element;
-						
+
 					if (type === state.bufferTypes.Html) {
 						container = this.__div;
 						container.innerHTML = html;
@@ -339,15 +339,15 @@ exports.add = function add(modules) {
 							};
 						};
 					};
-						
+
 					return html;
 				}),
 
 				onData: doodad.OVERRIDE(function onData(ev) {
 					const retval = this._super(ev);
-					
+
 					ev.preventDefault();
-					
+
 					return retval;
 				}),
 
@@ -359,13 +359,13 @@ exports.add = function add(modules) {
 
 				openStream: doodad.OVERRIDE(function openStream(/*optional*/options) {
 					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
-						
+
 					options = tools.extend({}, this.options, options);
 
 					const tag = types.get(options, 'tag', null);
 
 					let attrs = types.get(options, 'attrs', null);
-						
+
 					if (root.DD_ASSERT) {
 						root.DD_ASSERT(types.isStringAndNotEmptyTrim(tag), "Invalid tag.");
 						root.DD_ASSERT(types.isNothing(attrs) || types.isString(attrs), "Invalid attributes.");
@@ -380,9 +380,9 @@ exports.add = function add(modules) {
 					} else {
 						container.innerHTML = ('<' + tag + '></' + tag + '>' + this.options.newLine);
 					};
-						
+
 					options.element = client.getFirstElement(container);
-						
+
 					container.innerHTML = '';
 
 					return this._super(tools.extend({}, options, {noOpenClose: true}));
@@ -390,33 +390,33 @@ exports.add = function add(modules) {
 
 				openElement: doodad.OVERRIDE(function openElement(/*optional*/options) {
 					this._super(options);
-						
+
 					const tags = this.__tags;
 					tags[tags.length - 1][1] = this.element;
 				}),
 
 				closeElement: doodad.OVERRIDE(function closeElement() {
 					const tags = this.__tags;
-						
+
 					root.DD_ASSERT && root.DD_ASSERT((tags.length > 0), "No more elements opened.");
-						
+
 					const tag = tags[tags.length - 1],
 						element = tag[1];
 
 					this._super();
-						
+
 					types.setAttribute(this, 'element', element);
 				}),
 
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
-						
+
 					types.setAttribute(this, 'element', this.options.element);
 				}),
 
 				clear: doodad.OVERRIDE(function clear() {
 					this._super();
-						
+
 					if (this.element) {
 						this.element.innerHTML = '';
 					};
@@ -430,12 +430,12 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'FileInputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('FileInputStream')), true) * /,
-					
+
 				__listening: doodad.PROTECTED(false),
 				__file: doodad.PROTECTED(null),
 				__fileReader: doodad.PROTECTED(null),
 				__fileOffset: doodad.PROTECTED(null),
-					
+
 				__buffer: doodad.PROTECTED(null),
 
 				create: doodad.OVERRIDE(function create(file, /*optional* /options) {
@@ -446,7 +446,7 @@ exports.add = function add(modules) {
 					if (root.DD_ASSERT) {
 						root.DD_ASSERT((file instanceof _shared.Natives.windowFile) || (file instanceof _shared.Natives.windowBlob), "Invalid file or blob object.");
 					};
-						
+
 					this._super(options);
 
 					this.__file = file;
@@ -459,29 +459,29 @@ exports.add = function add(modules) {
 
 					root.DD_ASSERT && root.DD_ASSERT(types.isInteger(this.options.chunkSize), "Invalid chunk size.");
 				}),
-					
+
 				destroy: doodad.OVERRIDE(function destroy() {
 					this.stopListening();
-						
+
 					if (this.__file) {
 						this.__file.close();
 						this.__file = null;
 					};
-						
+
 					this._super();
 				}),
-					
+
 				onJsLoadEnd: doodad.PROTECTED(doodad.JS_EVENT('loadend', function onJsLoadEnd(ev) {
 					if (this.__fileReader.error) {
 						this.onError(new doodad.ErrorEvent(this.__fileReader.error));
-							
+
 					} else {
 						this.push(new io.BinaryData(this.__fileReader.result));
-							
+
 						const encoding = types.get(this.options, 'encoding', null);
 
 						this.__fileOffset += ev.loaded;
-							
+
 						const remaining = this.__file.size - this.__fileOffset,
 							end = this.__fileOffset + Math.min(this.options.chunkSize, remaining);
 
@@ -492,13 +492,13 @@ exports.add = function add(modules) {
 							} else {
 								this.__fileReader.readAsArrayBuffer(this.__file.slice(this.__fileOffset, end));
 							};
-								
+
 						} else {
 							this.push(new io.Data(io.EOF));
 						};
 					};
 				})),
-					
+
 				isListening: doodad.OVERRIDE(function isListening() {
 					return this.__listening;
 				}),
@@ -526,7 +526,7 @@ exports.add = function add(modules) {
 						this.onListen(new doodad.Event());
 					};
 				}),
-					
+
 				stopListening: doodad.OVERRIDE(function stopListening(/*optional* /options) {
 					if (this.__listening) {
 						this.__listening = false;
@@ -538,7 +538,7 @@ exports.add = function add(modules) {
 					};
 				}),
 			}));
-				
+
 			files.ADD('openFile', function openFile(url, /*optional* /options) {
 				if (!__Internal__.streamsSupported) {
 					throw new types.NotSupported("Streams are not supported.");

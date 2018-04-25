@@ -47,7 +47,7 @@ exports.add = function add(modules) {
 				ioInterfaces = io.Interfaces,
 				extenders = doodad.Extenders;
 
-					
+
 			tools.complete(_shared.Natives, {
 				consoleInfo: (global.console.info ? global.console.info.bind(global.console) : null),
 				consoleWarn: (global.console.warn ? global.console.warn.bind(global.console) : null),
@@ -56,7 +56,7 @@ exports.add = function add(modules) {
 				consoleLog: global.console.log.bind(global.console),
 			});
 
-					
+
 			const __Internal__ = {
 				stdin: null,
 				stdout: null,
@@ -66,14 +66,14 @@ exports.add = function add(modules) {
 			//=========================================
 			// Enums
 			//=========================================
-					
+
 			io.ADD('KeyboardFunctionKeys', types.freezeObject(tools.nullObject({
 				Shift: 1,
 				Ctrl: 2,
 				Alt: 4,
 				Meta: 8,
 			})));
-				
+
 			// Source: http://www.cambiaresearch.com/articles/15/javascript-char-codes-key-codes
 			io.ADD('KeyboardScanCodes', types.freezeObject(tools.nullObject({
 				Backspace: 8,
@@ -175,11 +175,11 @@ exports.add = function add(modules) {
 				CloseBraket: 221,
 				SingleQuote: 222,
 			})));
-				
+
 			//=====================================================
 			// Interfaces (continued)
 			//=====================================================
-				
+
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
 			{
 				$TYPE_NAME: 'NestedStream',
@@ -187,44 +187,44 @@ exports.add = function add(modules) {
 
 				openStream: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function openStream(/*optional*/options)
 			})));
-					
+
 			//=====================================================
 			// Basic implementations (continued)
 			//=====================================================
-				
+
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.TextInputStreamBase.$extend(
 								ioMixIns.TextTransformableOut,
 			{
 				$TYPE_NAME: 'TextInputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamMixInBase')), true) */,
-					
+
 				// Non-formatted text
 				readText: doodad.OVERRIDE(function readText(/*optional*/options) {
 					// TODO: Test
 					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
 					let text = '';
-						
+
 					let data;
-					
+
 					/* eslint no-cond-assign: "off" */
 					while (data = this.read(options)) {
 						text += types.toString(data);
 					};
-						
+
 					return text || null;
 				}),
-					
+
 				// Non-formatted text + newline
 				readLine: doodad.OVERRIDE(function readLine(/*optional*/options) {
 					// TODO: Test
 					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
 					let line = '';
-						
+
 					if (this.options.newLine) {
 						let ok = false;
-							
+
 						while (this.getCount() > 0) {
 							const data = this.pull(options);
 
@@ -245,33 +245,33 @@ exports.add = function add(modules) {
 									this.push(new io.TextData(remaining), {next: true});
 								};
 
-								ok = true;	
+								ok = true;
 								break;
 							};
 						};
-							
+
 						if (!ok && line) {
 							this.push(new io.TextData(line), {next: true});
 							line = null;
 						};
 					};
-						
+
 					return line || null;
 				}),
 			}))));
 
-				
+
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.TextOutputStreamBase.$extend(
 								ioMixIns.TextTransformableIn,
 			{
 				$TYPE_NAME: 'TextOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamMixInBase')), true) */,
-					
+
 				// Non-formatted text
 				writeText: doodad.OVERRIDE(function writeText(text, /*optional*/options) {
 					return this.write(types.toString(text), options);
 				}),
-					
+
 				// Non-formatted text + newline
 				writeLine: doodad.OVERRIDE(function writeLine(text, /*optional*/options) {
 					if (types.isNothing(text)) {
@@ -279,25 +279,25 @@ exports.add = function add(modules) {
 					};
 					return this.writeText(types.toString(text) + this.options.newLine, options);
 				}),
-					
+
 				// Formatted text + newline
 				print: doodad.OVERRIDE(function print(text, /*optional*/options) {
 					return this.writeLine(tools.format(types.toString(text), types.get(options, 'params')), options);
 				}),
 			}))));
-				
+
 
 			//=====================================================
 			// Complete implementations
 			//=====================================================
-				
+
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.InputStream.$extend(
 								ioMixIns.TextInputStream,
 			{
 				$TYPE_NAME: 'TextInput',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputMixIn')), true) */,
 			})));
-				
+
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextInput.$extend(
 			{
 				$TYPE_NAME: 'KeyboardInput',
@@ -343,14 +343,14 @@ exports.add = function add(modules) {
 				$TYPE_NAME: 'OutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamBase')), true) */,
 			})));
-				
+
 			io.REGISTER(doodad.BASE(io.Stream.$extend(
 								ioMixIns.BufferedOutputStream,
 			{
 				$TYPE_NAME: 'BufferedOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedOutputStreamBase')), true) */,
 			})));
-				
+
 			io.REGISTER(doodad.BASE(io.InputStream.$extend(
 								ioMixIns.TextInput,
 			{
@@ -371,7 +371,7 @@ exports.add = function add(modules) {
 				$TYPE_NAME: 'TextOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamBase')), true) */,
 			})));
-				
+
 			io.REGISTER(doodad.BASE(io.BufferedOutputStream.$extend(
 								ioMixIns.TextOutput,
 			{
@@ -392,7 +392,7 @@ exports.add = function add(modules) {
 				$TYPE_NAME: 'BufferedInputOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputOutputStreamBase')), true) */,
 			})));
-				
+
 			// TODO: Complete when needed
 			//io.REGISTER(doodad.BASE(io.InputOutputStream.$extend(
 			//					ioMixIns.TextInput,
@@ -440,7 +440,7 @@ exports.add = function add(modules) {
 					},
 				}
 			));
-				
+
 			io.REGISTER(io.BufferedTextOutputStream.$extend(
 								ioMixIns.NestedStream,
 								ioMixIns.TextTransformableIn,
@@ -448,21 +448,21 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'HtmlOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('HtmlOutputStream')), true) */,
-					
+
 				__tags: doodad.PROTECTED(null),
-					
+
 				$__bufferTypes: doodad.TYPE(doodad.ATTRIBUTE(__Internal__.BufferTypes, extenders.ExtendObject, {maxDepth: 0})),
 
 				create: doodad.OVERRIDE(function create(/*optional*/options) {
 					this._super(options);
-						
+
 					this.__tags = [];
 				}),
-					
+
 				setOptions: doodad.OVERRIDE(function setOptions(options) {
 					types.getDefault(options, 'printTag', types.getIn(this.options, 'printTag', 'div'));
 					types.getDefault(options, 'identStr', types.getIn(this.options, 'identStr', '\t'));
-						
+
 					this._super(options);
 
 					if (root.DD_ASSERT) {
@@ -470,7 +470,7 @@ exports.add = function add(modules) {
 						root.DD_ASSERT(types.isNothing(this.options.identStr) || types.isString(this.options.identStr), "Invalid indentation string.");
 					};
 				}),
-					
+
 				__submitInternal: doodad.OVERRIDE(function __submitInternal(data, /*optional*/options) {
 					const next = types.get(options, 'next', false),
 						buffer = this.__buffer;
@@ -480,13 +480,13 @@ exports.add = function add(modules) {
 
 						const cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes;
-							
+
 						let newData = null;
 
 						if (next) {
 							const firstItem = buffer[0],
 								itemValue = firstItem && firstItem.valueOf();
-									
+
 							if (!firstItem || (itemValue[0] !== bufferTypes.Html)) {
 								newData = new io.HtmlData([bufferTypes.Html, value, false]);
 								buffer.unshift(newData);
@@ -496,7 +496,7 @@ exports.add = function add(modules) {
 						} else {
 							const lastItem = buffer[buffer.length - 1],
 								itemValue = lastItem && lastItem.valueOf();
-									
+
 							if (!lastItem || (itemValue[0] !== bufferTypes.Html)) {
 								newData = new io.HtmlData([bufferTypes.Html, value, false]);
 								buffer.push(newData);
@@ -546,7 +546,7 @@ exports.add = function add(modules) {
 
 					return this.writeLine(html);
 				}),
-					
+
 				prepareFlushState: doodad.PROTECTED(function prepareFlushState(options) {
 					return {
 						html: '',
@@ -559,14 +559,14 @@ exports.add = function add(modules) {
 						idented: false,
 					};
 				}),
-					
+
 				handleBufferData: doodad.PROTECTED(doodad.JS_METHOD(function handleBufferData(data, state) {
 					data = data.raw;
-						
+
 					const type = data[0];
 
 					let html = null;
-						
+
 					if (type === state.bufferTypes.Html) {
 						html = data[1];
 						state.idented = data[2];
@@ -597,13 +597,13 @@ exports.add = function add(modules) {
 					} else if (type === state.bufferTypes.Flush) {
 						state.ignoreClose = true;
 					};
-						
+
 					return html;
 				})),
-					
+
 				flush: doodad.OVERRIDE(function flush(/*optional*/options) {
 					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
-						
+
 					const state = this.prepareFlushState(options),
 						buffer = this.__buffer,
 						bufferLen = buffer.length,
@@ -617,7 +617,7 @@ exports.add = function add(modules) {
 						line,
 						data,
 						type;
-							
+
 					if (state.flushElement) {
 						// NOTE: This will shrink the buffer
 						state.identCount = this.__tags.length - 1;
@@ -642,13 +642,13 @@ exports.add = function add(modules) {
 					} else {
 						root.DD_ASSERT && root.DD_ASSERT((this.__tags.length === 0), "Some elements have not been closed.");
 					};
-						
+
 					for (let i = bufferStart; i < bufferLen; i++) {
 						const html = this.handleBufferData(buffer[i], state);
-							
+
 						if (html) {
 							root.DD_ASSERT && root.DD_ASSERT(types.isString(html), "Invalid html.");
-								
+
 							if (state.idented) {
 								state.idented = false;
 								state.html += html;
@@ -675,7 +675,7 @@ exports.add = function add(modules) {
 							};
 						};
 					};
-						
+
 					if (state.flushElementChunk && (bufferStart < bufferLen)) {
 						// Replace everything after the "Open" chunk by the "Flush" chunk.
 						state.flushElementChunk[1] = state.html;
@@ -694,20 +694,20 @@ exports.add = function add(modules) {
 						if (callback) {
 							callback(null);
 						};
-							
+
 						this.onFlush();
 
 						this.overrideSuper();
-							
+
 					} else {
 						this._super(options);
 					};
 				}),
-					
+
 				__streamOnData: doodad.PROTECTED(function __streamOnData(ev) {
 					if (!ev.data.options.flushElement) {
 						const streamData = ev.handlerData[0];
-								
+
 						if (!streamData.consumed) {
 							const cls = types.getType(this),
 								bufferTypes = cls.$__bufferTypes,
@@ -724,15 +724,15 @@ exports.add = function add(modules) {
 						};
 					};
 				}),
-					
+
 				openStream: doodad.OVERRIDE(function openStream(/*optional*/options) {
 					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
-						
+
 					options = tools.extend({}, this.options, options);
-						
+
 					const tag = types.get(options, 'tag', null),
 						attrs = types.get(options, 'attrs', null);
-						
+
 					if (root.DD_ASSERT) {
 						root.DD_ASSERT(types.isStringAndNotEmptyTrim(tag), "Invalid tag.");
 						root.DD_ASSERT(types.isNothing(attrs) || types.isJsObject(attrs), "Invalid attributes.");
@@ -741,9 +741,9 @@ exports.add = function add(modules) {
 					const cls = types.getType(this),
 						bufferTypes = cls.$__bufferTypes,
 						stream = cls.$createInstance(options);
-							
+
 					const noOpenClose = types.get(options, 'noOpenClose', false);
-						
+
 					!noOpenClose && this.submit(new io.HtmlData([bufferTypes.Open, tag, attrs]));
 
 					const streamData = new io.HtmlData([bufferTypes.Stream, stream]); // <--- Will get replaced on flush
@@ -751,47 +751,47 @@ exports.add = function add(modules) {
 					this.submit(streamData);
 
 					!noOpenClose && this.submit(new io.HtmlData([bufferTypes.Close, tag]));
-						
+
 					stream.onData.attach(this, this.__streamOnData, 50, [streamData]);
 
 					return stream;
 				}),
-					
+
 				openElement: doodad.PUBLIC(function openElement(/*optional*/options) {
 					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
-						
+
 					options = tools.extend({}, this.options, options);
 
 					const tag = types.get(options, 'tag', null),
 						attrs = types.get(options, 'attrs', null);
-						
+
 					if (root.DD_ASSERT) {
 						root.DD_ASSERT(types.isStringAndNotEmptyTrim(tag), "Invalid tag.");
 						root.DD_ASSERT(types.isNothing(attrs) || types.isJsObject(attrs), "Invalid attributes.");
 					};
 
 					this.__tags.push([tag]);
-						
+
 					const cls = types.getType(this),
 						bufferTypes = cls.$__bufferTypes;
-						
+
 					this.submit(new io.HtmlData([bufferTypes.Open, tag, attrs]));
 				}),
-					
+
 				closeElement: doodad.PUBLIC(function closeElement() {
 					const tags = this.__tags;
-						
+
 					root.DD_ASSERT && root.DD_ASSERT((tags.length > 0), "No more elements opened.");
-						
+
 					const cls = types.getType(this),
 						bufferTypes = cls.$__bufferTypes;
-						
+
 					this.submit(new io.HtmlData([bufferTypes.Close, tags.pop()[0]]));
 				}),
-					
+
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
-						
+
 					this.__tags = [];
 				}),
 			}));
@@ -804,14 +804,14 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'ConsoleOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ConsoleOutputStream')), true) */,
-					
+
 				__fn: doodad.PROTECTED(null),
-					
+
 				create: doodad.OVERRIDE(function create(/*optional*/options) {
 					this._super(options);
-						
+
 					const name = types.get(this.options, 'name');
-						
+
 					if ((name === 'info') && _shared.Natives.consoleInfo) {
 						this.__fn = 'info';
 					} else if ((name === 'warn') && _shared.Natives.consoleWarn) {
@@ -862,15 +862,15 @@ exports.add = function add(modules) {
 				error: doodad.OVERRIDE(ioInterfaces.IConsole, function error(raw, /*optional*/options) {
 					(_shared.Natives.consoleError || _shared.Natives.consoleException || _shared.Natives.consoleLog)(raw);
 				}),
-					
+
 			}));
-				
-				
+
+
 			io.REGISTER(io.OutputStream.$extend(
 			{
 				$TYPE_NAME: 'NullOutputStream',
 				$TYPE_UUID: /*! REPLACE_BY(TO_SOURCE(UUID('NullOutputStream')), true) */ '' /*! END_REPLACE() */,
-					
+
 				$isValidEncoding: doodad.OVERRIDE(function(encoding) {
 					if (io.Data.$validateEncoding(encoding, true) !== null) {
 						this.overrideSuper();
@@ -893,8 +893,8 @@ exports.add = function add(modules) {
 					return null;
 				}),
 			}));
-				
-				
+
+
 			io.REGISTER(io.TextOutputStream.$extend(
 			{
 				$TYPE_NAME: 'NullTextOutputStream',
@@ -922,8 +922,8 @@ exports.add = function add(modules) {
 					return null;
 				}),
 			}));
-				
-				
+
+
 			io.REGISTER(io.TextOutputStream.$extend(
 								ioMixIns.TextTransformableIn,
 								ioMixIns.TextTransformableOut,
@@ -932,7 +932,7 @@ exports.add = function add(modules) {
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextDecoderStreamNodeJs')), true) */,
 			}));
 
-				
+
 			io.ADD('setStds', function setStds(stds) {
 				if (types.has(stds, 'stdin')) {
 					doodad.ASSERT && doodad.ASSERT(types._implements(stds.stdin, ioMixIns.InputStream), "");
@@ -980,8 +980,8 @@ exports.add = function add(modules) {
 				io.stdout = null;
 				io.stderr = null;
 			};
-					
-					
+
+
 			//===================================
 			// Init
 			//===================================
@@ -991,7 +991,7 @@ exports.add = function add(modules) {
 					stdout: (new io.ConsoleOutputStream({name: 'log'})),
 					stderr: (new io.ConsoleOutputStream({name: 'error'})),
 				});
-					
+
 				_shared.consoleHook = function consoleHook(level, message) {
 					// NOTE: Every "std" must be a stream.
 					if ((level === tools.LogLevels.Warning) || (level === tools.LogLevels.Error)) {

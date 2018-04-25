@@ -54,7 +54,7 @@ exports.add = function add(modules) {
 		dependencies: [
 			'Doodad.IO/common',
 		],
-			
+
 		create: function create(root, /*optional*/_options, _shared) {
 			const doodad = root.Doodad,
 				types = doodad.Types,
@@ -69,7 +69,7 @@ exports.add = function add(modules) {
 				nodejsIO = nodejs.IO,
 				//nodejsIOMixIns = nodejsIO.MixIns,
 				nodejsIOInterfaces = nodejsIO.Interfaces;
-					
+
 
 			const __Internal__ = {
 			};
@@ -79,7 +79,7 @@ exports.add = function add(modules) {
 				windowUnescape: global.unescape,
 				globalBuffer: global.Buffer,
 			});
-				
+
 
 			//=====================================================
 			// Stream objects
@@ -125,7 +125,7 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'BinaryInputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryInputStreamNodeJs')), true) */,
-					
+
 				__ended: doodad.PROTECTED(false),
 				__waiting: doodad.PROTECTED(false),
 				__listening: doodad.PROTECTED(false),
@@ -171,7 +171,7 @@ exports.add = function add(modules) {
 						data.chain(__pushCb);
 					};
 				}),
-					
+
 				streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
 					this.__ended = true;
 					if (!this.__waiting) {
@@ -229,7 +229,7 @@ exports.add = function add(modules) {
 						// Do nothing !
 					};
 				}),
-					
+
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
 
@@ -241,17 +241,17 @@ exports.add = function add(modules) {
 					const host = this[doodad.HostSymbol];
 					return host.stream._read(size);
 				}),
-					
+
 				push: doodad.REPLACE(nodejsIOInterfaces.IReadable, function push(chunk, /*optional*/encoding) {
 					const host = this[doodad.HostSymbol];
 					return host.stream.push(chunk, encoding || this.__defaultEncoding);
 				}),
-					
+
 				unshift: doodad.REPLACE(nodejsIOInterfaces.IReadable, function unshift(chunk) {
 					const host = this[doodad.HostSymbol];
 					return host.stream.unshift(chunk);
 				}),
-					
+
 				wrap: doodad.REPLACE(nodejsIOInterfaces.IReadable, function wrap(stream) {
 					const host = this[doodad.HostSymbol];
 					return host.stream.wrap(stream);
@@ -264,15 +264,15 @@ exports.add = function add(modules) {
 				listen: doodad.REPLACE(function listen(/*optional*/options) {
 					if (!this.__listening) {
 						this.__listening = true;
-							
+
 						if (!this.__waiting) {
 							const stream = this.stream;
-							
+
 							this.streamOnData.attach(stream);
 							this.streamOnEnd.attach(stream);
 							//this.streamOnClose.attach(stream);
 							//this.streamOnError.attach(stream);
-							
+
 							stream.resume();
 
 							this.onListen();
@@ -283,13 +283,13 @@ exports.add = function add(modules) {
 				stopListening: doodad.REPLACE(function stopListening() {
 					if (this.__listening) {
 						this.__listening = false;
-							
+
 						if (!this.__waiting) {
 							this.streamOnData.clear();
 							this.streamOnEnd.clear();
 							//this.streamOnClose.clear();
 							//this.streamOnError.clear();
-							
+
 							this.stream.pause();
 
 							this.onStopListening();
@@ -297,8 +297,8 @@ exports.add = function add(modules) {
 					};
 				}),
 			}));
-				
-				
+
+
 			nodejsIO.REGISTER(nodejsIO.BinaryInputStream.$extend(
 							ioMixIns.TextInput,
 							ioMixIns.TextTransformableOut,
@@ -327,8 +327,8 @@ exports.add = function add(modules) {
 
 				}),
 			}));
-				
-				
+
+
 			nodejsIO.REGISTER(io.OutputStream.$extend(
 							__Internal__.__NodeJsStream,
 							ioMixIns.BinaryTransformableIn,
@@ -336,9 +336,9 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'BinaryOutputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryOutputStreamNodeJs')), true) */,
-					
+
 				stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
-					
+
 				__lastWriteOk: doodad.PROTECTED(true),
 				__finished: doodad.PROTECTED(false),
 
@@ -361,7 +361,7 @@ exports.add = function add(modules) {
 					// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
 					this.streamOnPipeDrain(context);
 				}),
-					
+
 				streamOnPipeClose: doodad.NODE_EVENT('close', function streamOnPipeClose(context) {
 					// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
 					this.streamOnPipeFinish(context);
@@ -378,7 +378,7 @@ exports.add = function add(modules) {
 
 					context.data.consume();
 				}),
-					
+
 				streamOnFinish: doodad.NODE_EVENT('finish', function streamOnFinish(context) {
 					// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
 					this.streamOnDrain(context);
@@ -389,7 +389,7 @@ exports.add = function add(modules) {
 					const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
 					iwritable.onfinish();
 				}),
-					
+
 				streamOnClose: doodad.OVERRIDE(function streamOnClose(context) {
 					this._super(context);
 
@@ -401,16 +401,16 @@ exports.add = function add(modules) {
 				create: doodad.OVERRIDE(function create(stream, /*optional*/options) {
 					// FIXME: Figure out the object model of NodeJS to make the assertion because it fails with an http.ServerResponse object
 					//root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamWritable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
-						
+
 					this._super(stream, options);
 
 					this.streamOnFinish.attach(stream);
 				}),
-					
+
 				destroy: doodad.OVERRIDE(function destroy() {
 					this.streamOnFinish.clear();
 					this.streamOnDrain.clear();
-						
+
 					this.streamOnPipeDrain.clear();
 					this.streamOnPipeFinish.clear();
 					this.streamOnPipeClose.clear();
@@ -425,7 +425,7 @@ exports.add = function add(modules) {
 					this.__lastWriteOk = true;
 					this.__finished = false;
 				}),
-					
+
 				canWrite: doodad.REPLACE(function canWrite() {
 					return this.__lastWriteOk && !this.__finished;
 				}),
@@ -500,15 +500,15 @@ exports.add = function add(modules) {
 					const host = this[doodad.HostSymbol];
 					host.stream.cork();
 				}),
-					
+
 				uncork: doodad.REPLACE(nodejsIOInterfaces.IWritable, function uncork() {
 					const host = this[doodad.HostSymbol];
 					host.stream.uncork();
 				}),
 
 			}));
-				
-				
+
+
 			nodejsIO.REGISTER(nodejsIO.BinaryOutputStream.$extend(
 							ioMixIns.TextOutput,
 							ioMixIns.TextTransformableIn,
@@ -534,7 +534,7 @@ exports.add = function add(modules) {
 					};
 				}),
 			}));
-				
+
 
 			nodejsIO.REGISTER(io.InputOutputStream.$extend(
 							nodejsIO.BinaryInputStream,
@@ -593,7 +593,7 @@ exports.add = function add(modules) {
 
 				clear: doodad.OVERRIDE(function clear() {
 				}),
-					
+
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
 
@@ -644,9 +644,9 @@ exports.add = function add(modules) {
 
 							// TODO: Transform
 							const section = {
-								mode: mode, 
-								Modes: Modes, 
-								text: value, 
+								mode: mode,
+								Modes: Modes,
+								text: value,
 								valueOf: function valueOf() {
 									return this.text;
 								},
@@ -668,9 +668,9 @@ exports.add = function add(modules) {
 					if (eof) {
 						if (remaining) {
 							const section = {
-								mode: this.__mode, 
-								Modes: Modes, 
-								text: decode(remaining), 
+								mode: this.__mode,
+								Modes: Modes,
+								text: decode(remaining),
 							};
 							this.submit(new io.Data(section), {callback: data.defer()});
 						};
@@ -750,14 +750,14 @@ exports.add = function add(modules) {
 
 				setOptions: doodad.OVERRIDE(function setOptions(options) {
 					this._super(options);
-					
+
 					if (!this.options.boundary) {
 						throw new types.Error("The 'boundary' option is required.");
 					};
-						
+
 					this.__boundary = _shared.Natives.globalBuffer.from('--' + types.toString(this.options.boundary), 'binary');
 				}),
-					
+
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
 
@@ -881,13 +881,13 @@ exports.add = function add(modules) {
 				const Promise = types.getPromise();
 				return Promise.try(function() {
 					path = files.parseLocation(path);
-					
+
 					if (path instanceof files.Url) {
 						path = files.Path.parse(path);
 					};
-					
+
 					path = path.toString();
-					
+
 					const encoding = types.get(options, 'encoding');
 					const nodeStream = nodeFsCreateReadStream(path, {autoClose: true});
 

@@ -47,7 +47,7 @@ exports.add = function add(modules) {
 
 			const __Internal__ = {
 			};
-				
+
 			tools.complete(_shared.Natives, {
 				windowUint8Array: global.Uint8Array,
 			});
@@ -62,19 +62,19 @@ exports.add = function add(modules) {
 					return '';
 				}),
 			}));
-					
+
 			io.REGISTER(types.SINGLETON(io.Signal.$extend(
 			{
 				$TYPE_NAME: 'BOF',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BOFSingleton')), true) */,
 			})));
-					
+
 			io.REGISTER(types.SINGLETON(io.Signal.$extend(
 			{
 				$TYPE_NAME: 'EOF',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('EOFSingleton')), true) */,
 			})));
-				
+
 
 			//=========================================
 			// Data objects
@@ -327,7 +327,7 @@ exports.add = function add(modules) {
 					},
 				}
 			));
-				
+
 
 			io.REGISTER(io.Data.$inherit(
 				/*typeProto*/
@@ -385,12 +385,12 @@ exports.add = function add(modules) {
 					},
 				}
 			));
-				
+
 
 			//=====================================================
 			// Interfaces
 			//=====================================================
-				
+
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(doodad.Class.$extend(
 			{
 				$TYPE_NAME: 'TransformableBase',
@@ -402,28 +402,28 @@ exports.add = function add(modules) {
 				transformIn: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function transformIn(raw, /*optional*/options)
 				transformOut: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function transformOut(data, /*optional*/options)
 			}))));
-				
+
 
 			ioMixIns.REGISTER(doodad.MIX_IN(doodad.Class.$extend(
 								mixIns.Events,
 			{
 				$TYPE_NAME: 'Listener',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ListenerMixIn')), true) */,
-					
+
 				onListen: doodad.EVENT(), // function(ev)
 				onStopListening: doodad.EVENT(), // function(ev)
-					
+
 				isListening: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
 				listen: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 				stopListening: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function()
 			})));
-				
+
 
 			ioInterfaces.REGISTER(doodad.ISOLATED(doodad.INTERFACE(doodad.Class.$extend(
 			{
 				$TYPE_NAME: 'IConsole',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('IConsoleIsolated')), true) */,
-					
+
 				info: doodad.PUBLIC(doodad.METHOD()), //function info(raw, /*optional*/options)
 				warn: doodad.PUBLIC(doodad.METHOD()), //function warn(raw, /*optional*/options)
 				error: doodad.PUBLIC(doodad.METHOD()), //function error(raw, /*optional*/options)
@@ -440,16 +440,16 @@ exports.add = function add(modules) {
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamBaseMixIn')), true) */,
 
 				options: doodad.PUBLIC(doodad.READ_ONLY(null)),
-					
+
 				onError: doodad.ERROR_EVENT(), // function onError(ev)
 				onBOF: doodad.EVENT(false), // function(ev)
 				onEOF: doodad.EVENT(false), // function(ev)
 
 				create: doodad.OVERRIDE(function create(/*optional*/options) {
 					this._super();
-						
+
 					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isJsObject(options), "Invalid options.");
-						
+
 					if (types.isNothing(options)) {
 						this.setOptions({});
 					} else {
@@ -466,7 +466,7 @@ exports.add = function add(modules) {
 
 					types.setAttribute(this, 'options', types.freezeObject(tools.nullObject(this.options, options)));
 				}),
-					
+
 				consumeData: doodad.PUBLIC(function consumeData(data, /*optional*/err) {
 					if (err) {
 						if (types.isEntrant(this, 'onError')) {
@@ -487,7 +487,7 @@ exports.add = function add(modules) {
 				pipe: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(stream, /*optional*/transform)
 				unpipe: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/stream)
 			}))));
-				
+
 
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 			{
@@ -517,16 +517,16 @@ exports.add = function add(modules) {
 
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
-						
+
 					this.clearBuffer();
 				}),
-					
+
 				clear: doodad.OVERRIDE(function clear() {
 					this._super();
 
 					this.clearBuffer();
 				}),
-					
+
 				getCount: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function getCount()
 
 				flush: doodad.PUBLIC(doodad.CALL_FIRST(doodad.MUST_OVERRIDE(function flush(/*optional*/options) {
@@ -670,7 +670,7 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'TextStreamBase',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextStreamBaseMixIn')), true) */,
-					
+
 				setOptions: doodad.OVERRIDE(function setOptions(options) {
 					types.getDefault(options, 'newLine', types.getIn(this.options, 'newLine', tools.getOS().newLine));
 					types.getDefault(options, 'encoding', types.getIn(this.options, 'encoding', 'utf-8'));
@@ -678,12 +678,12 @@ exports.add = function add(modules) {
 					options.encoding = io.TextData.$validateEncoding(options.encoding, false);
 
 					this._super(options);
-						
+
 					root.DD_ASSERT && root.DD_ASSERT(types.isString(this.options.newLine), "Invalid new line string.");
 				}),
 
 			})));
-				
+
 
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 								ioMixIns.Listener,
@@ -781,7 +781,7 @@ exports.add = function add(modules) {
 
 					return value;
 				}),
-					
+
 				readAsync: doodad.PUBLIC(doodad.ASYNC(function readAsync(/*optional*/options) {
 					//const Promise = types.getPromise();
 					const result = this.read(options);
@@ -797,20 +797,20 @@ exports.add = function add(modules) {
 					};
 				})),
 			}))));
-				
-				
+
+
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.InputStreamBase.$extend(
 								ioMixIns.TextStreamBase,
 			{
 				$TYPE_NAME: 'TextInputStreamBase',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamBaseMixIn')), true) */,
-					
+
 				// Non-formatted text
 				readText: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
-					
+
 				// Non-formatted text + newline
 				readLine: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
-					
+
 				readTextAsync: doodad.PUBLIC(doodad.ASYNC(function readTextAsync(/*optional*/options) {
 					//const Promise = types.getPromise();
 					const result = this.readText(options);
@@ -824,7 +824,7 @@ exports.add = function add(modules) {
 					};
 					return undefined;
 				})),
-						
+
 				readLineAsync: doodad.PUBLIC(doodad.ASYNC(function readLineAsync(/*optional*/options) {
 					//const Promise = types.getPromise();
 					const result = this.readLine(options);
@@ -839,7 +839,7 @@ exports.add = function add(modules) {
 					return undefined;
 				})),
 			}))));
-				
+
 			__Internal__.__OutputBase = types.INIT(doodad.MIX_IN(doodad.Class.$extend(
 			{
 				$TYPE_NAME: '__OutputBase',
@@ -864,7 +864,7 @@ exports.add = function add(modules) {
 					return this._super(raw, options);
 				}))),
 			})));
-				
+
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 								__Internal__.__OutputBase,
 			{
@@ -1038,7 +1038,7 @@ exports.add = function add(modules) {
 
 					return data;
 				}),
-					
+
 				writeAsync: doodad.PUBLIC(doodad.ASYNC(function writeAsync(raw, /*optional*/options) {
 					const Promise = types.getPromise();
 
@@ -1077,22 +1077,22 @@ exports.add = function add(modules) {
 				})),
 
 			}))));
-				
+
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.OutputStreamBase.$extend(
 								ioMixIns.TextStreamBase,
 			{
 				$TYPE_NAME: 'TextOutputStreamBase',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamBaseMixIn')), true) */,
-					
+
 				// Non-formatted text
 				writeText: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(text, /*optional*/options)
-					
+
 				// Non-formatted text + newline
 				writeLine: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(text, /*optional*/options)
-					
+
 				// Formatted text + newline
 				print: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(text, /*optional*/options)
-					
+
 				writeTextAsync: doodad.PUBLIC(doodad.ASYNC(function writeTextAsync(text, /*optional*/options) {
 					const Promise = types.getPromise();
 
@@ -1129,7 +1129,7 @@ exports.add = function add(modules) {
 						})}));
 					}, this);
 				})),
-					
+
 				writeLineAsync: doodad.PUBLIC(doodad.ASYNC(function writeLineAsync(text, /*optional*/options) {
 					const Promise = types.getPromise();
 
@@ -1166,7 +1166,7 @@ exports.add = function add(modules) {
 						})}));
 					}, this);
 				})),
-					
+
 				printAsync: doodad.PUBLIC(doodad.ASYNC(function printAsync(text, /*optional*/options) {
 					const Promise = types.getPromise();
 
@@ -1258,11 +1258,11 @@ exports.add = function add(modules) {
 
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
-						
+
 					this.__flushing = false;
 					this.__flushPurge = false;
 				}),
-					
+
 				getCount: doodad.REPLACE(function getCount() {
 					return this.__buffer.length;
 				}),
@@ -1408,7 +1408,7 @@ exports.add = function add(modules) {
 				}),
 			}))));
 
-				
+
 			//return function init(/*optional*/options) {
 			//};
 		},

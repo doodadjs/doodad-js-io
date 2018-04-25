@@ -34,9 +34,9 @@ exports.add = function add(modules) {
 	modules['Doodad.IO/root'] = {
 		version: /*! REPLACE_BY(TO_SOURCE(VERSION(MANIFEST("name")))) */ null /*! END_REPLACE()*/,
 		dependencies: [
-			'Doodad.IO', 
+			'Doodad.IO',
 		],
-			
+
 		create: function create(root, /*optional*/_options, _shared) {
 			const doodad = root.Doodad,
 				types = doodad.Types,
@@ -45,13 +45,13 @@ exports.add = function add(modules) {
 				io = doodad.IO,
 				//ioInterfaces = io.Interfaces,
 				ioMixIns = io.MixIns;
-				
+
 			tools.complete(_shared.Natives, {
 				windowTextEncoder: (types.isFunction(global.TextEncoder) ? global.TextEncoder : null),
 				windowTextDecoder: (types.isFunction(global.TextDecoder) ? global.TextDecoder : null),
 			});
-				
-				
+
+
 			//=========================================
 			// Data objects (continued)
 			//=========================================
@@ -153,7 +153,7 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'TextTransformableBase',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableBaseMixInBase')), true) */,
-					
+
 				$isValidEncoding: doodad.OVERRIDE(function(encoding) {
 					if (io.TextData.$validateEncoding(encoding, true) !== null) {
 						this.overrideSuper();
@@ -240,14 +240,14 @@ exports.add = function add(modules) {
 
 				clear: doodad.OVERRIDE(function clear() {
 					this._super();
-						
+
 					this.__decoderIn = null;
 					this.__decoderInEncoding = null;
 				}),
-					
+
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
-						
+
 					this.__decoderIn = null;
 					this.__decoderInEncoding = null;
 				}),
@@ -257,7 +257,7 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'TextTransformableOut',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableOutMixIn')), true) */,
-					
+
 				__decoderOut: doodad.PROTECTED( null ),
 				__decoderOutEncoding: doodad.PROTECTED( null ),
 
@@ -311,24 +311,24 @@ exports.add = function add(modules) {
 
 				clear: doodad.OVERRIDE(function clear() {
 					this._super();
-						
+
 					this.__decoderOut = null;
 					this.__decoderOutEncoding = null;
 				}),
-					
+
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
-						
+
 					this.__decoderOut = null;
 					this.__decoderOutEncoding = null;
 				}),
 			})));
-					
+
 
 			//=====================================================
 			// Basic implementations
 			//=====================================================
-				
+
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 			{
 				$TYPE_NAME: 'Stream',
@@ -393,7 +393,7 @@ exports.add = function add(modules) {
 						this.onError(ex);
 					};
 				}),
-					
+
 				__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
 					const stream = ev.handlerData[0];
 					if (!_shared.DESTROYED(stream)) {
@@ -402,7 +402,7 @@ exports.add = function add(modules) {
 						};
 					};
 				}),
-						
+
 				__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
 					this.onError(ev);
 				}),
@@ -414,7 +414,7 @@ exports.add = function add(modules) {
 				__pipeStreamOnStopListening: doodad.PROTECTED(function __pipeStreamOnStopListening(ev) {
 					this.stopListening();
 				}),
-					
+
 				pipe: doodad.REPLACE(function pipe(stream, /*optional*/options) {
 					if (tools.indexOf(this.__pipes, stream) >= 0) {
 						// Stream already piped
@@ -458,7 +458,7 @@ exports.add = function add(modules) {
 
 					return stream;
 				}),
-					
+
 				unpipe: doodad.REPLACE(function unpipe(/*optional*/stream) {
 					let pos = -1;
 					if (stream) {
@@ -521,9 +521,9 @@ exports.add = function add(modules) {
 					};
 					return this;
 				}),
-					
+
 			}))));
-				
+
 
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
 								ioMixIns.InputStreamBase,
@@ -531,8 +531,8 @@ exports.add = function add(modules) {
 				$TYPE_NAME: 'InputStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputStreamMixIn')), true) */,
 			})));
-					
-				
+
+
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
 								ioMixIns.InputStreamBase,
 								ioMixIns.BufferedStream,
@@ -593,8 +593,8 @@ exports.add = function add(modules) {
 					return data;
 				}),
 			})));
-					
-				
+
+
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
 								ioMixIns.OutputStreamBase,
 			{

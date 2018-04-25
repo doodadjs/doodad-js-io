@@ -56,7 +56,7 @@ exports.add = function add(modules) {
 		dependencies: [
 			'Doodad.NodeJs.IO',
 		],
-			
+
 		create: function create(root, /*optional*/_options, _shared) {
 			const doodad = root.Doodad,
 				types = doodad.Types,
@@ -72,7 +72,7 @@ exports.add = function add(modules) {
 				//nodejsIOMixIns = nodejsIO.MixIns,
 				nodejsIOInterfaces = nodejsIO.Interfaces;
 
-				
+
 			tools.complete(_shared.Natives, {
 				windowUint8Array: global.Uint8Array,
 
@@ -80,8 +80,8 @@ exports.add = function add(modules) {
 				globalBufferIsEncoding: global.Buffer.isEncoding.bind(global.Buffer),
 				globalBufferFrom: global.Buffer.from.bind(global.Buffer),
 			});
-				
-				
+
+
 			//=========================================
 			// Data objects (continued)
 			//=========================================
@@ -220,7 +220,7 @@ exports.add = function add(modules) {
 					this._super(options);
 				}),
 			}))));
-					
+
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextTransformableBase.$extend(
 			{
 				$TYPE_NAME: 'TextTransformableIn',
@@ -293,17 +293,17 @@ exports.add = function add(modules) {
 						};
 					};
 				}),
-					
+
 				clear: doodad.OVERRIDE(function clear() {
 					this._super();
-						
+
 					this.__decoderIn = null;
 					this.__decoderInEncoding = null;
 				}),
-					
+
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
-						
+
 					this.__decoderIn = null;
 					this.__decoderInEncoding = null;
 				}),
@@ -316,7 +316,7 @@ exports.add = function add(modules) {
 
 				__decoderOut: doodad.PROTECTED( null ),
 				__decoderOutEncoding: doodad.PROTECTED( null ),
-					
+
 				transformOut: doodad.REPLACE(function transformOut(data, /*optional*/options) {
 					if (types._instanceof(data, io.TextData)) {
 						return data.toString() || null;
@@ -370,17 +370,17 @@ exports.add = function add(modules) {
 					};
 					return undefined;
 				}),
-					
+
 				clear: doodad.OVERRIDE(function clear() {
 					this._super();
-						
+
 					this.__decoderOut = null;
 					this.__decoderOutEncoding = null;
 				}),
-					
+
 				reset: doodad.OVERRIDE(function reset() {
 					this._super();
-						
+
 					this.__decoderOut = null;
 					this.__decoderOutEncoding = null;
 				}),
@@ -390,7 +390,7 @@ exports.add = function add(modules) {
 			//=====================================================
 			// Basic implementations
 			//=====================================================
-				
+
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
 							mixIns.NodeEvents,
 			{
@@ -400,13 +400,13 @@ exports.add = function add(modules) {
 				__pipes: doodad.PROTECTED(null),
 
 				$extend: doodad.SUPER(function $extend(/*paramarray*/...args) {
-					const isInput = this._implements(ioMixIns.InputStreamBase) 
-									|| 
+					const isInput = this._implements(ioMixIns.InputStreamBase)
+									||
 									tools.some(args, function(arg) {
 										return types._implements(arg, ioMixIns.InputStreamBase);
 									}),
-						isOutput = this._implements(ioMixIns.OutputStreamBase) 
-									|| 
+						isOutput = this._implements(ioMixIns.OutputStreamBase)
+									||
 									tools.some(args, function(arg) {
 										return types._implements(arg, ioMixIns.OutputStreamBase);
 									});
@@ -473,7 +473,7 @@ exports.add = function add(modules) {
 						isBuffered = ev.handlerData[3],
 						isInputOnly = ev.handlerData[4],
 						isNodeJsStream = ev.handlerData[5];
-						
+
 					if (_shared.DESTROYED(stream)) {
 						return;
 					};
@@ -537,7 +537,7 @@ exports.add = function add(modules) {
 						};
 					};
 				}),
-					
+
 				__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
 					const stream = ev.handlerData[0];
 					if (!_shared.DESTROYED(stream)) {
@@ -546,7 +546,7 @@ exports.add = function add(modules) {
 						};
 					};
 				}),
-						
+
 				__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
 					this.onError(ev);
 				}),
@@ -570,7 +570,7 @@ exports.add = function add(modules) {
 				__pipeNodeStreamOnDrain: doodad.NODE_EVENT('drain', function __pipeNodeStreamOnDrain(context) {
 					context.data.consume();
 				}),
-					
+
 				__pipeNodeStreamOnFinish: doodad.NODE_EVENT('finish', function __pipeNodeStreamOnFinish(context) {
 					// <PRB> Some Node.Js streams don't emit 'close' after 'finish'.
 
@@ -584,12 +584,12 @@ exports.add = function add(modules) {
 						this.__pipeNodeStreamOnError.attachOnce(context.emitter);
 					};
 				}),
-					
+
 				__pipeNodeStreamOnClose: doodad.PROTECTED(doodad.NODE_EVENT('close', function __pipeNodeStreamOnClose(context) {
 					// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
 					this.__pipeNodeStreamOnFinish(context);
 				})),
-					
+
 				pipe: doodad.REPLACE(function pipe(stream, /*optional*/options) {
 					if (tools.indexOf(this.__pipes, stream) >= 0) {
 						// Stream already piped
@@ -658,7 +658,7 @@ exports.add = function add(modules) {
 
 					return stream;
 				}),
-					
+
 				unpipe: doodad.REPLACE(function unpipe(/*optional*/stream) {
 					let pos = -1;
 
@@ -763,9 +763,9 @@ exports.add = function add(modules) {
 
 					return this;
 				}),
-					
+
 			}))));
-				
+
 
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
 								ioMixIns.InputStreamBase,
@@ -800,7 +800,7 @@ exports.add = function add(modules) {
 
 				onEOF: doodad.OVERRIDE(function onEOF(ev) {
 					const retval = this._super(ev);
-					
+
 					const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 					if (ireadable) {
 						if (ireadable.isPaused()) {
@@ -811,7 +811,7 @@ exports.add = function add(modules) {
 							};
 						};
 					};
-					
+
 					return retval;
 				}),
 
@@ -830,7 +830,7 @@ exports.add = function add(modules) {
 					};
 					return retval;
 				}),
-					
+
 				onListen: doodad.OVERRIDE(function onListen(ev) {
 					const retval = this._super(ev);
 					const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
@@ -847,8 +847,8 @@ exports.add = function add(modules) {
 					return retval;
 				}),
 			})));
-					
-				
+
+
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
 								ioMixIns.InputStreamBase,
 								ioMixIns.BufferedStream,
@@ -883,7 +883,7 @@ exports.add = function add(modules) {
 
 				onEOF: doodad.OVERRIDE(function onEOF(ev) {
 					const retval = this._super(ev);
-					
+
 					const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 					if (ireadable) {
 						if (ireadable.isPaused()) {
@@ -894,7 +894,7 @@ exports.add = function add(modules) {
 							};
 						};
 					};
-					
+
 					return retval;
 				}),
 
@@ -958,8 +958,8 @@ exports.add = function add(modules) {
 					return data;
 				}),
 			})));
-					
-				
+
+
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
 								ioMixIns.OutputStreamBase,
 			{
@@ -968,12 +968,12 @@ exports.add = function add(modules) {
 
 				onEOF: doodad.OVERRIDE(function onEOF(ev) {
 					const retval = this._super(ev);
-					
+
 					const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
 					if (iwritable) {
 						tools.callAsync(iwritable.onfinish, -1, iwritable, null, null, _shared.SECRET);
 					};
-					
+
 					return retval;
 				}),
 			})));
@@ -988,12 +988,12 @@ exports.add = function add(modules) {
 
 				onEOF: doodad.OVERRIDE(function onEOF(ev) {
 					const retval = this._super(ev);
-					
+
 					const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
 					if (iwritable) {
 						tools.callAsync(iwritable.onfinish, -1, iwritable, null, null, _shared.SECRET);
 					};
-					
+
 					return retval;
 				}),
 
@@ -1007,7 +1007,7 @@ exports.add = function add(modules) {
 				//
 				//	return retval;
 				//}),
-					
+
 				__submitInternal: doodad.REPLACE(function __submitInternal(data, /*optional*/options) {
 					if (data.consumed) {
 						throw new types.Error("Data object has been consumed.");

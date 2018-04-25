@@ -37,7 +37,7 @@ exports.add = function add(modules) {
 		dependencies: [
 			'Doodad.IO',
 		],
-			
+
 		create: function create(root, /*optional*/_options, _shared) {
 			const doodad = root.Doodad,
 				types = doodad.Types,
@@ -57,14 +57,14 @@ exports.add = function add(modules) {
 			//=====================================================
 			// Internals
 			//=====================================================
-				
+
 			const __Internal__ = {
 			};
 
 			//=====================================================
 			// DESTROY hook
 			//=====================================================
-				
+
 			__Internal__.oldDESTROY = _shared.DESTROY;
 			_shared.DESTROY = function DESTROY(obj) {
 				if (types.isLike(obj, doodad.Interface) && types._implements(obj, nodejsIOInterfaces.IStream)) {
@@ -79,16 +79,16 @@ exports.add = function add(modules) {
 			//=====================================================
 			// Interfaces (continued)
 			//=====================================================
-				
+
 			nodejsIOInterfaces.REGISTER(doodad.ISOLATED(doodad.MIX_IN(nodejsInterfaces.IEmitter.$extend(
 			{
 				$TYPE_NAME: 'IStream',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('IStreamIsolatedMixInNodeJs')), true) */,
-					
+
 				onclose: doodad.RAW_EVENT(),
 
 				destroyed: doodad.PUBLIC(doodad.PERSISTENT(doodad.READ_ONLY( false ))),
-					
+
 				onerror: doodad.RAW_ERROR_EVENT(function onerror(err) {
 					const host = this[doodad.HostSymbol];
 
@@ -133,18 +133,18 @@ exports.add = function add(modules) {
 					};
 				})),
 			}))));
-				
+
 			nodejsIOInterfaces.REGISTER(doodad.ISOLATED(doodad.MIX_IN(nodejsIOInterfaces.IStream.$extend(
 			{
 				$TYPE_NAME: 'IReadable',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('IReadableIsolatedMixInNodeJs')), true) */,
-					
+
 				ondata: doodad.RAW_EVENT(),
 				onpause: doodad.RAW_EVENT(),
 				onresume: doodad.RAW_EVENT(),
 				onend: doodad.RAW_EVENT(),
 				onreadable: doodad.RAW_EVENT(),
-					
+
 				__encoding: doodad.PROTECTED(null),
 
 				readable: doodad.PUBLIC(true),
@@ -243,12 +243,12 @@ exports.add = function add(modules) {
 					const host = this[doodad.HostSymbol];
 					return !host.isListening();
 				}),
-					
+
 				pause: doodad.PUBLIC(function pause() {
 					const host = this[doodad.HostSymbol];
 					host.stopListening();
 				}),
-					
+
 				pipe: doodad.PUBLIC(function pipe(destination, /*optional*/options) {
 					const host = this[doodad.HostSymbol];
 
@@ -353,20 +353,20 @@ exports.add = function add(modules) {
 							rs.pipes = [rs.pipes, destination];
 							rs.pipesCount = 2;
 						};
-							
+
 						const autoListen = types.get(options, 'autoListen', true);
 						if (autoListen) {
 							this.resume();
 						};
-							
+
 						destination.emit('pipe', this);
 					};
 
 					return destination;
 				}),
-					
+
 				_read: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function _read(/*optional*/size)
-					
+
 				read: doodad.PUBLIC(function read(/*optional*/size) {
 					if (size <= 0) {
 						// <PRB> Node.Js does "read(0)" sometimes.
@@ -387,12 +387,12 @@ exports.add = function add(modules) {
 
 					return null;
 				}),
-					
+
 				resume: doodad.PUBLIC(function resume() {
 					const host = this[doodad.HostSymbol];
 					host.listen();
 				}),
-					
+
 				setEncoding: doodad.PUBLIC(function setEncoding(encoding) {
 					const host = this[doodad.HostSymbol];
 					if (host._implements(ioMixIns.TextTransformable)) {
@@ -402,7 +402,7 @@ exports.add = function add(modules) {
 					};
 					return this;
 				}),
-					
+
 				unpipe: doodad.PUBLIC(function unpipe(/*optional*/destination) {
 					if (types._implements(destination, ioInterfaces.IStream)) {
 						const host = this[doodad.HostSymbol];
@@ -431,30 +431,30 @@ exports.add = function add(modules) {
 
 					return this;
 				}),
-					
+
 				push: doodad.PUBLIC(function push(chunk, /*optional*/encoding) {
 					const host = this[doodad.HostSymbol];
 					const data = host.transformIn(chunk, {encoding: encoding});
 					host.push(data);
 					return (host.getCount() < host.options.bufferSize);
 				}),
-					
+
 				unshift: doodad.PUBLIC(function unshift(chunk) {
 					const host = this[doodad.HostSymbol];
 					const data = host.transformIn(chunk);
 					host.push(data, {next: true});
 					return (host.getCount() < host.options.bufferSize);
 				}),
-					
+
 				wrap: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function wrap(stream)
 			}))));
-				
+
 
 			nodejsIOInterfaces.REGISTER(doodad.ISOLATED(doodad.MIX_IN(nodejsIOInterfaces.IStream.$extend(
 			{
 				$TYPE_NAME: 'IWritable',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('IWritableIsolatedMixInNodeJs')), true) */,
-					
+
 				ondrain: doodad.RAW_EVENT(),
 				onfinish: doodad.RAW_EVENT(),
 				onpipe: doodad.RAW_EVENT(), // function(source)
@@ -462,7 +462,7 @@ exports.add = function add(modules) {
 
 				cork: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function()
 				uncork: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function()
-					
+
 				__defaultEncoding: doodad.PROTECTED(null),
 
 				__drainingData: doodad.PROTECTED(null),
@@ -490,13 +490,13 @@ exports.add = function add(modules) {
 					};
 					return this;
 				}),
-					
+
 				write: doodad.PUBLIC(function write(chunk, /*optional*/encoding, /*optional*/callback) {
 					if (types.isFunction(encoding)) {
 						callback = encoding;
 						encoding = undefined;
 					};
-						
+
 					if (types.isNothing(encoding)) {
 						encoding = this.getDefaultEncoding();
 					};
@@ -505,7 +505,7 @@ exports.add = function add(modules) {
 						// Previously we have returned 'false', the customer didn't wait... so we throw !
 						throw new types.BufferOverflow();
 					};
-						
+
 					const host = this[doodad.HostSymbol];
 
 					const data = host.write(chunk, {encoding: encoding, callback: callback});
@@ -524,7 +524,7 @@ exports.add = function add(modules) {
 
 					return data.consumed;
 				}),
-					
+
 				end: doodad.PUBLIC(function end(/*optional*/chunk, /*optional*/encoding, /*optional*/callback) {
 					if (types.isFunction(chunk)) {
 						encoding = chunk;
@@ -539,7 +539,7 @@ exports.add = function add(modules) {
 					if (types.isNothing(encoding)) {
 						encoding = this.getDefaultEncoding();
 					};
-						
+
 					if (this.__drainingData) {
 						// <PRB> Node.Js never waits before calling 'end'. So we have to chain.
 						this.__drainingData.chain(doodad.AsyncCallback(this, function doOnDrain(err) {
@@ -549,7 +549,7 @@ exports.add = function add(modules) {
 						}));
 						return false;
 					};
-						
+
 					const host = this[doodad.HostSymbol];
 
 					const data = host.write(chunk, {eof: true, encoding: encoding, callback: callback});
@@ -565,7 +565,7 @@ exports.add = function add(modules) {
 					return data.consumed;
 				}),
 			}))));
-				
+
 
 			nodejsIOInterfaces.REGISTER(doodad.ISOLATED(doodad.MIX_IN(nodejsIOInterfaces.IReadable.$extend(
 								nodejsIOInterfaces.IWritable,
@@ -579,11 +579,11 @@ exports.add = function add(modules) {
 			{
 				$TYPE_NAME: 'ITransform',
 				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ITransformIsolatedMixInNodeJs')), true) */,
-					
+
 				// ????
 			}))));
-				
-				
+
+
 			//===================================
 			// Init
 			//===================================
