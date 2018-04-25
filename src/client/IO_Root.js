@@ -26,7 +26,7 @@
 
 //! IF_SET("mjs")
 //! ELSE()
-	"use strict";
+"use strict";
 //! END_IF()
 
 exports.add = function add(modules) {
@@ -149,124 +149,37 @@ exports.add = function add(modules) {
 			//=====================================================
 
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.TransformableBase.$extend(
-										ioMixIns.StreamBase,
-			{
-				$TYPE_NAME: 'TextTransformableBase',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableBaseMixInBase')), true) */,
+				ioMixIns.StreamBase,
+				{
+					$TYPE_NAME: 'TextTransformableBase',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableBaseMixInBase')), true) */,
 
-				$isValidEncoding: doodad.OVERRIDE(function(encoding) {
-					if (io.TextData.$validateEncoding(encoding, true) !== null) {
-						this.overrideSuper();
-						return true;
-					} else {
-						return this._super(encoding);
-					};
-				}),
-
-				setOptions: doodad.OVERRIDE(function setOptions(options) {
-					types.getDefault(options, 'encoding', types.getIn(this.options, 'encoding', 'utf-8'));
-
-					this._super(options);
-				}),
-			}))));
-
-
-			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextTransformableBase.$extend(
-			{
-				$TYPE_NAME: 'TextTransformableIn',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableInMixIn')), true) */,
-
-				__decoderIn: doodad.PROTECTED( null ),
-				__decoderInEncoding: doodad.PROTECTED( null ),
-
-				transformIn: doodad.REPLACE(function transformIn(raw, /*optional*/options) {
-					let encoding = types.get(options, 'encoding');
-					if (encoding) {
-						encoding = io.TextData.$validateEncoding(encoding);
-					} else {
-						encoding = this.options.encoding || 'raw';
-					};
-					if (encoding === 'raw') {
-						// Raw binary. We assume UTF-8 like Node.Js.
-						encoding = 'utf-8';
-					};
-
-					if (types._instanceof(raw, io.Signal)) {
-						let trailing = null;
-						const decoder = this.__decoderIn;
-						if (decoder) {
-							trailing = decoder.decode(null, {stream: false}) || null;
-						};
-						this.__decoderIn = null;
-						this.__decoderInEncoding = null;
-						if (!options) {
-							options = {};
-						};
-						options.encoding = encoding;
-						const dta = new io.TextData(raw, options);
-						dta.trailing = trailing;
-						return dta;
-					} else {
-						if (types.isArrayBuffer(raw) || types.isTypedArray(raw)) {
-							let text = '';
-							let decoder = this.__decoderIn;
-							const decoderEncoding = this.__decoderInEncoding;
-							if (decoderEncoding !== encoding) {
-								if (decoder) {
-									text = decoder.decode(null, {stream: false}) || '';
-									this.__decoderIn = null;
-									this.__decoderInEncoding = null;
-								};
-								decoder = new _shared.Natives.windowTextDecoder(encoding);
-								this.__decoderIn = decoder;
-								this.__decoderInEncoding = encoding;
-							};
-							text += decoder.decode(raw, {stream: true}) || '';
-							if (!options) {
-								options = {};
-							};
-							options.encoding = encoding;
-							return new io.TextData(text || null, options);
+					$isValidEncoding: doodad.OVERRIDE(function(encoding) {
+						if (io.TextData.$validateEncoding(encoding, true) !== null) {
+							this.overrideSuper();
+							return true;
 						} else {
-							const text = (types.isNothing(raw) ? null : types.toString(raw) || null);
-							if (!options) {
-								options = {};
-							};
-							options.encoding = encoding;
-							return new io.TextData(text, options);
+							return this._super(encoding);
 						};
-					};
-				}),
+					}),
 
-				clear: doodad.OVERRIDE(function clear() {
-					this._super();
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'encoding', types.getIn(this.options, 'encoding', 'utf-8'));
 
-					this.__decoderIn = null;
-					this.__decoderInEncoding = null;
-				}),
+						this._super(options);
+					}),
+				}))));
 
-				reset: doodad.OVERRIDE(function reset() {
-					this._super();
-
-					this.__decoderIn = null;
-					this.__decoderInEncoding = null;
-				}),
-			})));
 
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextTransformableBase.$extend(
-			{
-				$TYPE_NAME: 'TextTransformableOut',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableOutMixIn')), true) */,
+				{
+					$TYPE_NAME: 'TextTransformableIn',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableInMixIn')), true) */,
 
-				__decoderOut: doodad.PROTECTED( null ),
-				__decoderOutEncoding: doodad.PROTECTED( null ),
+					__decoderIn: doodad.PROTECTED( null ),
+					__decoderInEncoding: doodad.PROTECTED( null ),
 
-				transformOut: doodad.REPLACE(function transformOut(data, /*optional*/options) {
-					if (types._instanceof(data, io.TextData)) {
-						return data.toString() || null;
-					} else if (types._instanceof(data, io.BinaryData)) {
-						const eof = (data.raw === io.EOF);
-						const value = data.valueOf();
+					transformIn: doodad.REPLACE(function transformIn(raw, /*optional*/options) {
 						let encoding = types.get(options, 'encoding');
 						if (encoding) {
 							encoding = io.TextData.$validateEncoding(encoding);
@@ -274,55 +187,142 @@ exports.add = function add(modules) {
 							encoding = this.options.encoding || 'raw';
 						};
 						if (encoding === 'raw') {
-							// Raw binary. We assume UTF-8 like Node.Js.
+						// Raw binary. We assume UTF-8 like Node.Js.
 							encoding = 'utf-8';
 						};
-						if (types.isArrayBuffer(value) || types.isTypedArray(value)) {
-							let decoder = this.__decoderOut;
-							const decoderEncoding = this.__decoderOutEncoding;
-							let text = '';
-							if (decoderEncoding !== encoding) {
-								if (decoder) {
-									text = decoder.decode(null, {stream: false}) || '';
-									this.__decoderOut = null;
-									this.__decoderOutEncoding = null;
-								};
-								decoder = new _shared.Natives.windowTextDecoder(encoding);
-								if (!eof) {
-									this.__decoderOut = decoder;
-									this.__decoderOutEncoding = encoding;
-								};
+
+						if (types._instanceof(raw, io.Signal)) {
+							let trailing = null;
+							const decoder = this.__decoderIn;
+							if (decoder) {
+								trailing = decoder.decode(null, {stream: false}) || null;
 							};
-							if (eof) {
-								text += decoder.decode(value, {stream: false}) || '';
-							} else if (!types.isNothing(value)) {
-								text += decoder.decode(value, {stream: true}) || '';
+							this.__decoderIn = null;
+							this.__decoderInEncoding = null;
+							if (!options) {
+								options = {};
 							};
-							return text || null;
+							options.encoding = encoding;
+							const dta = new io.TextData(raw, options);
+							dta.trailing = trailing;
+							return dta;
 						} else {
-							const text = (types.isNothing(value) ? null : types.toString(value) || null);
-							return text;
+							if (types.isArrayBuffer(raw) || types.isTypedArray(raw)) {
+								let text = '';
+								let decoder = this.__decoderIn;
+								const decoderEncoding = this.__decoderInEncoding;
+								if (decoderEncoding !== encoding) {
+									if (decoder) {
+										text = decoder.decode(null, {stream: false}) || '';
+										this.__decoderIn = null;
+										this.__decoderInEncoding = null;
+									};
+									decoder = new _shared.Natives.windowTextDecoder(encoding);
+									this.__decoderIn = decoder;
+									this.__decoderInEncoding = encoding;
+								};
+								text += decoder.decode(raw, {stream: true}) || '';
+								if (!options) {
+									options = {};
+								};
+								options.encoding = encoding;
+								return new io.TextData(text || null, options);
+							} else {
+								const text = (types.isNothing(raw) ? null : types.toString(raw) || null);
+								if (!options) {
+									options = {};
+								};
+								options.encoding = encoding;
+								return new io.TextData(text, options);
+							};
 						};
-					} else if (types._instanceof(data, io.Data)) {
-						return data.toString() || null;
-					};
-					return undefined;
-				}),
+					}),
 
-				clear: doodad.OVERRIDE(function clear() {
-					this._super();
+					clear: doodad.OVERRIDE(function clear() {
+						this._super();
 
-					this.__decoderOut = null;
-					this.__decoderOutEncoding = null;
-				}),
+						this.__decoderIn = null;
+						this.__decoderInEncoding = null;
+					}),
 
-				reset: doodad.OVERRIDE(function reset() {
-					this._super();
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
 
-					this.__decoderOut = null;
-					this.__decoderOutEncoding = null;
-				}),
-			})));
+						this.__decoderIn = null;
+						this.__decoderInEncoding = null;
+					}),
+				})));
+
+			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.TextTransformableBase.$extend(
+				{
+					$TYPE_NAME: 'TextTransformableOut',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextTransformableOutMixIn')), true) */,
+
+					__decoderOut: doodad.PROTECTED( null ),
+					__decoderOutEncoding: doodad.PROTECTED( null ),
+
+					transformOut: doodad.REPLACE(function transformOut(data, /*optional*/options) {
+						if (types._instanceof(data, io.TextData)) {
+							return data.toString() || null;
+						} else if (types._instanceof(data, io.BinaryData)) {
+							const eof = (data.raw === io.EOF);
+							const value = data.valueOf();
+							let encoding = types.get(options, 'encoding');
+							if (encoding) {
+								encoding = io.TextData.$validateEncoding(encoding);
+							} else {
+								encoding = this.options.encoding || 'raw';
+							};
+							if (encoding === 'raw') {
+							// Raw binary. We assume UTF-8 like Node.Js.
+								encoding = 'utf-8';
+							};
+							if (types.isArrayBuffer(value) || types.isTypedArray(value)) {
+								let decoder = this.__decoderOut;
+								const decoderEncoding = this.__decoderOutEncoding;
+								let text = '';
+								if (decoderEncoding !== encoding) {
+									if (decoder) {
+										text = decoder.decode(null, {stream: false}) || '';
+										this.__decoderOut = null;
+										this.__decoderOutEncoding = null;
+									};
+									decoder = new _shared.Natives.windowTextDecoder(encoding);
+									if (!eof) {
+										this.__decoderOut = decoder;
+										this.__decoderOutEncoding = encoding;
+									};
+								};
+								if (eof) {
+									text += decoder.decode(value, {stream: false}) || '';
+								} else if (!types.isNothing(value)) {
+									text += decoder.decode(value, {stream: true}) || '';
+								};
+								return text || null;
+							} else {
+								const text = (types.isNothing(value) ? null : types.toString(value) || null);
+								return text;
+							};
+						} else if (types._instanceof(data, io.Data)) {
+							return data.toString() || null;
+						};
+						return undefined;
+					}),
+
+					clear: doodad.OVERRIDE(function clear() {
+						this._super();
+
+						this.__decoderOut = null;
+						this.__decoderOutEncoding = null;
+					}),
+
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
+
+						this.__decoderOut = null;
+						this.__decoderOutEncoding = null;
+					}),
+				})));
 
 
 			//=====================================================
@@ -330,356 +330,356 @@ exports.add = function add(modules) {
 			//=====================================================
 
 			ioMixIns.REGISTER(doodad.BASE(doodad.MIX_IN(ioMixIns.StreamBase.$extend(
-			{
-				$TYPE_NAME: 'Stream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamMixInBase')), true) */,
+				{
+					$TYPE_NAME: 'Stream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamMixInBase')), true) */,
 
-				__pipes: doodad.PROTECTED(null),
+					__pipes: doodad.PROTECTED(null),
 
-				reset: doodad.OVERRIDE(function reset() {
-					this._super();
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
 
-					this.__pipes = [];
-				}),
+						this.__pipes = [];
+					}),
 
-				destroy: doodad.OVERRIDE(function destroy() {
-					this.unpipe();
+					destroy: doodad.OVERRIDE(function destroy() {
+						this.unpipe();
 
-					this._super();
-				}),
+						this._super();
+					}),
 
-				__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
-					const stream = ev.handlerData[0],
-						//transform = ev.handlerData[1],
-						end = ev.handlerData[2],  // 'true' permits EOF. 'false' just write the trailing data if there are.
-						isBuffered = ev.handlerData[3],
-						isInputOnly = ev.handlerData[4];
+					__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
+						const stream = ev.handlerData[0],
+							//transform = ev.handlerData[1],
+							end = ev.handlerData[2],  // 'true' permits EOF. 'false' just write the trailing data if there are.
+							isBuffered = ev.handlerData[3],
+							isInputOnly = ev.handlerData[4];
 
-					if (_shared.DESTROYED(stream)) {
-						return;
-					};
-
-					if (isInputOnly || isBuffered) {
-						ev.preventDefault();
-					};
-
-					const data = ev.data;
-					const eof = end && (data.raw === io.EOF);
-					const bof = !eof && (data.raw === io.BOF);
-
-					// TODO: Re-Implement
-					//if (transform) {
-					//	const retval = transform(raw);
-					//	if (retval !== undefined) {
-					//		raw = retval;
-					//		eof = false;
-					//		bof = false;
-					//		if (raw === io.EOF) {
-					//			eof = end;
-					//			raw = null;
-					//		} else if (raw === io.BOF) {
-					//			bof = true;
-					//		};
-					//	};
-					//};
-
-					const raw = (this._implements(ioMixIns.TextTransformableOut) && !stream._implements(ioMixIns.TextTransformableIn) ? data.valueOf() : this.transformOut(data));
-					try {
-						const data2 = stream.write(raw, {eof: eof, bof: bof});
-						if (!data2.consumed) {
-							data2.chain(data.defer());
+						if (_shared.DESTROYED(stream)) {
+							return;
 						};
-					} catch(ex) {
-						this.onError(ex);
-					};
-				}),
 
-				__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
-					const stream = ev.handlerData[0];
-					if (!_shared.DESTROYED(stream)) {
-						if (stream.options.flushMode !== 'manual') {
-							stream.flush();
+						if (isInputOnly || isBuffered) {
+							ev.preventDefault();
 						};
-					};
-				}),
 
-				__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
-					this.onError(ev);
-				}),
+						const data = ev.data;
+						const eof = end && (data.raw === io.EOF);
+						const bof = !eof && (data.raw === io.BOF);
 
-				__pipeStreamOnListen: doodad.PROTECTED(function __pipeStreamOnListen(ev) {
-					this.listen();
-				}),
+						// TODO: Re-Implement
+						//if (transform) {
+						//	const retval = transform(raw);
+						//	if (retval !== undefined) {
+						//		raw = retval;
+						//		eof = false;
+						//		bof = false;
+						//		if (raw === io.EOF) {
+						//			eof = end;
+						//			raw = null;
+						//		} else if (raw === io.BOF) {
+						//			bof = true;
+						//		};
+						//	};
+						//};
 
-				__pipeStreamOnStopListening: doodad.PROTECTED(function __pipeStreamOnStopListening(ev) {
-					this.stopListening();
-				}),
-
-				pipe: doodad.REPLACE(function pipe(stream, /*optional*/options) {
-					if (tools.indexOf(this.__pipes, stream) >= 0) {
-						// Stream already piped
-						return stream;
-					};
-
-					const transform = types.get(options, 'transform'),
-						end = types.get(options, 'end', true),
-						autoListen = types.get(options, 'autoListen', true),
-						isListener = this._implements(ioMixIns.Listener),
-						isInput = this._implements(ioMixIns.InputStreamBase),
-						isOutput = this._implements(ioMixIns.OutputStreamBase),
-						isInputOnly = isInput && !isOutput,
-						isBuffered = this._implements(ioMixIns.BufferedStreamBase);
-
-					if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-						const datas = [stream, transform, end, isBuffered, isInputOnly];
-						if (isInput) {
-							this.onReady.attach(this, this.__pipeOnData, 40, datas);
-						} else {
-							this.onData.attach(this, this.__pipeOnData, 40, datas);
+						const raw = (this._implements(ioMixIns.TextTransformableOut) && !stream._implements(ioMixIns.TextTransformableIn) ? data.valueOf() : this.transformOut(data));
+						try {
+							const data2 = stream.write(raw, {eof: eof, bof: bof});
+							if (!data2.consumed) {
+								data2.chain(data.defer());
+							};
+						} catch(ex) {
+							this.onError(ex);
 						};
-						if (isBuffered && stream._implements(ioMixIns.BufferedStreamBase)) {
-							this.onFlush.attach(this, this.__pipeOnFlush, 40, [stream]);
-						};
-						stream.onError.attachOnce(this, this.__pipeStreamOnError);
-						stream.onDestroy.attachOnce(this, this.__pipeStreamOnDestroy);
-						if (isListener && stream._implements(ioMixIns.Listener)) {
-							stream.onListen.attach(this, this.__pipeStreamOnListen);
-							stream.onStopListening.attach(this, this.__pipeStreamOnStopListening);
-						};
-					} else {
-						throw new types.ValueError("'stream' must implement 'Doodad.IO.MixIns.OutputStreamBase'.");
-					};
+					}),
 
-					this.__pipes[this.__pipes.length] = stream;
+					__pipeOnFlush: doodad.PROTECTED(function __pipeOnFlush(ev) {
+						const stream = ev.handlerData[0];
+						if (!_shared.DESTROYED(stream)) {
+							if (stream.options.flushMode !== 'manual') {
+								stream.flush();
+							};
+						};
+					}),
 
-					if (autoListen && isListener) {
+					__pipeStreamOnError: doodad.PROTECTED(function __pipeStreamOnError(ev) {
+						this.onError(ev);
+					}),
+
+					__pipeStreamOnListen: doodad.PROTECTED(function __pipeStreamOnListen(ev) {
 						this.listen();
-					};
+					}),
 
-					return stream;
-				}),
-
-				unpipe: doodad.REPLACE(function unpipe(/*optional*/stream) {
-					let pos = -1;
-					if (stream) {
-						pos = tools.indexOf(this.__pipes, stream);
-						if (pos < 0) {
-							// Stream not piped
-							return this;
-						};
-					};
-					const isListener = this._implements(ioMixIns.Listener),
-						isInput = this._implements(ioMixIns.InputStreamBase),
-						//isOutput = this._implements(ioMixIns.OutputStreamBase),
-						//isInputOnly = isInput && !isOutput,
-						isBuffered = this._implements(ioMixIns.BufferedStreamBase);
-					if (isListener) {
+					__pipeStreamOnStopListening: doodad.PROTECTED(function __pipeStreamOnStopListening(ev) {
 						this.stopListening();
-					};
-					if (stream) {
+					}),
+
+					pipe: doodad.REPLACE(function pipe(stream, /*optional*/options) {
+						if (tools.indexOf(this.__pipes, stream) >= 0) {
+						// Stream already piped
+							return stream;
+						};
+
+						const transform = types.get(options, 'transform'),
+							end = types.get(options, 'end', true),
+							autoListen = types.get(options, 'autoListen', true),
+							isListener = this._implements(ioMixIns.Listener),
+							isInput = this._implements(ioMixIns.InputStreamBase),
+							isOutput = this._implements(ioMixIns.OutputStreamBase),
+							isInputOnly = isInput && !isOutput,
+							isBuffered = this._implements(ioMixIns.BufferedStreamBase);
+
 						if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-							const datas = [stream];
+							const datas = [stream, transform, end, isBuffered, isInputOnly];
 							if (isInput) {
-								this.onReady.detach(this, this.__pipeOnData, datas);
+								this.onReady.attach(this, this.__pipeOnData, 40, datas);
 							} else {
-								this.onData.detach(this, this.__pipeOnData, datas);
+								this.onData.attach(this, this.__pipeOnData, 40, datas);
 							};
 							if (isBuffered && stream._implements(ioMixIns.BufferedStreamBase)) {
-								this.onFlush.detach(this, this.__pipeOnFlush, datas);
+								this.onFlush.attach(this, this.__pipeOnFlush, 40, [stream]);
 							};
-							stream.onError.detach(this, this.__pipeStreamOnError);
-							stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
+							stream.onError.attachOnce(this, this.__pipeStreamOnError);
+							stream.onDestroy.attachOnce(this, this.__pipeStreamOnDestroy);
 							if (isListener && stream._implements(ioMixIns.Listener)) {
-								stream.onListen.detach(this, this.__pipeStreamOnListen);
-								stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
+								stream.onListen.attach(this, this.__pipeStreamOnListen);
+								stream.onStopListening.attach(this, this.__pipeStreamOnStopListening);
+							};
+						} else {
+							throw new types.ValueError("'stream' must implement 'Doodad.IO.MixIns.OutputStreamBase'.");
+						};
+
+						this.__pipes[this.__pipes.length] = stream;
+
+						if (autoListen && isListener) {
+							this.listen();
+						};
+
+						return stream;
+					}),
+
+					unpipe: doodad.REPLACE(function unpipe(/*optional*/stream) {
+						let pos = -1;
+						if (stream) {
+							pos = tools.indexOf(this.__pipes, stream);
+							if (pos < 0) {
+							// Stream not piped
+								return this;
 							};
 						};
-					} else {
-						if (isInput) {
-							this.onReady.detach(this, this.__pipeOnData);
-						} else {
-							this.onData.detach(this, this.__pipeOnData);
+						const isListener = this._implements(ioMixIns.Listener),
+							isInput = this._implements(ioMixIns.InputStreamBase),
+							//isOutput = this._implements(ioMixIns.OutputStreamBase),
+							//isInputOnly = isInput && !isOutput,
+							isBuffered = this._implements(ioMixIns.BufferedStreamBase);
+						if (isListener) {
+							this.stopListening();
 						};
-						if (isBuffered) {
-							this.onFlush.detach(this, this.__pipeOnFlush);
-						};
-						tools.forEach(this.__pipes, function(stream) {
-							if (types._implements(stream, ioMixIns.OutputStreamBase)) {
+						if (stream) {
+							if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
+								const datas = [stream];
+								if (isInput) {
+									this.onReady.detach(this, this.__pipeOnData, datas);
+								} else {
+									this.onData.detach(this, this.__pipeOnData, datas);
+								};
+								if (isBuffered && stream._implements(ioMixIns.BufferedStreamBase)) {
+									this.onFlush.detach(this, this.__pipeOnFlush, datas);
+								};
 								stream.onError.detach(this, this.__pipeStreamOnError);
 								stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
+								if (isListener && stream._implements(ioMixIns.Listener)) {
+									stream.onListen.detach(this, this.__pipeStreamOnListen);
+									stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
+								};
 							};
-							if (isListener && types._implements(stream, ioMixIns.Listener)) {
-								stream.onListen.detach(this, this.__pipeStreamOnListen);
-								stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
+						} else {
+							if (isInput) {
+								this.onReady.detach(this, this.__pipeOnData);
+							} else {
+								this.onData.detach(this, this.__pipeOnData);
 							};
-						}, this);
-					};
-					if (pos >= 0) {
-						this.__pipes.splice(pos, 1);
-					} else {
-						this.__pipes = [];
-					};
-					return this;
-				}),
-
-			}))));
-
-
-			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
-								ioMixIns.InputStreamBase,
-			{
-				$TYPE_NAME: 'InputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputStreamMixIn')), true) */,
-			})));
-
-
-			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
-								ioMixIns.InputStreamBase,
-								ioMixIns.BufferedStream,
-			{
-				$TYPE_NAME: 'BufferedInputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputStreamMixIn')), true) */,
-
-				__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
-					if (data.consumed) {
-						throw new types.Error("Data object has been consumed.");
-					};
-
-					const callback = types.get(options, 'callback'),
-						next = types.get(options, 'next', false),
-						buffer = this.__buffer;
-
-					if (buffer.length >= this.options.bufferSize) {
-						throw new types.BufferOverflow();
-					};
-
-					data.detach();
-
-					if (next) {
-						buffer.unshift(data);
-					} else {
-						buffer.push(data);
-					};
-
-					if (buffer.length >= this.options.bufferSize) {
-						if (this.options.flushMode === 'auto') {
-							this.flush({callback: callback});
-						} else {
-							callback && data.chain(callback);
+							if (isBuffered) {
+								this.onFlush.detach(this, this.__pipeOnFlush);
+							};
+							tools.forEach(this.__pipes, function(stream) {
+								if (types._implements(stream, ioMixIns.OutputStreamBase)) {
+									stream.onError.detach(this, this.__pipeStreamOnError);
+									stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
+								};
+								if (isListener && types._implements(stream, ioMixIns.Listener)) {
+									stream.onListen.detach(this, this.__pipeStreamOnListen);
+									stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
+								};
+							}, this);
 						};
-					} else {
-						callback && callback(null);
-					};
-				}),
-
-				__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
-					const next = types.get(options, 'next', false),
-						buffer = this.__buffer;
-
-					if (buffer.length <= 0) {
-						return null;
-					};
-
-					let data;
-
-					if (next) {
-						data = buffer.pop();
-					} else {
-						data = buffer.shift();
-					};
-
-					data.attach(this);
-
-					return data;
-				}),
-			})));
-
-
-			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
-								ioMixIns.OutputStreamBase,
-			{
-				$TYPE_NAME: 'OutputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamMixIn')), true) */,
-			})));
-
-
-			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
-								ioMixIns.OutputStreamBase,
-								ioMixIns.BufferedStream,
-			{
-				$TYPE_NAME: 'BufferedOutputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedOutputStreamMixIn')), true) */,
-
-				__submitInternal: doodad.REPLACE(function __submitInternal(data, /*optional*/options) {
-					if (data.consumed) {
-						throw new types.Error("Data object has been consumed.");
-					};
-
-					const callback = types.get(options, 'callback'),
-						next = types.get(options, 'next', false),
-						buffer = this.__buffer;
-
-					if (buffer.length >= this.options.bufferSize) {
-						throw new types.BufferOverflow();
-					};
-
-					data.detach();
-
-					if (next) {
-						buffer.unshift(data);
-					} else {
-						buffer.push(data);
-					};
-
-					if (buffer.length >= this.options.bufferSize) {
-						if (this.options.flushMode === 'auto') {
-							this.flush({callback: callback});
+						if (pos >= 0) {
+							this.__pipes.splice(pos, 1);
 						} else {
-							callback && data.chain(callback);
+							this.__pipes = [];
 						};
-					} else {
-						callback && callback(null);
-					};
-				}),
+						return this;
+					}),
 
-				canWrite: doodad.REPLACE(function canWrite() {
-					return !this.__flushing && (this.__buffer.length < this.options.bufferSize);
-				}),
-			})));
+				}))));
 
 
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
-								ioMixIns.InputOutputStreamBase,
-			{
-				$TYPE_NAME: 'InputOutputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputOutputStreamMixIn')), true) */,
-			})));
+				ioMixIns.InputStreamBase,
+				{
+					$TYPE_NAME: 'InputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputStreamMixIn')), true) */,
+				})));
+
+
+			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
+				ioMixIns.InputStreamBase,
+				ioMixIns.BufferedStream,
+				{
+					$TYPE_NAME: 'BufferedInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputStreamMixIn')), true) */,
+
+					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
+						if (data.consumed) {
+							throw new types.Error("Data object has been consumed.");
+						};
+
+						const callback = types.get(options, 'callback'),
+							next = types.get(options, 'next', false),
+							buffer = this.__buffer;
+
+						if (buffer.length >= this.options.bufferSize) {
+							throw new types.BufferOverflow();
+						};
+
+						data.detach();
+
+						if (next) {
+							buffer.unshift(data);
+						} else {
+							buffer.push(data);
+						};
+
+						if (buffer.length >= this.options.bufferSize) {
+							if (this.options.flushMode === 'auto') {
+								this.flush({callback: callback});
+							} else {
+								callback && data.chain(callback);
+							};
+						} else {
+							callback && callback(null);
+						};
+					}),
+
+					__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
+						const next = types.get(options, 'next', false),
+							buffer = this.__buffer;
+
+						if (buffer.length <= 0) {
+							return null;
+						};
+
+						let data;
+
+						if (next) {
+							data = buffer.pop();
+						} else {
+							data = buffer.shift();
+						};
+
+						data.attach(this);
+
+						return data;
+					}),
+				})));
+
+
+			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
+				ioMixIns.OutputStreamBase,
+				{
+					$TYPE_NAME: 'OutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('OutputStreamMixIn')), true) */,
+				})));
+
+
+			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
+				ioMixIns.OutputStreamBase,
+				ioMixIns.BufferedStream,
+				{
+					$TYPE_NAME: 'BufferedOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedOutputStreamMixIn')), true) */,
+
+					__submitInternal: doodad.REPLACE(function __submitInternal(data, /*optional*/options) {
+						if (data.consumed) {
+							throw new types.Error("Data object has been consumed.");
+						};
+
+						const callback = types.get(options, 'callback'),
+							next = types.get(options, 'next', false),
+							buffer = this.__buffer;
+
+						if (buffer.length >= this.options.bufferSize) {
+							throw new types.BufferOverflow();
+						};
+
+						data.detach();
+
+						if (next) {
+							buffer.unshift(data);
+						} else {
+							buffer.push(data);
+						};
+
+						if (buffer.length >= this.options.bufferSize) {
+							if (this.options.flushMode === 'auto') {
+								this.flush({callback: callback});
+							} else {
+								callback && data.chain(callback);
+							};
+						} else {
+							callback && callback(null);
+						};
+					}),
+
+					canWrite: doodad.REPLACE(function canWrite() {
+						return !this.__flushing && (this.__buffer.length < this.options.bufferSize);
+					}),
+				})));
+
+
+			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.Stream.$extend(
+				ioMixIns.InputOutputStreamBase,
+				{
+					$TYPE_NAME: 'InputOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('InputOutputStreamMixIn')), true) */,
+				})));
 
 			ioMixIns.REGISTER(doodad.MIX_IN(ioMixIns.InputOutputStream.$extend(
-								ioMixIns.BufferedInputStream,
-								ioMixIns.BufferedOutputStream,
-			{
-				$TYPE_NAME: 'BufferedInputOutputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputOutputStreamMixIn')), true) */,
+				ioMixIns.BufferedInputStream,
+				ioMixIns.BufferedOutputStream,
+				{
+					$TYPE_NAME: 'BufferedInputOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BufferedInputOutputStreamMixIn')), true) */,
 
-				__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
-					const callback = types.get(options, 'callback'),
-						next = types.get(options, 'next', false);
+					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
+						const callback = types.get(options, 'callback'),
+							next = types.get(options, 'next', false);
 
-					if (next) {
-						throw new types.NotAvailable("The option 'next' is not available.");
-					};
+						if (next) {
+							throw new types.NotAvailable("The option 'next' is not available.");
+						};
 
-					if (callback) {
-						data.chain(callback);
-					};
+						if (callback) {
+							data.chain(callback);
+						};
 
-					data.consume();
-				}),
+						data.consume();
+					}),
 
-				__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
-				}),
-			})));
+					__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
+					}),
+				})));
 
 
 			//===================================

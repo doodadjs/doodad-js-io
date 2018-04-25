@@ -26,7 +26,7 @@
 
 //! IF_SET("mjs")
 //! ELSE()
-	"use strict";
+"use strict";
 //! END_IF()
 
 exports.add = function add(modules) {
@@ -70,147 +70,147 @@ exports.add = function add(modules) {
 
 
 			clientIO.REGISTER(io.TextInputStream.$extend(
-									ioMixIns.KeyboardInput,
-									mixIns.JsEvents,
-									ioMixIns.ObjectTransformableIn,
-									ioMixIns.ObjectTransformableOut,
-			{
-				$TYPE_NAME: 'KeyboardInputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('KeyboardInputStream')), true) */,
+				ioMixIns.KeyboardInput,
+				mixIns.JsEvents,
+				ioMixIns.ObjectTransformableIn,
+				ioMixIns.ObjectTransformableOut,
+				{
+					$TYPE_NAME: 'KeyboardInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('KeyboardInputStream')), true) */,
 
-				element: doodad.READ_ONLY(null),
+					element: doodad.READ_ONLY(null),
 
-				__listening: doodad.PROTECTED(false),
-				__buffer: doodad.PROTECTED(null),
+					__listening: doodad.PROTECTED(false),
+					__buffer: doodad.PROTECTED(null),
 
-				onReady: doodad.CALL_FIRST(doodad.OVERRIDE(function onReady(ev) {
-					ev.data.event = ev;
+					onReady: doodad.CALL_FIRST(doodad.OVERRIDE(function onReady(ev) {
+						ev.data.event = ev;
 
-					return this._super(ev);
-				})),
+						return this._super(ev);
+					})),
 
-				onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(context) {
+					onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(context) {
 					// Shows virtual keyboard on mobile phones and tablets.
-					if (this.element.focus) {
-						this.element.focus();
-					};
-				})),
-
-				onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT('keydown', function onJsKeyDown(context) {
-					if (this.__listening) {
-						const ev = context.event;
-
-						const key = {};
-
-						let	functionKeys = 0,
-							charCode = ev.charCode;
-
-						const scanCode = ev.keyCode;
-
-						if (ev.shiftKey) {
-							functionKeys |= io.KeyboardFunctionKeys.Shift;
+						if (this.element.focus) {
+							this.element.focus();
 						};
-						if (ev.ctrlKey) {
-							functionKeys |= io.KeyboardFunctionKeys.Ctrl;
-						};
-						if (ev.altKey) {
-							functionKeys |= io.KeyboardFunctionKeys.Alt;
-						};
-						if (ev.metaKey) {
-							functionKeys |= io.KeyboardFunctionKeys.Meta;
-						};
+					})),
 
-						if (!functionKeys) {
-							if (charCode === 0) {
+					onJsKeyDown: doodad.PROTECTED(doodad.JS_EVENT('keydown', function onJsKeyDown(context) {
+						if (this.__listening) {
+							const ev = context.event;
+
+							const key = {};
+
+							let	functionKeys = 0,
+								charCode = ev.charCode;
+
+							const scanCode = ev.keyCode;
+
+							if (ev.shiftKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Shift;
+							};
+							if (ev.ctrlKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Ctrl;
+							};
+							if (ev.altKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Alt;
+							};
+							if (ev.metaKey) {
+								functionKeys |= io.KeyboardFunctionKeys.Meta;
+							};
+
+							if (!functionKeys) {
+								if (charCode === 0) {
 								// TODO: Fix every other wrong char codes
-								if (scanCode === io.KeyboardScanCodes.Enter) {
-									charCode = 10; // "\n"
+									if (scanCode === io.KeyboardScanCodes.Enter) {
+										charCode = 10; // "\n"
+									};
 								};
+							};
+
+							key.charCode = charCode;
+							key.scanCode = scanCode;
+							key.text = String.fromCharCode(charCode);
+							key.functionKeys = functionKeys;
+
+							const data = new io.Data(key);
+
+							this.push(data);
+
+							if (data.event.prevent) {
+								ev.preventDefault();
+								return false;
 							};
 						};
 
-						key.charCode = charCode;
-						key.scanCode = scanCode;
-						key.text = String.fromCharCode(charCode);
-						key.functionKeys = functionKeys;
+						return undefined;
+					})),
 
-						const data = new io.Data(key);
+					onJsKeyPress: doodad.PROTECTED(doodad.JS_EVENT('keypress', function onJsKeyPress(context) {
+						if (this.__listening) {
+							const ev = context.event;
 
-						this.push(data);
+							const key = {};
 
-						if (data.event.prevent) {
-							ev.preventDefault();
-							return false;
+							const unifiedEv = ev.getUnified();
+							key.text = String.fromCharCode(unifiedEv.which);
+
+							const data = new io.Data(key);
+
+							this.push(data);
+
+							if (data.event.prevent) {
+								ev.preventDefault();
+								return false;
+							};
 						};
-					};
 
-					return undefined;
-				})),
+						return undefined;
+					})),
 
-				onJsKeyPress: doodad.PROTECTED(doodad.JS_EVENT('keypress', function onJsKeyPress(context) {
-					if (this.__listening) {
-						const ev = context.event;
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'element', types.getIn(this.options, 'element', global.document));
 
-						const key = {};
+						this._super(options);
 
-						const unifiedEv = ev.getUnified();
-						key.text = String.fromCharCode(unifiedEv.which);
-
-						const data = new io.Data(key);
-
-						this.push(data);
-
-						if (data.event.prevent) {
-							ev.preventDefault();
-							return false;
+						if (root.DD_ASSERT) {
+							root.DD_ASSERT(types.isNothing(this.options.element) || client.isElement(this.options.element) || client.isDocument(this.options.element), "Invalid element.");
 						};
-					};
 
-					return undefined;
-				})),
+						types.setAttribute(this, 'element', this.options.element);
+					}),
 
-				setOptions: doodad.OVERRIDE(function setOptions(options) {
-					types.getDefault(options, 'element', types.getIn(this.options, 'element', global.document));
+					destroy: doodad.OVERRIDE(function destroy() {
+						this.stopListening();
 
-					this._super(options);
+						this._super();
+					}),
 
-					if (root.DD_ASSERT) {
-						root.DD_ASSERT(types.isNothing(this.options.element) || client.isElement(this.options.element) || client.isDocument(this.options.element), "Invalid element.");
-					};
+					isListening: doodad.OVERRIDE(function isListening() {
+						return this.__listening;
+					}),
 
-					types.setAttribute(this, 'element', this.options.element);
-				}),
+					listen: doodad.OVERRIDE(function listen(/*optional*/options) {
+						if (!this.__listening) {
+							this.__listening = true;
+							this.onJsClick.attach(this.element);
+							this.onJsKeyDown.attach(this.element);
+							this.onJsKeyPress.attach(this.element);
+							this.onListen();
+						};
+					}),
 
-				destroy: doodad.OVERRIDE(function destroy() {
-					this.stopListening();
-
-					this._super();
-				}),
-
-				isListening: doodad.OVERRIDE(function isListening() {
-					return this.__listening;
-				}),
-
-				listen: doodad.OVERRIDE(function listen(/*optional*/options) {
-					if (!this.__listening) {
-						this.__listening = true;
-						this.onJsClick.attach(this.element);
-						this.onJsKeyDown.attach(this.element);
-						this.onJsKeyPress.attach(this.element);
-						this.onListen();
-					};
-				}),
-
-				stopListening: doodad.OVERRIDE(function stopListening(/*optional*/options) {
-					if (this.__listening) {
-						this.__listening = false;
-						this.onJsClick.clear();
-						this.onJsKeyDown.clear();
-						this.onJsKeyPress.clear();
-						this.onStopListening();
-					};
-				}),
-			}));
+					stopListening: doodad.OVERRIDE(function stopListening(/*optional*/options) {
+						if (this.__listening) {
+							this.__listening = false;
+							this.onJsClick.clear();
+							this.onJsKeyDown.clear();
+							this.onJsKeyPress.clear();
+							this.onStopListening();
+						};
+					}),
+				}));
 
 
 			/* TODO: Complete and Test
@@ -263,167 +263,167 @@ exports.add = function add(modules) {
 
 
 			clientIO.REGISTER(io.HtmlOutputStream.$extend(
-			{
-				$TYPE_NAME: 'DomOutputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('DomOutputStream')), true) */,
+				{
+					$TYPE_NAME: 'DomOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('DomOutputStream')), true) */,
 
-				element: doodad.PUBLIC(doodad.READ_ONLY(null)),
+					element: doodad.PUBLIC(doodad.READ_ONLY(null)),
 
-				__div: doodad.PROTECTED(null),
+					__div: doodad.PROTECTED(null),
 
-				setOptions: doodad.OVERRIDE(function setOptions(options) {
-					types.getDefault(options, 'element', types.getIn(this.options, 'element', global.document && global.document.body));
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'element', types.getIn(this.options, 'element', global.document && global.document.body));
 
-					this._super(options);
+						this._super(options);
 
-					root.DD_ASSERT && root.DD_ASSERT(client.isElement(this.options.element), "Invalid element.");
+						root.DD_ASSERT && root.DD_ASSERT(client.isElement(this.options.element), "Invalid element.");
 
-					this.__div = this.options.element.ownerDocument.createElement('div');
+						this.__div = this.options.element.ownerDocument.createElement('div');
 
-					types.setAttribute(this, 'element', this.options.element);
-				}),
+						types.setAttribute(this, 'element', this.options.element);
+					}),
 
-				prepareFlushState: doodad.OVERRIDE(function prepareFlushState(options) {
-					const state = this._super(options);
+					prepareFlushState: doodad.OVERRIDE(function prepareFlushState(options) {
+						const state = this._super(options);
 
-					const element = this.element;
-					root.DD_ASSERT && root.DD_ASSERT(element);
-					state.parent = element;
+						const element = this.element;
+						root.DD_ASSERT && root.DD_ASSERT(element);
+						state.parent = element;
 
-					return state;
-				}),
+						return state;
+					}),
 
-				handleBufferData: doodad.SUPER(function handleBufferData(data, state) {
-					let html = this._super(data, state);
+					handleBufferData: doodad.SUPER(function handleBufferData(data, state) {
+						let html = this._super(data, state);
 
-					data = data.valueOf();
+						data = data.valueOf();
 
-					const type = data[0];
+						const type = data[0];
 
-					let container,
-						element;
+						let container,
+							element;
 
-					if (type === state.bufferTypes.Html) {
-						container = this.__div;
-						container.innerHTML = html;
-						/* eslint no-cond-assign: "off" */
-						while (element = container.firstChild) {
-							state.parent.appendChild(element);
-						};
-					} else if (type === state.bufferTypes.Open) {
-						if (state.flushElement) {
-							state.flushElement = false;
-							state.flushElementChunk[2] = element = this.element.ownerDocument.createElement('div');
-							types.setAttribute(this, 'element', element);
-							html = null;
-						} else {
+						if (type === state.bufferTypes.Html) {
 							container = this.__div;
 							container.innerHTML = html;
-							element = client.getFirstElement(container);
-							container.innerHTML = '';
-							if (element) {
-								state.parent.appendChild(element);
-							};
-						};
-						state.parent = element;
-					} else if (type === state.bufferTypes.Close) {
-						const parent = state.parent.parentElement;
-						root.DD_ASSERT && root.DD_ASSERT(parent, "Parent is missing.");
-						state.parent = parent;
-					} else if (type === state.bufferTypes.Flush) {
-						container = data[2];
-						if (container && !container.parentNode) {
 							/* eslint no-cond-assign: "off" */
 							while (element = container.firstChild) {
 								state.parent.appendChild(element);
 							};
+						} else if (type === state.bufferTypes.Open) {
+							if (state.flushElement) {
+								state.flushElement = false;
+								state.flushElementChunk[2] = element = this.element.ownerDocument.createElement('div');
+								types.setAttribute(this, 'element', element);
+								html = null;
+							} else {
+								container = this.__div;
+								container.innerHTML = html;
+								element = client.getFirstElement(container);
+								container.innerHTML = '';
+								if (element) {
+									state.parent.appendChild(element);
+								};
+							};
+							state.parent = element;
+						} else if (type === state.bufferTypes.Close) {
+							const parent = state.parent.parentElement;
+							root.DD_ASSERT && root.DD_ASSERT(parent, "Parent is missing.");
+							state.parent = parent;
+						} else if (type === state.bufferTypes.Flush) {
+							container = data[2];
+							if (container && !container.parentNode) {
+							/* eslint no-cond-assign: "off" */
+								while (element = container.firstChild) {
+									state.parent.appendChild(element);
+								};
+							};
 						};
-					};
 
-					return html;
-				}),
+						return html;
+					}),
 
-				onData: doodad.OVERRIDE(function onData(ev) {
-					const retval = this._super(ev);
+					onData: doodad.OVERRIDE(function onData(ev) {
+						const retval = this._super(ev);
 
-					ev.preventDefault();
+						ev.preventDefault();
 
-					return retval;
-				}),
+						return retval;
+					}),
 
-				flush: doodad.OVERRIDE(function flush(/*optional*/options) {
-					this._super(options);
+					flush: doodad.OVERRIDE(function flush(/*optional*/options) {
+						this._super(options);
 
-					this.__div.innerHTML = '';
-				}),
+						this.__div.innerHTML = '';
+					}),
 
-				openStream: doodad.OVERRIDE(function openStream(/*optional*/options) {
-					root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
+					openStream: doodad.OVERRIDE(function openStream(/*optional*/options) {
+						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
-					options = tools.extend({}, this.options, options);
+						options = tools.extend({}, this.options, options);
 
-					const tag = types.get(options, 'tag', null);
+						const tag = types.get(options, 'tag', null);
 
-					let attrs = types.get(options, 'attrs', null);
+						let attrs = types.get(options, 'attrs', null);
 
-					if (root.DD_ASSERT) {
-						root.DD_ASSERT(types.isStringAndNotEmptyTrim(tag), "Invalid tag.");
-						root.DD_ASSERT(types.isNothing(attrs) || types.isString(attrs), "Invalid attributes.");
-					};
+						if (root.DD_ASSERT) {
+							root.DD_ASSERT(types.isStringAndNotEmptyTrim(tag), "Invalid tag.");
+							root.DD_ASSERT(types.isNothing(attrs) || types.isString(attrs), "Invalid attributes.");
+						};
 
-					if (attrs) {
-						attrs = tools.trim(attrs);
-					};
-					const container = this.__div;
-					if (attrs && attrs.length) {
-						container.innerHTML = ('<' + tag + ' ' + attrs + '></' + tag + '>' + this.options.newLine);
-					} else {
-						container.innerHTML = ('<' + tag + '></' + tag + '>' + this.options.newLine);
-					};
+						if (attrs) {
+							attrs = tools.trim(attrs);
+						};
+						const container = this.__div;
+						if (attrs && attrs.length) {
+							container.innerHTML = ('<' + tag + ' ' + attrs + '></' + tag + '>' + this.options.newLine);
+						} else {
+							container.innerHTML = ('<' + tag + '></' + tag + '>' + this.options.newLine);
+						};
 
-					options.element = client.getFirstElement(container);
+						options.element = client.getFirstElement(container);
 
-					container.innerHTML = '';
+						container.innerHTML = '';
 
-					return this._super(tools.extend({}, options, {noOpenClose: true}));
-				}),
+						return this._super(tools.extend({}, options, {noOpenClose: true}));
+					}),
 
-				openElement: doodad.OVERRIDE(function openElement(/*optional*/options) {
-					this._super(options);
+					openElement: doodad.OVERRIDE(function openElement(/*optional*/options) {
+						this._super(options);
 
-					const tags = this.__tags;
-					tags[tags.length - 1][1] = this.element;
-				}),
+						const tags = this.__tags;
+						tags[tags.length - 1][1] = this.element;
+					}),
 
-				closeElement: doodad.OVERRIDE(function closeElement() {
-					const tags = this.__tags;
+					closeElement: doodad.OVERRIDE(function closeElement() {
+						const tags = this.__tags;
 
-					root.DD_ASSERT && root.DD_ASSERT((tags.length > 0), "No more elements opened.");
+						root.DD_ASSERT && root.DD_ASSERT((tags.length > 0), "No more elements opened.");
 
-					const tag = tags[tags.length - 1],
-						element = tag[1];
+						const tag = tags[tags.length - 1],
+							element = tag[1];
 
-					this._super();
+						this._super();
 
-					types.setAttribute(this, 'element', element);
-				}),
+						types.setAttribute(this, 'element', element);
+					}),
 
-				reset: doodad.OVERRIDE(function reset() {
-					this._super();
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
 
-					types.setAttribute(this, 'element', this.options.element);
-				}),
+						types.setAttribute(this, 'element', this.options.element);
+					}),
 
-				clear: doodad.OVERRIDE(function clear() {
-					this._super();
+					clear: doodad.OVERRIDE(function clear() {
+						this._super();
 
-					if (this.element) {
-						this.element.innerHTML = '';
-					};
-				}),
-			}));
+						if (this.element) {
+							this.element.innerHTML = '';
+						};
+					}),
+				}));
 
-/*
+			/*
 			// TODO : Test and debug
 			clientIO.REGISTER(io.InputStream.$extend(
 									mixIns.JsEvents,

@@ -26,15 +26,15 @@
 
 
 //! IF_SET("mjs")
-	// //! INJECT("import {default as nodeStream} from 'stream';")
-	//! INJECT("import {default as nodeFs} from 'fs';")
-	//! INJECT("import {default as nodeCluster} from 'cluster';")
+// //! INJECT("import {default as nodeStream} from 'stream';")
+//! INJECT("import {default as nodeFs} from 'fs';")
+//! INJECT("import {default as nodeCluster} from 'cluster';")
 //! ELSE()
-	"use strict";
+"use strict";
 
-	const //nodeStream = require('stream'),
-		nodeFs = require('fs'),
-		nodeCluster = require('cluster');
+const //nodeStream = require('stream'),
+	nodeFs = require('fs'),
+	nodeCluster = require('cluster');
 //! END_IF()
 
 const //nodeStreamReadable = nodeStream.Readable,
@@ -86,477 +86,477 @@ exports.add = function add(modules) {
 			//=====================================================
 
 			__Internal__.__NodeJsStream = types.INIT(doodad.MIX_IN(ioMixIns.Stream.$extend(
-			{
-				$TYPE_NAME: '__NodeJsStream',
+				{
+					$TYPE_NAME: '__NodeJsStream',
 
-				stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
+					stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
 
-				streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
-					if (types.isEntrant(this, 'onError')) {
-						this.onError(new doodad.ErrorEvent(ex));
-					};
-				}),
+					streamOnError: doodad.NODE_EVENT('error', function streamOnError(context, ex) {
+						if (types.isEntrant(this, 'onError')) {
+							this.onError(new doodad.ErrorEvent(ex));
+						};
+					}),
 
-				streamOnClose: doodad.NODE_EVENT('close'),
+					streamOnClose: doodad.NODE_EVENT('close'),
 
-				create: doodad.OVERRIDE(function create(stream, /*optional*/options) {
+					create: doodad.OVERRIDE(function create(stream, /*optional*/options) {
 					//////root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamReadable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
 
-					this._super(options);
+						this._super(options);
 
-					this.streamOnError.attach(stream);
-					this.streamOnClose.attach(stream);
+						this.streamOnError.attach(stream);
+						this.streamOnClose.attach(stream);
 
-					types.setAttribute(this, 'stream', stream);
-				}),
+						types.setAttribute(this, 'stream', stream);
+					}),
 
-				destroy: doodad.OVERRIDE(function destroy() {
-					this.streamOnClose.clear();
-					this.streamOnError.clear();
+					destroy: doodad.OVERRIDE(function destroy() {
+						this.streamOnClose.clear();
+						this.streamOnError.clear();
 
-					this._super();
-				}),
-			})));
+						this._super();
+					}),
+				})));
 
 			nodejsIO.REGISTER(io.InputStream.$extend(
-							__Internal__.__NodeJsStream,
-							ioMixIns.BinaryTransformableIn,
-							ioMixIns.BinaryTransformableOut,
-			{
-				$TYPE_NAME: 'BinaryInputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryInputStreamNodeJs')), true) */,
+				__Internal__.__NodeJsStream,
+				ioMixIns.BinaryTransformableIn,
+				ioMixIns.BinaryTransformableOut,
+				{
+					$TYPE_NAME: 'BinaryInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryInputStreamNodeJs')), true) */,
 
-				__ended: doodad.PROTECTED(false),
-				__waiting: doodad.PROTECTED(false),
-				__listening: doodad.PROTECTED(false),
+					__ended: doodad.PROTECTED(false),
+					__waiting: doodad.PROTECTED(false),
+					__listening: doodad.PROTECTED(false),
 
-				streamOnData: doodad.NODE_EVENT('data', function streamOnData(context, chunk) {
-					if (this.__waiting) {
-						throw new types.BufferOverflow();
-					};
+					streamOnData: doodad.NODE_EVENT('data', function streamOnData(context, chunk) {
+						if (this.__waiting) {
+							throw new types.BufferOverflow();
+						};
 
-					const __pushCb = doodad.Callback(this, function pushCb(err) {
-						if (!err && this.__listening) {
-							const chunk = this.stream.read();
-							if (chunk) {
-								this.push(new io.BinaryData(chunk), {callback: __pushCb});
-							} else {
-								this.__waiting = false;
-								if (this.__ended) {
-									this.push(new io.BinaryData(io.EOF), {callback: doodad.Callback(this, function() {
-										this.stopListening();
-									})});
+						const __pushCb = doodad.Callback(this, function pushCb(err) {
+							if (!err && this.__listening) {
+								const chunk = this.stream.read();
+								if (chunk) {
+									this.push(new io.BinaryData(chunk), {callback: __pushCb});
 								} else {
-									this.stream.resume();
-									this.streamOnData.attach(this.stream);
+									this.__waiting = false;
+									if (this.__ended) {
+										this.push(new io.BinaryData(io.EOF), {callback: doodad.Callback(this, function() {
+											this.stopListening();
+										})});
+									} else {
+										this.stream.resume();
+										this.streamOnData.attach(this.stream);
+									};
 								};
-							};
-						} else {
+							} else {
 							// Fully apply stopListening
-							this.__waiting = false;
-							this.__listening = true;
-							this.stopListening();
-						};
-					});
+								this.__waiting = false;
+								this.__listening = true;
+								this.stopListening();
+							};
+						});
 
-					const data = new io.BinaryData(chunk);
+						const data = new io.BinaryData(chunk);
 
-					this.push(data);
+						this.push(data);
 
-					if (!data.consumed) {
-						this.__waiting = true;
-						this.stream.pause();
-						this.streamOnData.clear();
-						//this.stream.removeAllListeners('data');
-						data.chain(__pushCb);
-					};
-				}),
-
-				streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
-					this.__ended = true;
-					if (!this.__waiting) {
-						this.push(new io.BinaryData(io.EOF), {callback: doodad.Callback(this, function() {
-							this.stopListening();
-						})});
-					};
-				}),
-
-				streamOnClose: doodad.OVERRIDE(function streamOnClose(context) {
-					this._super(context);
-
-					if (!this.__ended) {
-						this.__ended = true;
-						this.push(new io.BinaryData(io.EOF));
-					};
-				}),
-
-				__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
-					const size = types.get(options, 'size');
-
-					const raw = this.stream.read(size);
-
-					if (raw) {
-						const data = new io.BinaryData(raw, options);
-
-						data.attach(this);
-
-						return data;
-
-					} else {
-						return null;
-
-					};
-				}),
-
-				__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
-					const next = types.get(options, 'next', false);
-
-					const raw = this.transformOut(data, options);
-
-					if (next) {
-						this.stream.unshift(raw);
-					} else {
-						this.stream.push(raw);
-					};
-
-					data.consume();
-				}),
-
-				clear: doodad.OVERRIDE(function clear() {
-					this._super();
-
-					while (this.stream.read()) {
-						// Do nothing !
-					};
-				}),
-
-				reset: doodad.OVERRIDE(function reset() {
-					this._super();
-
-					this.__ended = false;
-					this.__waiting = false;
-				}),
-
-				_read: doodad.REPLACE(nodejsIOInterfaces.IReadable, function _read(/*optional*/size) {
-					const host = this[doodad.HostSymbol];
-					return host.stream._read(size);
-				}),
-
-				push: doodad.REPLACE(nodejsIOInterfaces.IReadable, function push(chunk, /*optional*/encoding) {
-					const host = this[doodad.HostSymbol];
-					return host.stream.push(chunk, encoding || this.__defaultEncoding);
-				}),
-
-				unshift: doodad.REPLACE(nodejsIOInterfaces.IReadable, function unshift(chunk) {
-					const host = this[doodad.HostSymbol];
-					return host.stream.unshift(chunk);
-				}),
-
-				wrap: doodad.REPLACE(nodejsIOInterfaces.IReadable, function wrap(stream) {
-					const host = this[doodad.HostSymbol];
-					return host.stream.wrap(stream);
-				}),
-
-				isListening: doodad.REPLACE(function isListening() {
-					return this.__listening;
-				}),
-
-				listen: doodad.REPLACE(function listen(/*optional*/options) {
-					if (!this.__listening) {
-						this.__listening = true;
-
-						if (!this.__waiting) {
-							const stream = this.stream;
-
-							this.streamOnData.attach(stream);
-							this.streamOnEnd.attach(stream);
-							//this.streamOnClose.attach(stream);
-							//this.streamOnError.attach(stream);
-
-							stream.resume();
-
-							this.onListen();
-						};
-					};
-				}),
-
-				stopListening: doodad.REPLACE(function stopListening() {
-					if (this.__listening) {
-						this.__listening = false;
-
-						if (!this.__waiting) {
-							this.streamOnData.clear();
-							this.streamOnEnd.clear();
-							//this.streamOnClose.clear();
-							//this.streamOnError.clear();
-
+						if (!data.consumed) {
+							this.__waiting = true;
 							this.stream.pause();
-
-							this.onStopListening();
+							this.streamOnData.clear();
+							//this.stream.removeAllListeners('data');
+							data.chain(__pushCb);
 						};
-					};
-				}),
-			}));
+					}),
+
+					streamOnEnd: doodad.NODE_EVENT('end', function streamOnEnd(context) {
+						this.__ended = true;
+						if (!this.__waiting) {
+							this.push(new io.BinaryData(io.EOF), {callback: doodad.Callback(this, function() {
+								this.stopListening();
+							})});
+						};
+					}),
+
+					streamOnClose: doodad.OVERRIDE(function streamOnClose(context) {
+						this._super(context);
+
+						if (!this.__ended) {
+							this.__ended = true;
+							this.push(new io.BinaryData(io.EOF));
+						};
+					}),
+
+					__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
+						const size = types.get(options, 'size');
+
+						const raw = this.stream.read(size);
+
+						if (raw) {
+							const data = new io.BinaryData(raw, options);
+
+							data.attach(this);
+
+							return data;
+
+						} else {
+							return null;
+
+						};
+					}),
+
+					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
+						const next = types.get(options, 'next', false);
+
+						const raw = this.transformOut(data, options);
+
+						if (next) {
+							this.stream.unshift(raw);
+						} else {
+							this.stream.push(raw);
+						};
+
+						data.consume();
+					}),
+
+					clear: doodad.OVERRIDE(function clear() {
+						this._super();
+
+						while (this.stream.read()) {
+						// Do nothing !
+						};
+					}),
+
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
+
+						this.__ended = false;
+						this.__waiting = false;
+					}),
+
+					_read: doodad.REPLACE(nodejsIOInterfaces.IReadable, function _read(/*optional*/size) {
+						const host = this[doodad.HostSymbol];
+						return host.stream._read(size);
+					}),
+
+					push: doodad.REPLACE(nodejsIOInterfaces.IReadable, function push(chunk, /*optional*/encoding) {
+						const host = this[doodad.HostSymbol];
+						return host.stream.push(chunk, encoding || this.__defaultEncoding);
+					}),
+
+					unshift: doodad.REPLACE(nodejsIOInterfaces.IReadable, function unshift(chunk) {
+						const host = this[doodad.HostSymbol];
+						return host.stream.unshift(chunk);
+					}),
+
+					wrap: doodad.REPLACE(nodejsIOInterfaces.IReadable, function wrap(stream) {
+						const host = this[doodad.HostSymbol];
+						return host.stream.wrap(stream);
+					}),
+
+					isListening: doodad.REPLACE(function isListening() {
+						return this.__listening;
+					}),
+
+					listen: doodad.REPLACE(function listen(/*optional*/options) {
+						if (!this.__listening) {
+							this.__listening = true;
+
+							if (!this.__waiting) {
+								const stream = this.stream;
+
+								this.streamOnData.attach(stream);
+								this.streamOnEnd.attach(stream);
+								//this.streamOnClose.attach(stream);
+								//this.streamOnError.attach(stream);
+
+								stream.resume();
+
+								this.onListen();
+							};
+						};
+					}),
+
+					stopListening: doodad.REPLACE(function stopListening() {
+						if (this.__listening) {
+							this.__listening = false;
+
+							if (!this.__waiting) {
+								this.streamOnData.clear();
+								this.streamOnEnd.clear();
+								//this.streamOnClose.clear();
+								//this.streamOnError.clear();
+
+								this.stream.pause();
+
+								this.onStopListening();
+							};
+						};
+					}),
+				}));
 
 
 			nodejsIO.REGISTER(nodejsIO.BinaryInputStream.$extend(
-							ioMixIns.TextInput,
-							ioMixIns.TextTransformableOut,
-			{
-				$TYPE_NAME: 'TextInputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamNodeJs')), true) */,
+				ioMixIns.TextInput,
+				ioMixIns.TextTransformableOut,
+				{
+					$TYPE_NAME: 'TextInputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextInputStreamNodeJs')), true) */,
 
-				__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
-					const size = types.get(options, 'size');
+					__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
+						const size = types.get(options, 'size');
 
-					const raw = this.stream.read(size);
+						const raw = this.stream.read(size);
 
-					if (raw) {
-						const data = new io.TextData(raw, options);
+						if (raw) {
+							const data = new io.TextData(raw, options);
 
-						if (data) {
-							data.attach(this);
+							if (data) {
+								data.attach(this);
+							};
+
+							return data;
+
+						} else {
+							return null;
+
 						};
 
-						return data;
-
-					} else {
-						return null;
-
-					};
-
-				}),
-			}));
+					}),
+				}));
 
 
 			nodejsIO.REGISTER(io.OutputStream.$extend(
-							__Internal__.__NodeJsStream,
-							ioMixIns.BinaryTransformableIn,
-							ioMixIns.BinaryTransformableOut,
-			{
-				$TYPE_NAME: 'BinaryOutputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryOutputStreamNodeJs')), true) */,
+				__Internal__.__NodeJsStream,
+				ioMixIns.BinaryTransformableIn,
+				ioMixIns.BinaryTransformableOut,
+				{
+					$TYPE_NAME: 'BinaryOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryOutputStreamNodeJs')), true) */,
 
-				stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
+					stream: doodad.PUBLIC(doodad.READ_ONLY(null)),
 
-				__lastWriteOk: doodad.PROTECTED(true),
-				__finished: doodad.PROTECTED(false),
+					__lastWriteOk: doodad.PROTECTED(true),
+					__finished: doodad.PROTECTED(false),
 
-				streamOnPipeDrain: doodad.NODE_EVENT('drain', function streamOnPipeDrain(context) {
+					streamOnPipeDrain: doodad.NODE_EVENT('drain', function streamOnPipeDrain(context) {
 					// <PRB> Some Node.Js streams don't wait after pipes before emitting 'finish'.
 
-					this.streamOnPipeDrain.detach(context.emitter);
-					this.streamOnPipeFinish.detach(context.emitter);
-					this.streamOnPipeClose.detach(context.emitter);
-					this.streamOnPipeUnpipe.detach(context.emitter);
+						this.streamOnPipeDrain.detach(context.emitter);
+						this.streamOnPipeFinish.detach(context.emitter);
+						this.streamOnPipeClose.detach(context.emitter);
+						this.streamOnPipeUnpipe.detach(context.emitter);
 
-					if (--context.data.count === 0) {
+						if (--context.data.count === 0) {
+							this.__lastWriteOk = true;
+
+							context.data.consume();
+						};
+					}),
+
+					streamOnPipeFinish: doodad.NODE_EVENT('finish', function streamOnPipeFinish(context) {
+					// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
+						this.streamOnPipeDrain(context);
+					}),
+
+					streamOnPipeClose: doodad.NODE_EVENT('close', function streamOnPipeClose(context) {
+					// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
+						this.streamOnPipeFinish(context);
+					}),
+
+					streamOnPipeUnpipe: doodad.NODE_EVENT('unpipe', function streamOnPipeUnpipe(context, source) {
+						if (source === this.stream) {
+							this.streamOnPipeDrain(context);
+						};
+					}),
+
+					streamOnDrain: doodad.NODE_EVENT('drain', function streamOnDrain(context) {
 						this.__lastWriteOk = true;
 
 						context.data.consume();
-					};
-				}),
+					}),
 
-				streamOnPipeFinish: doodad.NODE_EVENT('finish', function streamOnPipeFinish(context) {
+					streamOnFinish: doodad.NODE_EVENT('finish', function streamOnFinish(context) {
 					// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
-					this.streamOnPipeDrain(context);
-				}),
+						this.streamOnDrain(context);
 
-				streamOnPipeClose: doodad.NODE_EVENT('close', function streamOnPipeClose(context) {
-					// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
-					this.streamOnPipeFinish(context);
-				}),
+						//types.setAttribute(this, 'stream', null);
+						this.__finished = true;
 
-				streamOnPipeUnpipe: doodad.NODE_EVENT('unpipe', function streamOnPipeUnpipe(context, source) {
-					if (source === this.stream) {
-						this.streamOnPipeDrain(context);
-					};
-				}),
+						const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
+						iwritable.onfinish();
+					}),
 
-				streamOnDrain: doodad.NODE_EVENT('drain', function streamOnDrain(context) {
-					this.__lastWriteOk = true;
+					streamOnClose: doodad.OVERRIDE(function streamOnClose(context) {
+						this._super(context);
 
-					context.data.consume();
-				}),
-
-				streamOnFinish: doodad.NODE_EVENT('finish', function streamOnFinish(context) {
-					// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
-					this.streamOnDrain(context);
-
-					//types.setAttribute(this, 'stream', null);
-					this.__finished = true;
-
-					const iwritable = this.getInterface(nodejsIOInterfaces.IWritable);
-					iwritable.onfinish();
-				}),
-
-				streamOnClose: doodad.OVERRIDE(function streamOnClose(context) {
-					this._super(context);
-
-					// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
-					this.streamOnFinish(context);
-				}),
+						// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
+						this.streamOnFinish(context);
+					}),
 
 
-				create: doodad.OVERRIDE(function create(stream, /*optional*/options) {
+					create: doodad.OVERRIDE(function create(stream, /*optional*/options) {
 					// FIXME: Figure out the object model of NodeJS to make the assertion because it fails with an http.ServerResponse object
 					//root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamWritable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
 
-					this._super(stream, options);
+						this._super(stream, options);
 
-					this.streamOnFinish.attach(stream);
-				}),
+						this.streamOnFinish.attach(stream);
+					}),
 
-				destroy: doodad.OVERRIDE(function destroy() {
-					this.streamOnFinish.clear();
-					this.streamOnDrain.clear();
+					destroy: doodad.OVERRIDE(function destroy() {
+						this.streamOnFinish.clear();
+						this.streamOnDrain.clear();
 
-					this.streamOnPipeDrain.clear();
-					this.streamOnPipeFinish.clear();
-					this.streamOnPipeClose.clear();
-					this.streamOnPipeUnpipe.clear();
+						this.streamOnPipeDrain.clear();
+						this.streamOnPipeFinish.clear();
+						this.streamOnPipeClose.clear();
+						this.streamOnPipeUnpipe.clear();
 
-					this._super();
-				}),
+						this._super();
+					}),
 
-				reset: doodad.OVERRIDE(function reset() {
-					this._super();
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
 
-					this.__lastWriteOk = true;
-					this.__finished = false;
-				}),
+						this.__lastWriteOk = true;
+						this.__finished = false;
+					}),
 
-				canWrite: doodad.REPLACE(function canWrite() {
-					return this.__lastWriteOk && !this.__finished;
-				}),
+					canWrite: doodad.REPLACE(function canWrite() {
+						return this.__lastWriteOk && !this.__finished;
+					}),
 
-				__writeToStream: doodad.PROTECTED(function __writeToStream(raw, /*optional*/end) {
-					if (end) {
-						if (types.isNothing(raw)) {
-							this.stream.end();
-							return true;
-						} else {
-							this.stream.end(raw);
-							return false;
-						};
-					} else {
-						if (types.isNothing(raw)) {
-							return true;
-						} else {
-							return this.stream.write(raw);
-						};
-					};
-				}),
-
-				__submitInternal: doodad.REPLACE(function __submitInternal(data, /*optional*/options) {
-					if (data.consumed) {
-						throw new types.Error("Data object has been consumed.");
-					};
-
-					const callback = types.get(options, 'callback');
-					const eof = (data.raw === io.EOF);
-
-					if (callback) {
-						data.chain(callback);
-					};
-
-					if (!this.__finished) {
-						const lastOk = this.__lastWriteOk;
-
-						if (eof || lastOk) {
-							const buf = data.valueOf();
-							const ok = this.__lastWriteOk = (buf || eof ? this.__writeToStream(buf, eof) : true) && lastOk;
-							if (ok && !eof) {
-								data.consume();
+					__writeToStream: doodad.PROTECTED(function __writeToStream(raw, /*optional*/end) {
+						if (end) {
+							if (types.isNothing(raw)) {
+								this.stream.end();
+								return true;
 							} else {
-								const context = {count: 1, consume: data.consume.bind(data)};
-								const rs = this.stream._readableState;
-								if (eof && rs && (rs.pipesCount > 0)) {
-									// <PRB> Some Node.Js streams don't wait after pipes before emitting 'drain' or 'finish'.
-									// NOTE: 'rs.pipes' can be a stream or an array of streams.
-									context.count = rs.pipesCount;
-									this.streamOnPipeDrain.attachOnce(rs.pipes, context, true);
-									this.streamOnPipeFinish.attachOnce(rs.pipes, context, true);
-									this.streamOnPipeClose.attachOnce(rs.pipes, context, true);
-									this.streamOnPipeUnpipe.attachOnce(rs.pipes, context, true);
-								} else if (ok && eof) {
-									data.consume();
-								} else {
-									this.streamOnDrain.attachOnce(this.stream, context, true);
-								};
+								this.stream.end(raw);
+								return false;
 							};
 						} else {
-							// Stream's 'write' function previously returned 'false', meaning that we should wait for the 'drain' event, but something has been submitted before that event.
-							throw new types.BufferOverflow();
+							if (types.isNothing(raw)) {
+								return true;
+							} else {
+								return this.stream.write(raw);
+							};
 						};
-					} else if (eof) {
-						data.consume();
-					} else {
-						throw new types.NotAvailable("Stream has finished.");
-					};
-				}),
+					}),
 
-				cork: doodad.REPLACE(nodejsIOInterfaces.IWritable, function cork() {
-					const host = this[doodad.HostSymbol];
-					host.stream.cork();
-				}),
+					__submitInternal: doodad.REPLACE(function __submitInternal(data, /*optional*/options) {
+						if (data.consumed) {
+							throw new types.Error("Data object has been consumed.");
+						};
 
-				uncork: doodad.REPLACE(nodejsIOInterfaces.IWritable, function uncork() {
-					const host = this[doodad.HostSymbol];
-					host.stream.uncork();
-				}),
+						const callback = types.get(options, 'callback');
+						const eof = (data.raw === io.EOF);
 
-			}));
+						if (callback) {
+							data.chain(callback);
+						};
+
+						if (!this.__finished) {
+							const lastOk = this.__lastWriteOk;
+
+							if (eof || lastOk) {
+								const buf = data.valueOf();
+								const ok = this.__lastWriteOk = (buf || eof ? this.__writeToStream(buf, eof) : true) && lastOk;
+								if (ok && !eof) {
+									data.consume();
+								} else {
+									const context = {count: 1, consume: data.consume.bind(data)};
+									const rs = this.stream._readableState;
+									if (eof && rs && (rs.pipesCount > 0)) {
+									// <PRB> Some Node.Js streams don't wait after pipes before emitting 'drain' or 'finish'.
+									// NOTE: 'rs.pipes' can be a stream or an array of streams.
+										context.count = rs.pipesCount;
+										this.streamOnPipeDrain.attachOnce(rs.pipes, context, true);
+										this.streamOnPipeFinish.attachOnce(rs.pipes, context, true);
+										this.streamOnPipeClose.attachOnce(rs.pipes, context, true);
+										this.streamOnPipeUnpipe.attachOnce(rs.pipes, context, true);
+									} else if (ok && eof) {
+										data.consume();
+									} else {
+										this.streamOnDrain.attachOnce(this.stream, context, true);
+									};
+								};
+							} else {
+							// Stream's 'write' function previously returned 'false', meaning that we should wait for the 'drain' event, but something has been submitted before that event.
+								throw new types.BufferOverflow();
+							};
+						} else if (eof) {
+							data.consume();
+						} else {
+							throw new types.NotAvailable("Stream has finished.");
+						};
+					}),
+
+					cork: doodad.REPLACE(nodejsIOInterfaces.IWritable, function cork() {
+						const host = this[doodad.HostSymbol];
+						host.stream.cork();
+					}),
+
+					uncork: doodad.REPLACE(nodejsIOInterfaces.IWritable, function uncork() {
+						const host = this[doodad.HostSymbol];
+						host.stream.uncork();
+					}),
+
+				}));
 
 
 			nodejsIO.REGISTER(nodejsIO.BinaryOutputStream.$extend(
-							ioMixIns.TextOutput,
-							ioMixIns.TextTransformableIn,
-			{
-				$TYPE_NAME: 'TextOutputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamNodeJs')), true) */,
+				ioMixIns.TextOutput,
+				ioMixIns.TextTransformableIn,
+				{
+					$TYPE_NAME: 'TextOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('TextOutputStreamNodeJs')), true) */,
 
-				__writeToStream: doodad.REPLACE(function __writeToStream(raw, /*optional*/end) {
-					if (end) {
-						if (types.isNothing(raw)) {
-							this.stream.end();
-							return true;
+					__writeToStream: doodad.REPLACE(function __writeToStream(raw, /*optional*/end) {
+						if (end) {
+							if (types.isNothing(raw)) {
+								this.stream.end();
+								return true;
+							} else {
+								this.stream.end(raw, this.options.encoding);
+								return false;
+							};
 						} else {
-							this.stream.end(raw, this.options.encoding);
-							return false;
+							if (types.isNothing(raw)) {
+								return true;
+							} else {
+								return this.stream.write(raw, this.options.encoding);
+							};
 						};
-					} else {
-						if (types.isNothing(raw)) {
-							return true;
-						} else {
-							return this.stream.write(raw, this.options.encoding);
-						};
-					};
-				}),
-			}));
+					}),
+				}));
 
 
 			nodejsIO.REGISTER(io.InputOutputStream.$extend(
-							nodejsIO.BinaryInputStream,
-							nodejsIO.BinaryOutputStream,
-			{
-				$TYPE_NAME: 'BinaryInputOutputStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryInputOutputStreamNodeJs')), true) */,
+				nodejsIO.BinaryInputStream,
+				nodejsIO.BinaryOutputStream,
+				{
+					$TYPE_NAME: 'BinaryInputOutputStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryInputOutputStreamNodeJs')), true) */,
 
-				__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
-					const next = types.get(options, 'next', false);
-					if (next) {
-						throw new types.NotAvailable("The option 'next' is not available.");
-					};
+					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
+						const next = types.get(options, 'next', false);
+						if (next) {
+							throw new types.NotAvailable("The option 'next' is not available.");
+						};
 
-					//const itransform = this.getInterface(nodejsIOInterfaces.ITransform);
-					//const raw = this.transformOut(data, options);
+						//const itransform = this.getInterface(nodejsIOInterfaces.ITransform);
+						//const raw = this.transformOut(data, options);
 
-					//itransform.emit('data', raw);
+						//itransform.emit('data', raw);
 
-					data.consume();
-				}),
-			}));
+						data.consume();
+					}),
+				}));
 
 
 			// TODO: Complete when needed
@@ -570,311 +570,311 @@ exports.add = function add(modules) {
 
 
 			io.REGISTER(io.Stream.$extend(
-							io.BufferedOutputStream,
-							ioMixIns.TextTransformableIn,
-							ioMixIns.ObjectTransformableOut,
-			{
-				$TYPE_NAME: 'UrlDecoderStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('UrlDecoderStreamNodeJs')), true) */,
+				io.BufferedOutputStream,
+				ioMixIns.TextTransformableIn,
+				ioMixIns.ObjectTransformableOut,
+				{
+					$TYPE_NAME: 'UrlDecoderStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('UrlDecoderStreamNodeJs')), true) */,
 
-				__remaining: doodad.PROTECTED(null),
-				__mode: doodad.PROTECTED(0),
+					__remaining: doodad.PROTECTED(null),
+					__mode: doodad.PROTECTED(0),
 
-				$Modes: doodad.PUBLIC(doodad.READ_ONLY(types.freezeObject({
-					Key: 0,
-					Value: 1,
-				}))),
+					$Modes: doodad.PUBLIC(doodad.READ_ONLY(types.freezeObject({
+						Key: 0,
+						Value: 1,
+					}))),
 
-				setOptions: doodad.OVERRIDE(function setOptions(options) {
-					types.getDefault(options, 'maxStringLength', types.getIn(this.options, 'maxStringLength', 1024 * 1024 * 1));
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						types.getDefault(options, 'maxStringLength', types.getIn(this.options, 'maxStringLength', 1024 * 1024 * 1));
 
-					this._super(options);
-				}),
+						this._super(options);
+					}),
 
-				clear: doodad.OVERRIDE(function clear() {
-				}),
+					clear: doodad.OVERRIDE(function clear() {
+					}),
 
-				reset: doodad.OVERRIDE(function reset() {
-					this._super();
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
 
-					this.__remaining = '';
-					this.__mode = 0;
-				}),
+						this.__remaining = '';
+						this.__mode = 0;
+					}),
 
-				onWrite: doodad.OVERRIDE(function onWrite(ev) {
-					const retval = this._super(ev);
+					onWrite: doodad.OVERRIDE(function onWrite(ev) {
+						const retval = this._super(ev);
 
-					const data = ev.data;
+						const data = ev.data;
 
-					ev.preventDefault();
+						ev.preventDefault();
 
-					const eof = (data.raw === io.EOF);
-					const type = types.getType(this);
-					const Modes = type.$Modes;
-					const encoding = this.options.encoding;
-					const decode = function decode(value) {
-						value = _shared.Natives.windowUnescape(value);
-						value = _shared.Natives.globalBuffer.from(value, 'binary');
-						value = io.TextData.$decode(value, encoding);
-						return value;
-					};
+						const eof = (data.raw === io.EOF);
+						const type = types.getType(this);
+						const Modes = type.$Modes;
+						const encoding = this.options.encoding;
+						const decode = function decode(value) {
+							value = _shared.Natives.windowUnescape(value);
+							value = _shared.Natives.globalBuffer.from(value, 'binary');
+							value = io.TextData.$decode(value, encoding);
+							return value;
+						};
 
-					let remaining = this.__remaining;
-					this.__remaining = '';
+						let remaining = this.__remaining;
+						this.__remaining = '';
 
-					const value = data.toString();
-					if ((remaining.length + value.length) > this.options.maxStringLength) {
-						throw new types.BufferOverflow("URL buffer exceeded maximum permitted length.");
-					};
+						const value = data.toString();
+						if ((remaining.length + value.length) > this.options.maxStringLength) {
+							throw new types.BufferOverflow("URL buffer exceeded maximum permitted length.");
+						};
 
-					const url = remaining + value;
+						const url = remaining + value;
 
-					const delimiters = /=|&/g;
+						const delimiters = /=|&/g;
 
-					let last = 0,
-						result;
-					/* eslint no-cond-assign: "off" */
-					while (result = delimiters.exec(url)) {
-						const chr = result[0];
-						if ((this.__mode === Modes.Value) && (chr === '=')) {
+						let last = 0,
+							result;
+						/* eslint no-cond-assign: "off" */
+						while (result = delimiters.exec(url)) {
+							const chr = result[0];
+							if ((this.__mode === Modes.Value) && (chr === '=')) {
 							// Character "=" in the value
-						} else {
-							const value = decode(url.slice(last, result.index));
-							const mode = this.__mode;
-
-							// TODO: Transform
-							const section = {
-								mode: mode,
-								Modes: Modes,
-								text: value,
-								valueOf: function valueOf() {
-									return this.text;
-								},
-							};
-							section.raw = section;
-							this.submit(new io.Data(section), {callback: data.defer()});
-
-							if (mode === Modes.Key) {
-								this.__mode = Modes.Value;
 							} else {
-								this.__mode = Modes.Key;
+								const value = decode(url.slice(last, result.index));
+								const mode = this.__mode;
+
+								// TODO: Transform
+								const section = {
+									mode: mode,
+									Modes: Modes,
+									text: value,
+									valueOf: function valueOf() {
+										return this.text;
+									},
+								};
+								section.raw = section;
+								this.submit(new io.Data(section), {callback: data.defer()});
+
+								if (mode === Modes.Key) {
+									this.__mode = Modes.Value;
+								} else {
+									this.__mode = Modes.Key;
+								};
+
+								last = delimiters.lastIndex;
 							};
-
-							last = delimiters.lastIndex;
 						};
-					};
 
-					remaining = url.slice(last);
-					if (eof) {
-						if (remaining) {
-							const section = {
-								mode: this.__mode,
-								Modes: Modes,
-								text: decode(remaining),
+						remaining = url.slice(last);
+						if (eof) {
+							if (remaining) {
+								const section = {
+									mode: this.__mode,
+									Modes: Modes,
+									text: decode(remaining),
+								};
+								this.submit(new io.Data(section), {callback: data.defer()});
 							};
-							this.submit(new io.Data(section), {callback: data.defer()});
+							this.submit(new io.Data(io.EOF), {callback: data.defer()});
+						} else if (remaining) {
+							this.__remaining = remaining;
 						};
-						this.submit(new io.Data(io.EOF), {callback: data.defer()});
-					} else if (remaining) {
-						this.__remaining = remaining;
-					};
 
-					return retval;
-				}),
-			}));
+						return retval;
+					}),
+				}));
 
 
 			io.REGISTER(io.Stream.$extend(
-							io.BufferedOutputStream,
-							ioMixIns.TextTransformableIn,
-							ioMixIns.BinaryTransformableOut,
-			{
-				$TYPE_NAME: 'Base64DecoderStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('Base64DecoderStreamNodeJs')), true) */,
+				io.BufferedOutputStream,
+				ioMixIns.TextTransformableIn,
+				ioMixIns.BinaryTransformableOut,
+				{
+					$TYPE_NAME: 'Base64DecoderStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('Base64DecoderStreamNodeJs')), true) */,
 
-				__remaining: doodad.PROTECTED(null),
+					__remaining: doodad.PROTECTED(null),
 
-				reset: doodad.OVERRIDE(function reset() {
-					this._super();
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
 
-					this.__remaining = '';
-				}),
+						this.__remaining = '';
+					}),
 
-				onWrite: doodad.OVERRIDE(function onWrite(ev) {
-					const retval = this._super(ev);
+					onWrite: doodad.OVERRIDE(function onWrite(ev) {
+						const retval = this._super(ev);
 
-					ev.preventDefault();
+						ev.preventDefault();
 
-					const data = ev.data;
+						const data = ev.data;
 
-					const eof = (data.raw === io.EOF);
+						const eof = (data.raw === io.EOF);
 
-					const value = data.toString();
-					const buf = this.__remaining + (types.isNothing(value) ? '' : value.replace(/\n|\r/gm, ''));
-					this.__remaining = '';
+						const value = data.toString();
+						const buf = this.__remaining + (types.isNothing(value) ? '' : value.replace(/\n|\r/gm, ''));
+						this.__remaining = '';
 
-					const bufLen = buf.length;
-					const chunkLen = (eof ? bufLen : (bufLen >> 2) << 2); // Math.floor(bufLen / 4) * 4
+						const bufLen = buf.length;
+						const chunkLen = (eof ? bufLen : (bufLen >> 2) << 2); // Math.floor(bufLen / 4) * 4
 
-					if (chunkLen) {
-						const chunk = _shared.Natives.globalBuffer.from(buf.slice(0, chunkLen), 'base64');
-						if (chunkLen !== bufLen) {
-							this.__remaining = buf.slice(chunkLen);
+						if (chunkLen) {
+							const chunk = _shared.Natives.globalBuffer.from(buf.slice(0, chunkLen), 'base64');
+							if (chunkLen !== bufLen) {
+								this.__remaining = buf.slice(chunkLen);
+							};
+							this.submit(new io.BinaryData(chunk), {callback: data.defer()});
 						};
-						this.submit(new io.BinaryData(chunk), {callback: data.defer()});
-					};
 
-					if (eof) {
-						this.submit(new io.Data(io.EOF), {callback: data.defer()});
-					};
+						if (eof) {
+							this.submit(new io.Data(io.EOF), {callback: data.defer()});
+						};
 
-					return retval;
-				}),
-			}));
+						return retval;
+					}),
+				}));
 
 
 			io.REGISTER(io.Stream.$extend(
-							io.BufferedOutputStream,
-							ioMixIns.BinaryTransformableIn,
-							ioMixIns.BinaryTransformableOut,
-			{
-				$TYPE_NAME: 'FormMultipartDecoderStream',
-				$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('FormMultipartDecoderStreamNodeJs')), true) */,
+				io.BufferedOutputStream,
+				ioMixIns.BinaryTransformableIn,
+				ioMixIns.BinaryTransformableOut,
+				{
+					$TYPE_NAME: 'FormMultipartDecoderStream',
+					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('FormMultipartDecoderStreamNodeJs')), true) */,
 
-				__headersCompiled: doodad.PROTECTED(false),
-				__headers: doodad.PROTECTED(null),
-				__inPart: doodad.PROTECTED(false),
-				__remaining: doodad.PROTECTED(null),
+					__headersCompiled: doodad.PROTECTED(false),
+					__headers: doodad.PROTECTED(null),
+					__inPart: doodad.PROTECTED(false),
+					__remaining: doodad.PROTECTED(null),
 
-				__boundary: doodad.PROTECTED(null),
+					__boundary: doodad.PROTECTED(null),
 
-				setOptions: doodad.OVERRIDE(function setOptions(options) {
-					this._super(options);
+					setOptions: doodad.OVERRIDE(function setOptions(options) {
+						this._super(options);
 
-					if (!this.options.boundary) {
-						throw new types.Error("The 'boundary' option is required.");
-					};
+						if (!this.options.boundary) {
+							throw new types.Error("The 'boundary' option is required.");
+						};
 
-					this.__boundary = _shared.Natives.globalBuffer.from('--' + types.toString(this.options.boundary), 'binary');
-				}),
+						this.__boundary = _shared.Natives.globalBuffer.from('--' + types.toString(this.options.boundary), 'binary');
+					}),
 
-				reset: doodad.OVERRIDE(function reset() {
-					this._super();
+					reset: doodad.OVERRIDE(function reset() {
+						this._super();
 
-					this.__headers = tools.nullObject();
-					this.__headersCompiled = false;
-					this.__inPart = false;
-					this.__remaining = null;
-				}),
-
-				onWrite: doodad.OVERRIDE(function onWrite(ev) {
-					const retval = this._super(ev);
-
-					const data = ev.data;
-
-					ev.preventDefault();
-
-					const eof = (data.raw === io.EOF);
-					let buf = this.transformOut(data);
-					const remaining = this.__remaining;
-					if (remaining) {
+						this.__headers = tools.nullObject();
+						this.__headersCompiled = false;
+						this.__inPart = false;
 						this.__remaining = null;
-						if (buf) {
+					}),
+
+					onWrite: doodad.OVERRIDE(function onWrite(ev) {
+						const retval = this._super(ev);
+
+						const data = ev.data;
+
+						ev.preventDefault();
+
+						const eof = (data.raw === io.EOF);
+						let buf = this.transformOut(data);
+						const remaining = this.__remaining;
+						if (remaining) {
+							this.__remaining = null;
+							if (buf) {
 							// TODO: Add a limit to "buf"'s length
-							buf = _shared.Natives.globalBuffer.concat([remaining, buf], remaining.length + buf.length);
-						} else {
-							buf = remaining;
-						};
-					};
-
-					if (buf) {
-						const __parseHeaders = function parseHeaders(buf, start, /*optional*/end) {
-							if (types.isNothing(end)) {
-								end = buf.length;
+								buf = _shared.Natives.globalBuffer.concat([remaining, buf], remaining.length + buf.length);
+							} else {
+								buf = remaining;
 							};
+						};
 
-							if (!this.__headersCompiled) {
-								let index;
-								/* eslint no-cond-assign: "off" */
-								while ((start < end) && ((index = buf.indexOf(0x0A, start)) >= 0)) { // "\n"
-									if (index === start + 1) {
-										this.__headersCompiled = true;
+						if (buf) {
+							const __parseHeaders = function parseHeaders(buf, start, /*optional*/end) {
+								if (types.isNothing(end)) {
+									end = buf.length;
+								};
+
+								if (!this.__headersCompiled) {
+									let index;
+									/* eslint no-cond-assign: "off" */
+									while ((start < end) && ((index = buf.indexOf(0x0A, start)) >= 0)) { // "\n"
+										if (index === start + 1) {
+											this.__headersCompiled = true;
+											start = index + 1;
+											this.submit(new io.Data(io.BOF, {headers: this.__headers}), {callback: data.defer()});
+											break;
+										};
+										const str = buf.slice(start, index).toString('utf-8');  // Doing like Node.js (UTF-8). Normally it should be ASCII 7 bits.
+										const header = tools.split(str, ':', 2);
+										const name = tools.trim(header[0] || '');
+										const value = tools.trim(header[1] || '');
+										if (name) {
+											this.__headers[name] = value;
+										};
 										start = index + 1;
-										this.submit(new io.Data(io.BOF, {headers: this.__headers}), {callback: data.defer()});
-										break;
 									};
-									const str = buf.slice(start, index).toString('utf-8');  // Doing like Node.js (UTF-8). Normally it should be ASCII 7 bits.
-									const header = tools.split(str, ':', 2);
-									const name = tools.trim(header[0] || '');
-									const value = tools.trim(header[1] || '');
-									if (name) {
-										this.__headers[name] = value;
-									};
-									start = index + 1;
 								};
+
+								if ((start < end) && this.__headersCompiled) {
+									if ((start > 0) || (end < buf.length)) {
+										buf = buf.slice(start, end);
+									};
+									start = end;
+									this.submit(new io.BinaryData(buf), {callback: data.defer()});
+								};
+
+								return start;
 							};
 
-							if ((start < end) && this.__headersCompiled) {
-								if ((start > 0) || (end < buf.length)) {
-									buf = buf.slice(start, end);
-								};
-								start = end;
-								this.submit(new io.BinaryData(buf), {callback: data.defer()});
-							};
-
-							return start;
-						};
-
-						let pos = 0;
-						while (pos < buf.length) {
-							const index = buf.indexOf(this.__boundary, pos);
-							if (index >= 0) {
-								if ((index + this.__boundary.length + 2) < buf.length) {
-									let start = pos;
-									pos = index + this.__boundary.length;
-									const cr = buf[pos];
-									const lf = buf[pos + 1];
-									pos += 2;
-									if (this.__inPart) {
-										start = __parseHeaders.call(this, buf, start, index);
-										if (this.__headersCompiled && (start >= index)) {
-											this.submit(new io.Data(io.EOF), {callback: data.defer()});
-											this.__headers = tools.nullObject();
-											this.__headersCompiled = false;
-											if ((cr !== 0x0D) && (lf !== 0x0A)) { // "\r\n"
+							let pos = 0;
+							while (pos < buf.length) {
+								const index = buf.indexOf(this.__boundary, pos);
+								if (index >= 0) {
+									if ((index + this.__boundary.length + 2) < buf.length) {
+										let start = pos;
+										pos = index + this.__boundary.length;
+										const cr = buf[pos];
+										const lf = buf[pos + 1];
+										pos += 2;
+										if (this.__inPart) {
+											start = __parseHeaders.call(this, buf, start, index);
+											if (this.__headersCompiled && (start >= index)) {
+												this.submit(new io.Data(io.EOF), {callback: data.defer()});
+												this.__headers = tools.nullObject();
+												this.__headersCompiled = false;
+												if ((cr !== 0x0D) && (lf !== 0x0A)) { // "\r\n"
 												// Latest boundary
-												this.__inPart = false;
-												break;
+													this.__inPart = false;
+													break;
+												};
 											};
+										} else {
+											this.__inPart = true;
 										};
 									} else {
-										this.__inPart = true;
+									// Missing end of boundary data
+										break;
 									};
 								} else {
-									// Missing end of boundary data
+									if (this.__inPart) {
+										__parseHeaders.call(this, buf, pos, null);
+									};
+									pos = buf.length;
 									break;
 								};
-							} else {
-								if (this.__inPart) {
-									__parseHeaders.call(this, buf, pos, null);
-								};
-								pos = buf.length;
-								break;
+							};
+
+							if (pos < buf.length) {
+								this.__remaining = (pos > 0 ? buf.slice(pos) : buf);
 							};
 						};
 
-						if (pos < buf.length) {
-							this.__remaining = (pos > 0 ? buf.slice(pos) : buf);
+						if (eof) {
+							this.submit(new io.Data(io.EOF), {callback: data.defer()});
 						};
-					};
 
-					if (eof) {
-						this.submit(new io.Data(io.EOF), {callback: data.defer()});
-					};
-
-					return retval;
-				}),
-			}));
+						return retval;
+					}),
+				}));
 
 
 			files.ADD('openFile', function openFile(path, /*optional*/options) {
