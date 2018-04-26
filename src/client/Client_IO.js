@@ -313,7 +313,8 @@ exports.add = function add(modules) {
 						} else if (type === state.bufferTypes.Open) {
 							if (state.flushElement) {
 								state.flushElement = false;
-								state.flushElementChunk[2] = element = this.element.ownerDocument.createElement('div');
+								element = this.element.ownerDocument.createElement('div');
+								state.flushElementChunk[2] = element;
 								types.setAttribute(this, 'element', element);
 								html = null;
 							} else {

@@ -465,7 +465,8 @@ exports.add = function add(modules) {
 
 							if (eof || lastOk) {
 								const buf = data.valueOf();
-								const ok = this.__lastWriteOk = (buf || eof ? this.__writeToStream(buf, eof) : true) && lastOk;
+								const ok = (buf || eof ? this.__writeToStream(buf, eof) : true) && lastOk;
+								this.__lastWriteOk = ok;
 								if (ok && !eof) {
 									data.consume();
 								} else {

@@ -197,7 +197,8 @@ exports.add = function add(modules) {
 							if (this.deferFn) {
 								return this.deferFn;
 							} else {
-								const cb = this.deferFn = io.DeferCallback(this);
+								const cb = io.DeferCallback(this);
+								this.deferFn = cb;
 								cb.data = this;
 								return cb;
 							};
@@ -285,7 +286,8 @@ exports.add = function add(modules) {
 									this.callbacks = callback;
 								} else {
 									if (!types.isArray(cbChain)) {
-										this.callbacks = cbChain = [cbChain];
+										cbChain = [cbChain];
+										this.callbacks = cbChain;
 									};
 									if (root.DD_ASSERT) {
 										root.DD_ASSERT(tools.indexOf(cbChain, callback) < 0, "Callback has already been chained.");

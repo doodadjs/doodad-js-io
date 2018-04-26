@@ -517,7 +517,8 @@ exports.add = function add(modules) {
 							} else if (!types.isNothing(raw)) {
 								const state = {ok: false};
 								try {
-									const ok = state.ok = stream.write(raw);
+									const ok = stream.write(raw);
+									state.ok = ok;
 									if (!ok) {
 										this.__pipeNodeStreamOnDrain.attachOnce(stream, {consume: data.defer()});
 									};
