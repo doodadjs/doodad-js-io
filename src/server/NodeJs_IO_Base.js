@@ -116,7 +116,7 @@ exports.add = function add(modules) {
 					}),
 
 					destroy: doodad.PUBLIC(doodad.CAN_BE_DESTROYED(function destroy() {
-					// IMPORTANT: Never access to "host" from this function.
+						// IMPORTANT: Never access to "host" from this function.
 
 						if (!this.destroyed) {
 							this.onclose();
@@ -150,7 +150,7 @@ exports.add = function add(modules) {
 					readable: doodad.PUBLIC(true),
 
 					_readableState: doodad.PUBLIC({
-					//flowing: true,
+						//flowing: true,
 						ended: false,
 						pipesCount: 0,
 						pipes: null,
@@ -165,7 +165,7 @@ exports.add = function add(modules) {
 					}),
 
 					__pipeOnData: doodad.PROTECTED(function __pipeOnData(ev) {
-					//const host = this[doodad.HostSymbol];
+						//const host = this[doodad.HostSymbol];
 
 						const data = ev.data;
 						const eof = (data.raw === io.EOF);
@@ -178,7 +178,7 @@ exports.add = function add(modules) {
 						};
 
 						if (state.consumeCb) {
-						// Oops... Normally, it should wait, but it has not !
+							// Oops... Normally, it should wait, but it has not !
 							throw new types.BufferOverflow();
 
 						} else {
@@ -320,7 +320,7 @@ exports.add = function add(modules) {
 									try {
 										state.consumeCb(err);
 									} catch(o) {
-									// Do nothing
+										// Do nothing
 									};
 								};
 								try {
@@ -369,7 +369,7 @@ exports.add = function add(modules) {
 
 					read: doodad.PUBLIC(function read(/*optional*/size) {
 						if (size <= 0) {
-						// <PRB> Node.Js does "read(0)" sometimes.
+							// <PRB> Node.Js does "read(0)" sometimes.
 							return null;
 						};
 
@@ -502,7 +502,7 @@ exports.add = function add(modules) {
 						};
 
 						if (this.__drainingData) {
-						// Previously we have returned 'false', the customer didn't wait... so we throw !
+							// Previously we have returned 'false', the customer didn't wait... so we throw !
 							throw new types.BufferOverflow();
 						};
 
@@ -541,7 +541,7 @@ exports.add = function add(modules) {
 						};
 
 						if (this.__drainingData) {
-						// <PRB> Node.Js never waits before calling 'end'. So we have to chain.
+							// <PRB> Node.Js never waits before calling 'end'. So we have to chain.
 							this.__drainingData.chain(doodad.AsyncCallback(this, function doOnDrain(err) {
 								if (!err) {
 									this.end(chunk, encoding, callback);
@@ -580,7 +580,7 @@ exports.add = function add(modules) {
 					$TYPE_NAME: 'ITransform',
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('ITransformIsolatedMixInNodeJs')), true) */,
 
-				// ????
+					// ????
 				}))));
 
 

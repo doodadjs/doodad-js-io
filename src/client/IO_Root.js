@@ -187,7 +187,7 @@ exports.add = function add(modules) {
 							encoding = this.options.encoding || 'raw';
 						};
 						if (encoding === 'raw') {
-						// Raw binary. We assume UTF-8 like Node.Js.
+							// Raw binary. We assume UTF-8 like Node.Js.
 							encoding = 'utf-8';
 						};
 
@@ -274,7 +274,7 @@ exports.add = function add(modules) {
 								encoding = this.options.encoding || 'raw';
 							};
 							if (encoding === 'raw') {
-							// Raw binary. We assume UTF-8 like Node.Js.
+								// Raw binary. We assume UTF-8 like Node.Js.
 								encoding = 'utf-8';
 							};
 							if (types.isArrayBuffer(value) || types.isTypedArray(value)) {
@@ -417,7 +417,7 @@ exports.add = function add(modules) {
 
 					pipe: doodad.REPLACE(function pipe(stream, /*optional*/options) {
 						if (tools.indexOf(this.__pipes, stream) >= 0) {
-						// Stream already piped
+							// Stream already piped
 							return stream;
 						};
 
@@ -464,7 +464,7 @@ exports.add = function add(modules) {
 						if (stream) {
 							pos = tools.indexOf(this.__pipes, stream);
 							if (pos < 0) {
-							// Stream not piped
+								// Stream not piped
 								return this;
 							};
 						};

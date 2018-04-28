@@ -100,7 +100,7 @@ exports.add = function add(modules) {
 					streamOnClose: doodad.NODE_EVENT('close'),
 
 					create: doodad.OVERRIDE(function create(stream, /*optional*/options) {
-					//////root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamReadable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
+						//////root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamReadable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
 
 						this._super(options);
 
@@ -152,7 +152,7 @@ exports.add = function add(modules) {
 									};
 								};
 							} else {
-							// Fully apply stopListening
+								// Fully apply stopListening
 								this.__waiting = false;
 								this.__listening = true;
 								this.stopListening();
@@ -226,7 +226,7 @@ exports.add = function add(modules) {
 						this._super();
 
 						while (this.stream.read()) {
-						// Do nothing !
+							// Do nothing !
 						};
 					}),
 
@@ -343,7 +343,7 @@ exports.add = function add(modules) {
 					__finished: doodad.PROTECTED(false),
 
 					streamOnPipeDrain: doodad.NODE_EVENT('drain', function streamOnPipeDrain(context) {
-					// <PRB> Some Node.Js streams don't wait after pipes before emitting 'finish'.
+						// <PRB> Some Node.Js streams don't wait after pipes before emitting 'finish'.
 
 						this.streamOnPipeDrain.detach(context.emitter);
 						this.streamOnPipeFinish.detach(context.emitter);
@@ -358,12 +358,12 @@ exports.add = function add(modules) {
 					}),
 
 					streamOnPipeFinish: doodad.NODE_EVENT('finish', function streamOnPipeFinish(context) {
-					// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
+						// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
 						this.streamOnPipeDrain(context);
 					}),
 
 					streamOnPipeClose: doodad.NODE_EVENT('close', function streamOnPipeClose(context) {
-					// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
+						// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
 						this.streamOnPipeFinish(context);
 					}),
 
@@ -380,7 +380,7 @@ exports.add = function add(modules) {
 					}),
 
 					streamOnFinish: doodad.NODE_EVENT('finish', function streamOnFinish(context) {
-					// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
+						// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
 						this.streamOnDrain(context);
 
 						//types.setAttribute(this, 'stream', null);
@@ -399,8 +399,8 @@ exports.add = function add(modules) {
 
 
 					create: doodad.OVERRIDE(function create(stream, /*optional*/options) {
-					// FIXME: Figure out the object model of NodeJS to make the assertion because it fails with an http.ServerResponse object
-					//root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamWritable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
+						// FIXME: Figure out the object model of NodeJS to make the assertion because it fails with an http.ServerResponse object
+						//root.DD_ASSERT && root.DD_ASSERT(types._instanceof(stream, [nodeStreamWritable, nodeStreamDuplex, nodeStreamTransform]), "Invalid node.js stream object.");
 
 						this._super(stream, options);
 
@@ -473,8 +473,8 @@ exports.add = function add(modules) {
 									const context = {count: 1, consume: data.consume.bind(data)};
 									const rs = this.stream._readableState;
 									if (eof && rs && (rs.pipesCount > 0)) {
-									// <PRB> Some Node.Js streams don't wait after pipes before emitting 'drain' or 'finish'.
-									// NOTE: 'rs.pipes' can be a stream or an array of streams.
+										// <PRB> Some Node.Js streams don't wait after pipes before emitting 'drain' or 'finish'.
+										// NOTE: 'rs.pipes' can be a stream or an array of streams.
 										context.count = rs.pipesCount;
 										this.streamOnPipeDrain.attachOnce(rs.pipes, context, true);
 										this.streamOnPipeFinish.attachOnce(rs.pipes, context, true);
@@ -487,7 +487,7 @@ exports.add = function add(modules) {
 									};
 								};
 							} else {
-							// Stream's 'write' function previously returned 'false', meaning that we should wait for the 'drain' event, but something has been submitted before that event.
+								// Stream's 'write' function previously returned 'false', meaning that we should wait for the 'drain' event, but something has been submitted before that event.
 								throw new types.BufferOverflow();
 							};
 						} else if (eof) {
@@ -638,7 +638,7 @@ exports.add = function add(modules) {
 						while (result = delimiters.exec(url)) {
 							const chr = result[0];
 							if ((this.__mode === Modes.Value) && (chr === '=')) {
-							// Character "=" in the value
+								// Character "=" in the value
 							} else {
 								const value = decode(url.slice(last, result.index));
 								const mode = this.__mode;
@@ -781,7 +781,7 @@ exports.add = function add(modules) {
 						if (remaining) {
 							this.__remaining = null;
 							if (buf) {
-							// TODO: Add a limit to "buf"'s length
+								// TODO: Add a limit to "buf"'s length
 								buf = _shared.Natives.globalBuffer.concat([remaining, buf], remaining.length + buf.length);
 							} else {
 								buf = remaining;
@@ -843,7 +843,7 @@ exports.add = function add(modules) {
 												this.__headers = tools.nullObject();
 												this.__headersCompiled = false;
 												if ((cr !== 0x0D) && (lf !== 0x0A)) { // "\r\n"
-												// Latest boundary
+													// Latest boundary
 													this.__inPart = false;
 													break;
 												};
@@ -852,7 +852,7 @@ exports.add = function add(modules) {
 											this.__inPart = true;
 										};
 									} else {
-									// Missing end of boundary data
+										// Missing end of boundary data
 										break;
 									};
 								} else {

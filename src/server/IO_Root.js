@@ -237,7 +237,7 @@ exports.add = function add(modules) {
 							encoding = this.options.encoding || 'raw';
 						};
 						if (encoding === 'raw') {
-						// Raw binary. We assume UTF-8 like Node.Js.
+							// Raw binary. We assume UTF-8 like Node.Js.
 							encoding = 'utf-8';
 						};
 
@@ -268,10 +268,10 @@ exports.add = function add(modules) {
 										this.__decoderInEncoding = null;
 									};
 									if (nodeIConv) {
-									// iconv-lite
+										// iconv-lite
 										decoder = nodeIConv.getDecoder(encoding);
 									} else {
-									// StringDecoder
+										// StringDecoder
 										decoder = new nodeStringDecoderStringDecoder(encoding);
 									};
 									this.__decoderIn = decoder;
@@ -330,7 +330,7 @@ exports.add = function add(modules) {
 								encoding = this.options.encoding || 'raw';
 							};
 							if (encoding === 'raw') {
-							// Raw binary. We assume UTF-8 like Node.Js.
+								// Raw binary. We assume UTF-8 like Node.Js.
 								encoding = 'utf-8';
 							};
 							if (types.isArrayBuffer(value) || types.isTypedArray(value)) {
@@ -344,10 +344,10 @@ exports.add = function add(modules) {
 										this.__decoderOutEncoding = null;
 									};
 									if (nodeIConv) {
-									// iconv-lite
+										// iconv-lite
 										decoder = nodeIConv.getDecoder(encoding);
 									} else {
-									// StringDecoder
+										// StringDecoder
 										decoder = new nodeStringDecoderStringDecoder(encoding);
 									};
 									if (!eof) {
@@ -442,7 +442,7 @@ exports.add = function add(modules) {
 						const istream = this.getInterface(nodejsIOInterfaces.IStream);
 						if (istream) {
 							if (types.isEntrant(istream, 'onerror') && (istream.onerror.getCount() > 0)) {
-							// <PRB> Node.Js re-emits 'error'.
+								// <PRB> Node.Js re-emits 'error'.
 								const noop = function noop(err) {};
 
 								istream.onerror.attachOnce(null, noop);
@@ -573,9 +573,9 @@ exports.add = function add(modules) {
 					}),
 
 					__pipeNodeStreamOnFinish: doodad.NODE_EVENT('finish', function __pipeNodeStreamOnFinish(context) {
-					// <PRB> Some Node.Js streams don't emit 'close' after 'finish'.
+						// <PRB> Some Node.Js streams don't emit 'close' after 'finish'.
 
-					// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
+						// <PRB> Some Node.Js streams don't emit 'drain' on 'finish'.
 						this.__pipeNodeStreamOnDrain(context);
 
 						this.unpipe(context.emitter);
@@ -587,13 +587,13 @@ exports.add = function add(modules) {
 					}),
 
 					__pipeNodeStreamOnClose: doodad.PROTECTED(doodad.NODE_EVENT('close', function __pipeNodeStreamOnClose(context) {
-					// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
+						// <PRB> Some Node.Js streams don't emit 'finish' before 'close'.
 						this.__pipeNodeStreamOnFinish(context);
 					})),
 
 					pipe: doodad.REPLACE(function pipe(stream, /*optional*/options) {
 						if (tools.indexOf(this.__pipes, stream) >= 0) {
-						// Stream already piped
+							// Stream already piped
 							return stream;
 						};
 
@@ -666,7 +666,7 @@ exports.add = function add(modules) {
 						if (stream) {
 							pos = tools.indexOf(this.__pipes, stream);
 							if (pos < 0) {
-							// Stream not piped
+								// Stream not piped
 								return this;
 							};
 						};
@@ -805,7 +805,7 @@ exports.add = function add(modules) {
 						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 						if (ireadable) {
 							if (ireadable.isPaused()) {
-							// Must be Async (function must return before the event)
+								// Must be Async (function must return before the event)
 								if (ireadable._readableState && !ireadable._readableState.ended) {
 									ireadable._readableState.ended = true;
 									tools.callAsync(ireadable.onend, -1, ireadable, null, null, _shared.SECRET);
@@ -888,7 +888,7 @@ exports.add = function add(modules) {
 						const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
 						if (ireadable) {
 							if (ireadable.isPaused()) {
-							// Must be Async (function must return before the event)
+								// Must be Async (function must return before the event)
 								if (ireadable._readableState && !ireadable._readableState.ended) {
 									ireadable._readableState.ended = true;
 									tools.callAsync(ireadable.onend, -1, ireadable, null, null, _shared.SECRET);

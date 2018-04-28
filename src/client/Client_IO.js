@@ -90,7 +90,7 @@ exports.add = function add(modules) {
 					})),
 
 					onJsClick: doodad.PROTECTED(doodad.JS_EVENT('click', function onJsClick(context) {
-					// Shows virtual keyboard on mobile phones and tablets.
+						// Shows virtual keyboard on mobile phones and tablets.
 						if (this.element.focus) {
 							this.element.focus();
 						};
@@ -122,7 +122,7 @@ exports.add = function add(modules) {
 
 							if (!functionKeys) {
 								if (charCode === 0) {
-								// TODO: Fix every other wrong char codes
+									// TODO: Fix every other wrong char codes
 									if (scanCode === io.KeyboardScanCodes.Enter) {
 										charCode = 10; // "\n"
 									};
@@ -334,7 +334,7 @@ exports.add = function add(modules) {
 						} else if (type === state.bufferTypes.Flush) {
 							container = data[2];
 							if (container && !container.parentNode) {
-							/* eslint no-cond-assign: "off" */
+								/* eslint no-cond-assign: "off" */
 								while (element = container.firstChild) {
 									state.parent.appendChild(element);
 								};

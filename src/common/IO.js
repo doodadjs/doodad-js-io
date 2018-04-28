@@ -200,7 +200,7 @@ exports.add = function add(modules) {
 
 					// Non-formatted text
 					readText: doodad.OVERRIDE(function readText(/*optional*/options) {
-					// TODO: Test
+						// TODO: Test
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
 						let text = '';
@@ -217,7 +217,7 @@ exports.add = function add(modules) {
 
 					// Non-formatted text + newline
 					readLine: doodad.OVERRIDE(function readLine(/*optional*/options) {
-					// TODO: Test
+						// TODO: Test
 						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
 
 						let line = '';
@@ -619,7 +619,7 @@ exports.add = function add(modules) {
 							type;
 
 						if (state.flushElement) {
-						// NOTE: This will shrink the buffer
+							// NOTE: This will shrink the buffer
 							state.identCount = this.__tags.length - 1;
 							bufferStart = bufferLen;
 							let closed = 0;
@@ -677,7 +677,7 @@ exports.add = function add(modules) {
 						};
 
 						if (state.flushElementChunk && (bufferStart < bufferLen)) {
-						// Replace everything after the "Open" chunk by the "Flush" chunk.
+							// Replace everything after the "Open" chunk by the "Flush" chunk.
 							state.flushElementChunk[1] = state.html;
 
 							const data = new io.HtmlData(state.flushElementChunk);
@@ -843,18 +843,18 @@ exports.add = function add(modules) {
 
 					// Console hook
 					log: doodad.OVERRIDE(ioInterfaces.IConsole, function log(raw, /*optional*/options) {
-					//! IF_SET("serverSide")
+						//! IF_SET("serverSide")
 						_shared.Natives.consoleWarn(raw); // force stderr
-					//! ELSE()
+						//! ELSE()
 						//! INJECT("_shared.Natives.consoleLog(raw);") // force stderr
-					//! END_IF()
+						//! END_IF()
 					}),
 					info: doodad.OVERRIDE(ioInterfaces.IConsole, function info(raw, /*optional*/options) {
-					//! IF_SET("serverSide")
+						//! IF_SET("serverSide")
 						_shared.Natives.consoleWarn(raw); // force stderr
-					//! ELSE()
+						//! ELSE()
 						//! INJECT("(_shared.Natives.consoleInfo || _shared.Natives.consoleLog)(raw);") // force stderr
-					//! END_IF()
+						//! END_IF()
 					}),
 					warn: doodad.OVERRIDE(ioInterfaces.IConsole, function warn(raw, /*optional*/options) {
 						(_shared.Natives.consoleWarn || _shared.Natives.consoleLog)(raw);

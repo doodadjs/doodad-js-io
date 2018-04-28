@@ -773,11 +773,11 @@ exports.add = function add(modules) {
 						let value = null;
 
 						if (data.deferred <= 0) {
-						// NOTE: Data should not have been consumed.
+							// NOTE: Data should not have been consumed.
 							value = this.transformOut(data, options);
 							data.consume();
 						} else {
-						// Not ready yet.
+							// Not ready yet.
 							this.push(data, {next: true});
 						};
 
@@ -785,7 +785,7 @@ exports.add = function add(modules) {
 					}),
 
 					readAsync: doodad.PUBLIC(doodad.ASYNC(function readAsync(/*optional*/options) {
-					//const Promise = types.getPromise();
+						//const Promise = types.getPromise();
 						const result = this.read(options);
 						if (!types.isNothing(result)) {
 							return result;
@@ -814,7 +814,7 @@ exports.add = function add(modules) {
 					readLine: doodad.PUBLIC(doodad.MUST_OVERRIDE()), // function(/*optional*/options)
 
 					readTextAsync: doodad.PUBLIC(doodad.ASYNC(function readTextAsync(/*optional*/options) {
-					//const Promise = types.getPromise();
+						//const Promise = types.getPromise();
 						const result = this.readText(options);
 						if (!types.isNothing(result)) {
 							return result;
@@ -828,7 +828,7 @@ exports.add = function add(modules) {
 					})),
 
 					readLineAsync: doodad.PUBLIC(doodad.ASYNC(function readLineAsync(/*optional*/options) {
-					//const Promise = types.getPromise();
+						//const Promise = types.getPromise();
 						const result = this.readLine(options);
 						if (!types.isNothing(result)) {
 							return result;
@@ -1375,7 +1375,7 @@ exports.add = function add(modules) {
 									};
 
 									if (!finished && !state.deferred) {
-									// After each X data objects, we continue on another tick
+										// After each X data objects, we continue on another tick
 										__flushCbAsync();
 									};
 								} catch(ex) {
