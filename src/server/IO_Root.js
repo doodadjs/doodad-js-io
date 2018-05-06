@@ -1,48 +1,48 @@
 //! BEGIN_MODULE()
 
 //! REPLACE_BY("// Copyright 2015-2018 Claude Petit, licensed under Apache License version 2.0\n", true)
-// doodad-js - Object-oriented programming framework
-// File: IO_Root.js - Node.js IO Root
-// Project home: https://github.com/doodadjs/
-// Author: Claude Petit, Quebec city
-// Contact: doodadjs [at] gmail.com
-// Note: I'm still in alpha-beta stage, so expect to find some bugs or incomplete parts !
-// License: Apache V2
-//
-//	Copyright 2015-2018 Claude Petit
-//
-//	Licensed under the Apache License, Version 2.0 (the "License");
-//	you may not use this file except in compliance with the License.
-//	You may obtain a copy of the License at
-//
-//		http://www.apache.org/licenses/LICENSE-2.0
-//
-//	Unless required by applicable law or agreed to in writing, software
-//	distributed under the License is distributed on an "AS IS" BASIS,
-//	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//	See the License for the specific language governing permissions and
-//	limitations under the License.
+	// doodad-js - Object-oriented programming framework
+	// File: IO_Root.js - Node.js IO Root
+	// Project home: https://github.com/doodadjs/
+	// Author: Claude Petit, Quebec city
+	// Contact: doodadjs [at] gmail.com
+	// Note: I'm still in alpha-beta stage, so expect to find some bugs or incomplete parts !
+	// License: Apache V2
+	//
+	//	Copyright 2015-2018 Claude Petit
+	//
+	//	Licensed under the Apache License, Version 2.0 (the "License");
+	//	you may not use this file except in compliance with the License.
+	//	You may obtain a copy of the License at
+	//
+	//		http://www.apache.org/licenses/LICENSE-2.0
+	//
+	//	Unless required by applicable law or agreed to in writing, software
+	//	distributed under the License is distributed on an "AS IS" BASIS,
+	//	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	//	See the License for the specific language governing permissions and
+	//	limitations under the License.
 //! END_REPLACE()
 
 
 //! IF_SET("mjs")
-// TODO: Make "iconv-lite" optional... For the moment, we can't !
-//! INJECT("import {default as nodeIConv} from 'iconv-lite';")
+	// TODO: Make "iconv-lite" optional... For the moment, we can't !
+	//! INJECT("import {default as nodeIConv} from 'iconv-lite';")
 
-//! INJECT("import {default as nodeStringDecoder} from 'string_decoder';")
+	//! INJECT("import {default as nodeStringDecoder} from 'string_decoder';")
 //! ELSE()
-"use strict";
+	"use strict";
 
-let nodeIConv = null;
-try {
-	/* eslint import/no-extraneous-dependencies: "off" */  // Can we have optional dependencies ???
-	/* eslint global-require: "off" */
-	nodeIConv = require('iconv-lite');
-} catch(ex) {
-	// Do nothing
-};
+	let nodeIConv = null;
+	try {
+		/* eslint import/no-extraneous-dependencies: "off" */  // Can we have optional dependencies ???
+		/* eslint global-require: "off" */
+		nodeIConv = require('iconv-lite');
+	} catch(ex) {
+		// Do nothing
+	};
 
-const nodeStringDecoder = require('string_decoder');
+	const nodeStringDecoder = require('string_decoder');
 //! END_IF()
 
 
