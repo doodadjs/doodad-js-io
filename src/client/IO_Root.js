@@ -676,9 +676,6 @@ exports.add = function add(modules) {
 
 						data.consume();
 					}),
-
-					__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
-					}),
 				})));
 
 
