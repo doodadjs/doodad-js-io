@@ -470,7 +470,7 @@ exports.add = function add(modules) {
 								if (ok && !eof) {
 									data.consume();
 								} else {
-									const context = {count: 1, consume: data.consume.bind(data)};
+									const context = {count: 1, consume: _shared.Natives.functionBindCall(data.consume, data)};
 									const rs = this.stream._readableState;
 									if (eof && rs && (rs.pipesCount > 0)) {
 										// <PRB> Some Node.Js streams don't wait after pipes before emitting 'drain' or 'finish'.
