@@ -49,11 +49,11 @@ exports.add = function add(modules) {
 
 
 			tools.complete(_shared.Natives, {
-				consoleInfo: (global.console.info ? global.console.info.bind(global.console) : null),
-				consoleWarn: (global.console.warn ? global.console.warn.bind(global.console) : null),
-				consoleException: (global.console.exception ? global.console.exception.bind(global.console) : null),
-				consoleError: (global.console.error ? global.console.error.bind(global.console) : null),
-				consoleLog: global.console.log.bind(global.console),
+				consoleInfo: (global.console.info ? _shared.Natives.functionBindCall(global.console.info, global.console) : null),
+				consoleWarn: (global.console.warn ? _shared.Natives.functionBindCall(global.console.warn, global.console) : null),
+				consoleException: (global.console.exception ? _shared.Natives.functionBindCall(global.console.exception, global.console) : null),
+				consoleError: (global.console.error ? _shared.Natives.functionBindCall(global.console.error, global.console) : null),
+				consoleLog: _shared.Natives.functionBindCall(global.console.log, global.console),
 			});
 
 
