@@ -77,8 +77,8 @@ exports.add = function add(modules) {
 				windowUint8Array: global.Uint8Array,
 
 				globalBuffer: global.Buffer,
-				globalBufferIsEncoding: global.Buffer.isEncoding.bind(global.Buffer),
-				globalBufferFrom: global.Buffer.from.bind(global.Buffer),
+				globalBufferIsEncoding: _shared.Natives.functionBindCall(global.Buffer.isEncoding, global.Buffer),
+				globalBufferFrom: _shared.Natives.functionBindCall(global.Buffer.from, global.Buffer),
 			});
 
 
