@@ -84,7 +84,7 @@ exports.add = function add(modules) {
 				//return types.INHERIT(io.DeferCallback, function consume(err) {
 				//	data.consume(err);
 				//});
-				const cb = types.INHERIT(io.DeferCallback, data.consume.bind(data));
+				const cb = types.INHERIT(io.DeferCallback, _shared.Natives.functionBindCall(data.consume, data));
 				types.setAttribute(cb, _shared.BoundObjectSymbol, data, {});
 				//types.setAttribute(cb, _shared.OriginalValueSymbol, data.consume, {});
 				return cb;
