@@ -80,15 +80,19 @@ exports.add = function add(modules) {
 			// Data objects
 			//=========================================
 
-			io.ADD('DeferCallback', types.INHERIT(types.Callback, function DeferCallback(data) {
+			io.ADD('DeferCallback', function DeferCallback(data) {
 				//return types.INHERIT(io.DeferCallback, function consume(err) {
 				//	data.consume(err);
 				//});
-				const cb = types.INHERIT(io.DeferCallback, _shared.Natives.functionBindCall(data.consume, data));
+				const cb = _shared.Natives.functionBindCall(data.consume, data);
+				types.setAttribute(cb, _shared.BaseSymbol, io.DeferCallback, {});
 				types.setAttribute(cb, _shared.BoundObjectSymbol, data, {});
 				//types.setAttribute(cb, _shared.OriginalValueSymbol, data.consume, {});
+				_shared.registerCallback(cb);
 				return cb;
-			}));
+			});
+
+			types.setAttribute(io.DeferCallback, _shared.BaseSymbol, types.Callback, {});
 
 			io.REGISTER(types.Type.$inherit(
 				/*typeProto*/
