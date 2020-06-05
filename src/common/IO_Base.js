@@ -85,14 +85,13 @@ exports.add = function add(modules) {
 				//	data.consume(err);
 				//});
 				const cb = _shared.Natives.functionBindCall(data.consume, data);
-				types.setAttribute(cb, _shared.BaseSymbol, io.DeferCallback, {});
+				types.setAttribute(cb, _shared.CallbackSymbol, io.DeferCallback, {});
 				types.setAttribute(cb, _shared.BoundObjectSymbol, data, {});
 				//types.setAttribute(cb, _shared.OriginalValueSymbol, data.consume, {});
-				_shared.registerCallback(cb);
 				return cb;
 			});
 
-			types.setAttribute(io.DeferCallback, _shared.BaseSymbol, types.Callback, {});
+			types.setAttribute(io.DeferCallback, _shared.CallbackSymbol, types.Callback, {});
 
 			io.REGISTER(types.Type.$inherit(
 				/*typeProto*/
