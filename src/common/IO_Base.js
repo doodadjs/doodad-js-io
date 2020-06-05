@@ -88,6 +88,7 @@ exports.add = function add(modules) {
 				types.setAttribute(cb, _shared.CallbackSymbol, io.DeferCallback, {});
 				types.setAttribute(cb, _shared.BoundObjectSymbol, data, {});
 				//types.setAttribute(cb, _shared.OriginalValueSymbol, data.consume, {});
+				_shared.registerCallback(cb);
 				return cb;
 			});
 
