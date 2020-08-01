@@ -491,7 +491,7 @@ exports.add = function add(modules) {
 									newData = new io.HtmlData([bufferTypes.Html, value, false]);
 									buffer.unshift(newData);
 								} else {
-									itemValue[1] = value + firstItem[1];
+									itemValue[1] = value + itemValue[1];
 								};
 							} else {
 								const lastItem = buffer[buffer.length - 1],
