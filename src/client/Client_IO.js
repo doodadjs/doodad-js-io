@@ -363,7 +363,7 @@ exports.add = function add(modules) {
 
 						options = tools.extend({}, this.options, options);
 
-						const tag = types.get(options, 'tag', null);
+						const tag = types.get(options, 'tag') || 'div';
 
 						let attrs = types.get(options, 'attrs', null);
 
@@ -386,7 +386,7 @@ exports.add = function add(modules) {
 
 						container.innerHTML = '';
 
-						return this._super(tools.extend({}, options, {noOpenClose: true}));
+						return this._super(tools.extend({}, options, {tag: null}));
 					}),
 
 					openElement: doodad.OVERRIDE(function openElement(/*optional*/options) {

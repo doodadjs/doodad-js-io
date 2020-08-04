@@ -561,23 +561,23 @@ exports.add = function add(modules) {
 					}),
 
 					handleBufferData: doodad.PROTECTED(doodad.JS_METHOD(function handleBufferData(data, state) {
-						data = data.raw;
+						const raw = data.raw;
 
-						const type = data[0];
+						const type = raw[0];
 
 						let html = null;
 
 						if (type === state.bufferTypes.Html) {
-							html = data[1];
-							state.idented = data[2];
+							html = raw[1];
+							state.idented = raw[2];
 						} else if (type === state.bufferTypes.Open) {
-							const attrs = data[2];
+							const attrs = raw[2];
 							if (attrs) {
-								html = ('<' + data[1] + tools.reduce(attrs, function(result, value, key) {
+								html = ('<' + raw[1] + tools.reduce(attrs, function(result, value, key) {
 									return result + ' ' + tools.escapeHtml(key, true) + '="' + tools.escapeHtml(value, false) + '"';
 								}, '') + '>' + this.options.newLine);
 							} else {
-								html = ('<' + data[1] + '>' + this.options.newLine);
+								html = ('<' + raw[1] + '>' + this.options.newLine);
 							};
 							state.identIncrement = 1;
 						} else if (type === state.bufferTypes.Close) {
@@ -585,15 +585,15 @@ exports.add = function add(modules) {
 							if (state.ignoreClose) {
 								state.ignoreClose = false;
 							} else {
-								html = ('</' + data[1] + '>' + this.options.newLine);
+								html = ('</' + raw[1] + '>' + this.options.newLine);
 							};
 							state.identIncrement = -1;
 						} else if (type === state.bufferTypes.Stream) {
-							const stream = data[1];
+							const stream = raw[1];
 							state.idented = stream.options.identLines;
 							stream.flush();
 							stream.onData.detach(this);
-							html = this.handleBufferData(data, state);
+							html = this.handleBufferData(raw, state);
 						} else if (type === state.bufferTypes.Flush) {
 							state.ignoreClose = true;
 						};
@@ -726,31 +726,27 @@ exports.add = function add(modules) {
 					}),
 
 					openStream: doodad.OVERRIDE(function openStream(/*optional*/options) {
-						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
-
-						options = tools.extend({}, this.options, options);
+						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isJsObject(options), "Invalid options.");
 
 						const tag = types.get(options, 'tag', null),
 							attrs = types.get(options, 'attrs', null);
 
 						if (root.DD_ASSERT) {
-							root.DD_ASSERT(types.isStringAndNotEmptyTrim(tag), "Invalid tag.");
+							root.DD_ASSERT(types.isNothing(tag) || types.isStringAndNotEmptyTrim(tag), "Invalid tag.");
 							root.DD_ASSERT(types.isNothing(attrs) || types.isJsObject(attrs), "Invalid attributes.");
 						};
 
 						const cls = types.getType(this),
 							bufferTypes = cls.$__bufferTypes,
-							stream = cls.$createInstance(options);
+							stream = cls.$createInstance(tools.extend({}, this.options, options));
 
-						const noOpenClose = types.get(options, 'noOpenClose', false);
-
-						!noOpenClose && this.submit(new io.HtmlData([bufferTypes.Open, tag, attrs]));
+						tag && this.submit(new io.HtmlData([bufferTypes.Open, tag, attrs]));
 
 						const streamData = new io.HtmlData([bufferTypes.Stream, stream]); // <--- Will get replaced on flush
 
 						this.submit(streamData);
 
-						!noOpenClose && this.submit(new io.HtmlData([bufferTypes.Close, tag]));
+						tag && this.submit(new io.HtmlData([bufferTypes.Close, tag]));
 
 						stream.onData.attach(this, this.__streamOnData, 50, [streamData]);
 
