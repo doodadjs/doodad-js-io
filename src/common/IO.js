@@ -242,7 +242,7 @@ exports.add = function add(modules) {
 									line = line.slice(0, index);
 
 									if (remaining) {
-										this.push(new io.TextData(remaining), {next: true});
+										this.push(new io.TextData(remaining), {revert: true});
 									};
 
 									ok = true;
@@ -251,7 +251,7 @@ exports.add = function add(modules) {
 							};
 
 							if (!ok && line) {
-								this.push(new io.TextData(line), {next: true});
+								this.push(new io.TextData(line), {revert: true});
 								line = null;
 							};
 						};
@@ -472,7 +472,7 @@ exports.add = function add(modules) {
 					}),
 
 					__submitInternal: doodad.OVERRIDE(function __submitInternal(data, /*optional*/options) {
-						const next = types.get(options, 'next', false),
+						const revert = types.get(options, 'revert', false),
 							buffer = this.__buffer;
 
 						if (types._instanceof(data, io.TextData)) {
@@ -483,7 +483,7 @@ exports.add = function add(modules) {
 
 							let newData = null;
 
-							if (next) {
+							if (revert) {
 								const firstItem = buffer[0],
 									itemValue = firstItem && firstItem.valueOf();
 

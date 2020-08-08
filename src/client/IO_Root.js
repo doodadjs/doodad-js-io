@@ -546,7 +546,7 @@ exports.add = function add(modules) {
 						};
 
 						const callback = types.get(options, 'callback'),
-							next = types.get(options, 'next', false),
+							revert = types.get(options, 'revert', false),
 							buffer = this.__buffer;
 
 						if (buffer.length >= this.options.bufferSize) {
@@ -555,7 +555,7 @@ exports.add = function add(modules) {
 
 						data.detach();
 
-						if (next) {
+						if (revert) {
 							buffer.unshift(data);
 						} else {
 							buffer.push(data);
@@ -573,7 +573,7 @@ exports.add = function add(modules) {
 					}),
 
 					__pullInternal: doodad.REPLACE(function __pullInternal(/*optional*/options) {
-						const next = types.get(options, 'next', false),
+						const revert = types.get(options, 'revert', false),
 							buffer = this.__buffer;
 
 						if (buffer.length <= 0) {
@@ -582,7 +582,7 @@ exports.add = function add(modules) {
 
 						let data;
 
-						if (next) {
+						if (revert) {
 							data = buffer.pop();
 						} else {
 							data = buffer.shift();
@@ -616,7 +616,7 @@ exports.add = function add(modules) {
 						};
 
 						const callback = types.get(options, 'callback'),
-							next = types.get(options, 'next', false),
+							revert = types.get(options, 'revert', false),
 							buffer = this.__buffer;
 
 						if (buffer.length >= this.options.bufferSize) {
@@ -625,7 +625,7 @@ exports.add = function add(modules) {
 
 						data.detach();
 
-						if (next) {
+						if (revert) {
 							buffer.unshift(data);
 						} else {
 							buffer.push(data);
@@ -664,10 +664,10 @@ exports.add = function add(modules) {
 
 					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
 						const callback = types.get(options, 'callback'),
-							next = types.get(options, 'next', false);
+							revert = types.get(options, 'revert', false);
 
-						if (next) {
-							throw new types.NotAvailable("The option 'next' is not available.");
+						if (revert) {
+							throw new types.NotAvailable("The option 'revert' is not available.");
 						};
 
 						if (callback) {

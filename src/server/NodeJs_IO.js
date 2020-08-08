@@ -209,11 +209,11 @@ exports.add = function add(modules) {
 					}),
 
 					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
-						const next = types.get(options, 'next', false);
+						const revert = types.get(options, 'revert', false);
 
 						const raw = this.transformOut(data, options);
 
-						if (next) {
+						if (revert) {
 							this.stream.unshift(raw);
 						} else {
 							this.stream.push(raw);
@@ -545,9 +545,9 @@ exports.add = function add(modules) {
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('BinaryInputOutputStreamNodeJs')), true) */,
 
 					__pushInternal: doodad.REPLACE(function __pushInternal(data, /*optional*/options) {
-						const next = types.get(options, 'next', false);
-						if (next) {
-							throw new types.NotAvailable("The option 'next' is not available.");
+						const revert = types.get(options, 'revert', false);
+						if (revert) {
+							throw new types.NotAvailable("The option 'revert' is not available.");
 						};
 
 						//const itransform = this.getInterface(nodejsIOInterfaces.ITransform);

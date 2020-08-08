@@ -781,7 +781,7 @@ exports.add = function add(modules) {
 							data.consume();
 						} else {
 							// Not ready yet.
-							this.push(data, {next: true});
+							this.push(data, {revert: !types.get(options, 'revert', false)});
 						};
 
 						return value;

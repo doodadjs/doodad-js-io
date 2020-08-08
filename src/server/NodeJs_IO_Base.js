@@ -442,7 +442,7 @@ exports.add = function add(modules) {
 					unshift: doodad.PUBLIC(function unshift(chunk) {
 						const host = this[doodad.HostSymbol];
 						const data = host.transformIn(chunk);
-						host.push(data, {next: true});
+						host.push(data, {revert: true});
 						return (host.getCount() < host.options.bufferSize);
 					}),
 
