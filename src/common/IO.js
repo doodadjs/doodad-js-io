@@ -218,9 +218,11 @@ exports.add = function add(modules) {
 					// Non-formatted text + newline
 					readLine: doodad.OVERRIDE(function readLine(/*optional*/options) {
 						// TODO: Test
-						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isObject(options), "Invalid options.");
+						root.DD_ASSERT && root.DD_ASSERT(types.isNothing(options) || types.isJsObject(options), "Invalid options.");
 
 						let line = '';
+
+						const revert = types.get(options, 'revert', false);
 
 						if (this.options.newLine) {
 							let ok = false;
@@ -242,7 +244,7 @@ exports.add = function add(modules) {
 									line = line.slice(0, index);
 
 									if (remaining) {
-										this.push(new io.TextData(remaining), {revert: true});
+										this.push(new io.TextData(remaining), {revert: !revert});
 									};
 
 									ok = true;
@@ -251,7 +253,7 @@ exports.add = function add(modules) {
 							};
 
 							if (!ok && line) {
-								this.push(new io.TextData(line), {revert: true});
+								this.push(new io.TextData(line), {revert: !revert});
 								line = null;
 							};
 						};

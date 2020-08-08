@@ -771,6 +771,8 @@ exports.add = function add(modules) {
 					}),
 
 					read: doodad.PUBLIC(function read(/*optional*/options) {
+						const revert = types.get(options, 'revert', false);
+
 						const data = this.pull(options);
 
 						let value = null;
@@ -781,7 +783,7 @@ exports.add = function add(modules) {
 							data.consume();
 						} else {
 							// Not ready yet.
-							this.push(data, {revert: !types.get(options, 'revert', false)});
+							this.push(data, {revert: !revert});
 						};
 
 						return value;
