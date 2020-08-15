@@ -325,8 +325,6 @@ exports.add = function add(modules) {
 								};
 								try {
 									this.onerror(err);
-								} catch(ex) {
-									throw ex;
 								} finally {
 									if (state.unpipeCb) {
 										state.unpipeCb(this);

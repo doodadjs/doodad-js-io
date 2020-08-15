@@ -400,13 +400,11 @@ exports.add = function add(modules) {
 					__pipes: doodad.PROTECTED(null),
 
 					$extend: doodad.SUPER(function $extend(/*paramarray*/...args) {
-						const isInput = this._implements(ioMixIns.InputStreamBase)
-									||
+						const isInput = this._implements(ioMixIns.InputStreamBase) ||
 									tools.some(args, function(arg) {
 										return types._implements(arg, ioMixIns.InputStreamBase);
 									}),
-							isOutput = this._implements(ioMixIns.OutputStreamBase)
-									||
+							isOutput = this._implements(ioMixIns.OutputStreamBase) ||
 									tools.some(args, function(arg) {
 										return types._implements(arg, ioMixIns.OutputStreamBase);
 									});
@@ -453,9 +451,6 @@ exports.add = function add(modules) {
 									if (emitted) {
 										ev.preventDefault();
 									};
-
-								} catch(ex) {
-									throw ex;
 
 								} finally {
 									istream.onerror.detach(null, noop);
