@@ -20,6 +20,6 @@
   },
   "tonicExampleFilename": "tonic.js",
   "optionalDependencies": {
-    "iconv-lite": "^0.4.23"
+    "iconv-lite": "^0.6.2"
   }
 }
