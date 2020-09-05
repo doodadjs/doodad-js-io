@@ -811,15 +811,15 @@ exports.add = function add(modules) {
 						const name = types.get(this.options, 'name');
 
 						if ((name === 'info') && _shared.Natives.consoleInfo) {
-							this.__fn = 'info';
+							this.__fn = _shared.Natives.consoleInfo;
 						} else if ((name === 'warn') && _shared.Natives.consoleWarn) {
-							this.__fn = 'warn';
+							this.__fn = _shared.Natives.consoleWarn;
 						} else if ((name === 'error') && _shared.Natives.consoleError) {
-							this.__fn = 'error';
+							this.__fn = _shared.Natives.consoleError;
 						} else if ((name === 'error') && _shared.Natives.consoleException) {
-							this.__fn = 'exception';
+							this.__fn = _shared.Natives.consoleException;
 						} else {
-							this.__fn = 'log';
+							this.__fn = _shared.Natives.consoleLog;
 						};
 					}),
 
@@ -827,7 +827,7 @@ exports.add = function add(modules) {
 						const text = data.toString();
 
 						if (!types.isNothing(text)) {
-							global.console[this.__fn](text);
+							this.__fn(text);
 						};
 
 						const callback = types.get(options, 'callback');
@@ -844,14 +844,14 @@ exports.add = function add(modules) {
 						//! IF_SET("serverSide")
 							_shared.Natives.consoleWarn(raw); // force stderr
 						//! ELSE()
-							//! INJECT("_shared.Natives.consoleLog(raw);") // force stderr
+							//! INJECT("_shared.Natives.consoleLog(raw);")
 						//! END_IF()
 					}),
 					info: doodad.OVERRIDE(ioInterfaces.IConsole, function info(raw, /*optional*/options) {
 						//! IF_SET("serverSide")
 							_shared.Natives.consoleWarn(raw); // force stderr
 						//! ELSE()
-							//! INJECT("(_shared.Natives.consoleInfo || _shared.Natives.consoleLog)(raw);") // force stderr
+							//! INJECT("(_shared.Natives.consoleInfo || _shared.Natives.consoleLog)(raw);")
 						//! END_IF()
 					}),
 					warn: doodad.OVERRIDE(ioInterfaces.IConsole, function warn(raw, /*optional*/options) {
