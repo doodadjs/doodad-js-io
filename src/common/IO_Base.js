@@ -761,13 +761,17 @@ exports.add = function add(modules) {
 					pull: doodad.PUBLIC(function pull(/*optional*/options) {
 						const data = this.__pullInternal(options);
 
-						root.DD_ASSERT && root.DD_ASSERT(types._instanceof(data, io.Data), "Invalid Data object.");
+						if (data) {
+							root.DD_ASSERT && root.DD_ASSERT(types._instanceof(data, io.Data), "Invalid Data object.");
 
-						if (data.consumed) {
-							throw new types.Error("Data object has been consumed.");
+							if (data.consumed) {
+								throw new types.Error("Data object has been consumed.");
+							};
+
+							return data;
 						};
 
-						return data;
+						return null;
 					}),
 
 					read: doodad.PUBLIC(function read(/*optional*/options) {
@@ -777,13 +781,15 @@ exports.add = function add(modules) {
 
 						let value = null;
 
-						if (data.deferred <= 0) {
-							// NOTE: Data should not have been consumed.
-							value = this.transformOut(data, options);
-							data.consume();
-						} else {
-							// Not ready yet.
-							this.push(data, {revert: !revert});
+						if (data) {
+							if (data.deferred <= 0) {
+								// NOTE: Data should not have been consumed.
+								value = this.transformOut(data, options);
+								data.consume();
+							} else {
+								// Not ready yet.
+								this.push(data, {revert: !revert});
+							};
 						};
 
 						return value;
