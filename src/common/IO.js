@@ -226,10 +226,9 @@ exports.add = function add(modules) {
 
 						if (this.options.newLine) {
 							let ok = false;
+							let data = this.pull(options);
 
-							while (this.getCount() > 0) {
-								const data = this.pull(options);
-
+							while (data) {
 								if (data.raw === io.EOF) {
 									ok = true;
 									break;
@@ -250,6 +249,8 @@ exports.add = function add(modules) {
 									ok = true;
 									break;
 								};
+
+								data = this.pull(options);
 							};
 
 							if (!ok && line) {
