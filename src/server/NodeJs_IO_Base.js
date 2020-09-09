@@ -146,6 +146,7 @@ exports.add = function add(modules) {
 					onreadable: doodad.RAW_EVENT(),
 
 					__encoding: doodad.PROTECTED(null),
+					__unpiping: doodad.PROTECTED(false),
 
 					readable: doodad.PUBLIC(true),
 
@@ -402,29 +403,35 @@ exports.add = function add(modules) {
 					}),
 
 					unpipe: doodad.PUBLIC(function unpipe(/*optional*/destination) {
-						if (types._implements(destination, ioInterfaces.IStream)) {
-							const host = this[doodad.HostSymbol];
-							host.unpipe(destination);
+						this.pause();
 
-						} else {
-							this.pause();
+						const host = this[doodad.HostSymbol];
 
-							if (types.isNothing(destination)) {
-								const rs = this._readableState;
-								const pipes = rs.pipes;
-								if (types.isArray(pipes)) {
-									const len = pipes.length;
-									for (let i = len; i >= 0; i--) { // NOTE: Array gets modified
-										if (types.has(pipes, i)) {
-											pipes[i].emit('unpipe', this);
+						if (types.isNothing(destination)) {
+							if (!this.__unpiping) {
+								this.__unpiping = true;
+								try {
+									const rs = this._readableState;
+									const pipes = rs.pipes;
+									if (types.isArray(pipes)) {
+										const len = pipes.length;
+										for (let i = len; i >= 0; i--) { // NOTE: Array gets modified
+											if (types.has(pipes, i)) {
+												pipes[i].emit('unpipe', this);
+											};
 										};
+									} else if (!types.isNothing(pipes)) {
+										pipes.emit('unpipe', this);
 									};
-								} else if (!types.isNothing(pipes)) {
-									pipes.emit('unpipe', this);
+									host.unpipe();
+								} finally {
+									this.__unpiping = false;
 								};
-							} else {
-								destination.emit('unpipe', this);
 							};
+						} else if (types._implements(destination, ioInterfaces.IStream)) {
+							host.unpipe(destination);
+						} else {
+							destination.emit('unpipe', this);
 						};
 
 						return this;
@@ -434,14 +441,20 @@ exports.add = function add(modules) {
 						const host = this[doodad.HostSymbol];
 						const data = host.transformIn(chunk, {encoding: encoding});
 						host.push(data);
-						return (host.getCount() < host.options.bufferSize);
+						if (types._implements(host, io.BufferedStreamBase)) {
+							return (host.getCount() < host.options.bufferSize);
+						};
+						return true;
 					}),
 
 					unshift: doodad.PUBLIC(function unshift(chunk) {
 						const host = this[doodad.HostSymbol];
 						const data = host.transformIn(chunk);
 						host.push(data, {revert: true});
-						return (host.getCount() < host.options.bufferSize);
+						if (types._implements(host, io.BufferedStreamBase)) {
+							return (host.getCount() < host.options.bufferSize);
+						};
+						return true;
 					}),
 
 					wrap: doodad.PUBLIC(doodad.NOT_IMPLEMENTED()), // function wrap(stream)
