@@ -460,41 +460,17 @@ exports.add = function add(modules) {
 					}),
 
 					unpipe: doodad.REPLACE(function unpipe(/*optional*/stream) {
-						let pos = -1;
-						if (stream) {
-							pos = tools.indexOf(this.__pipes, stream);
-							if (pos < 0) {
-								// Stream not piped
-								return this;
-							};
-						};
 						const isListener = this._implements(ioMixIns.Listener),
 							isInput = this._implements(ioMixIns.InputStreamBase),
 							//isOutput = this._implements(ioMixIns.OutputStreamBase),
 							//isInputOnly = isInput && !isOutput,
 							isBuffered = this._implements(ioMixIns.BufferedStreamBase);
+
 						if (isListener) {
 							this.stopListening();
 						};
-						if (stream) {
-							if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-								const datas = [stream];
-								if (isInput) {
-									this.onReady.detach(this, this.__pipeOnData, datas);
-								} else {
-									this.onData.detach(this, this.__pipeOnData, datas);
-								};
-								if (isBuffered && stream._implements(ioMixIns.BufferedStreamBase)) {
-									this.onFlush.detach(this, this.__pipeOnFlush, datas);
-								};
-								stream.onError.detach(this, this.__pipeStreamOnError);
-								stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
-								if (isListener && stream._implements(ioMixIns.Listener)) {
-									stream.onListen.detach(this, this.__pipeStreamOnListen);
-									stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
-								};
-							};
-						} else {
+
+						if (types.isNothing(stream)) {
 							if (isInput) {
 								this.onReady.detach(this, this.__pipeOnData);
 							} else {
@@ -504,20 +480,34 @@ exports.add = function add(modules) {
 								this.onFlush.detach(this, this.__pipeOnFlush);
 							};
 							tools.forEach(this.__pipes, function(stream) {
-								if (types._implements(stream, ioMixIns.OutputStreamBase)) {
-									stream.onError.detach(this, this.__pipeStreamOnError);
-									stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
-								};
+								stream.onError.detach(this, this.__pipeStreamOnError);
+								stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
 								if (isListener && types._implements(stream, ioMixIns.Listener)) {
 									stream.onListen.detach(this, this.__pipeStreamOnListen);
 									stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
 								};
 							}, this);
-						};
-						if (pos >= 0) {
-							this.__pipes.splice(pos, 1);
-						} else {
 							this.__pipes = [];
+						} else {
+							const pos = tools.indexOf(this.__pipes, stream);
+							if (pos >= 0) {
+								const datas = [stream];
+								if (isInput) {
+									this.onReady.detach(this, this.__pipeOnData, datas);
+								} else {
+									this.onData.detach(this, this.__pipeOnData, datas);
+								};
+								if (isBuffered && types._implements(stream, ioMixIns.BufferedStreamBase)) {
+									this.onFlush.detach(this, this.__pipeOnFlush, datas);
+								};
+								stream.onError.detach(this, this.__pipeStreamOnError);
+								stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
+								if (isListener && types._implements(stream, ioMixIns.Listener)) {
+									stream.onListen.detach(this, this.__pipeStreamOnListen);
+									stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
+								};
+								this.__pipes.splice(pos, 1);
+							};
 						};
 						return this;
 					}),
