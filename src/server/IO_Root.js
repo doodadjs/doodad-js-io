@@ -398,6 +398,7 @@ exports.add = function add(modules) {
 					$TYPE_UUID: '' /*! INJECT('+' + TO_SOURCE(UUID('StreamMixInBase')), true) */,
 
 					__pipes: doodad.PROTECTED(null),
+					__unpiping: doodad.PROTECTED(false),
 
 					$extend: doodad.SUPER(function $extend(/*paramarray*/...args) {
 						const isInput = this._implements(ioMixIns.InputStreamBase) ||
@@ -656,16 +657,6 @@ exports.add = function add(modules) {
 					}),
 
 					unpipe: doodad.REPLACE(function unpipe(/*optional*/stream) {
-						let pos = -1;
-
-						if (stream) {
-							pos = tools.indexOf(this.__pipes, stream);
-							if (pos < 0) {
-								// Stream not piped
-								return this;
-							};
-						};
-
 						const isListener = this._implements(ioMixIns.Listener),
 							isInput = this._implements(ioMixIns.InputStreamBase),
 							//isOutput = this._implements(ioMixIns.OutputStreamBase),
@@ -676,85 +667,91 @@ exports.add = function add(modules) {
 							this.stopListening();
 						};
 
-						if (stream) {
-							if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
-								const datas = [stream];
+						if (types.isNothing(stream)) {
+							if (!this.__unpiping) {
+								this.__unpiping = true;
+								try {
+									if (isInput) {
+										this.onReady.detach(this, this.__pipeOnData);
+									} else {
+										this.onData.detach(this, this.__pipeOnData);
+									};
 
-								if (isInput) {
-									this.onReady.detach(this, this.__pipeOnData, datas);
-								} else {
-									this.onData.detach(this, this.__pipeOnData, datas);
+									if (isBuffered) {
+										this.onFlush.detach(this, this.__pipeOnFlush);
+									};
+
+									tools.forEach(this.__pipes, function(stream) {
+										if (types._implements(stream, ioMixIns.OutputStreamBase)) {
+											stream.onError.detach(this, this.__pipeStreamOnError);
+											stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
+										};
+
+										if (isListener && types._implements(stream, ioMixIns.Listener)) {
+											stream.onListen.detach(this, this.__pipeStreamOnListen);
+											stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
+										};
+									}, this);
+
+									this.__pipes = [];
+
+									this.__pipeNodeStreamOnError.clear();
+									this.__pipeNodeStreamOnFinish.clear();
+									this.__pipeNodeStreamOnClose.clear();
+									this.__pipeNodeStreamOnDrain.clear();
+
+									if (this._implements(nodejsIOInterfaces.IReadable)) {
+										const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
+										ireadable.unpipe();
+									};
+
+								} finally {
+									this.__unpiping = false;
 								};
-
-								if (isBuffered && stream._implements(ioMixIns.BufferedStreamBase)) {
-									this.onFlush.detach(this, this.__pipeOnFlush, datas);
-								};
-
-								stream.onError.detach(this, this.__pipeStreamOnError);
-								stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
-
-								if (isListener && stream._implements(ioMixIns.Listener)) {
-									stream.onListen.detach(this, this.__pipeStreamOnListen);
-									stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
-								};
-
-							} else if (types.isWritableStream(stream)) { // Node streams
-								if (this._implements(nodejsIOInterfaces.IReadable)) {
-									const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
-									ireadable.unpipe(stream);
-								} else {
+							};
+						} else {
+							const pos = tools.indexOf(this.__pipes, stream);
+							if (pos >= 0) {
+								if (types._implements(stream, ioMixIns.OutputStreamBase)) { // doodad-js streams
 									const datas = [stream];
+
 									if (isInput) {
 										this.onReady.detach(this, this.__pipeOnData, datas);
 									} else {
 										this.onData.detach(this, this.__pipeOnData, datas);
 									};
-								};
 
-								this.__pipeNodeStreamOnError.detach(stream);
-								this.__pipeNodeStreamOnFinish.detach(stream);
-								this.__pipeNodeStreamOnClose.detach(stream);
-								this.__pipeNodeStreamOnDrain.detach(stream);
-							};
+									if (isBuffered && stream._implements(ioMixIns.BufferedStreamBase)) {
+										this.onFlush.detach(this, this.__pipeOnFlush, datas);
+									};
 
-						} else {
-							if (isInput) {
-								this.onReady.detach(this, this.__pipeOnData);
-							} else {
-								this.onData.detach(this, this.__pipeOnData);
-							};
-
-							if (isBuffered) {
-								this.onFlush.detach(this, this.__pipeOnFlush);
-							};
-
-							if (this._implements(nodejsIOInterfaces.IReadable)) {
-								const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
-								ireadable.unpipe();
-							};
-
-							tools.forEach(this.__pipes, function(stream) {
-								if (types._implements(stream, ioMixIns.OutputStreamBase)) {
 									stream.onError.detach(this, this.__pipeStreamOnError);
 									stream.onDestroy.detach(this, this.__pipeStreamOnDestroy);
+
+									if (isListener && stream._implements(ioMixIns.Listener)) {
+										stream.onListen.detach(this, this.__pipeStreamOnListen);
+										stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
+									};
+								} else { //if (types.isWritableStream(stream)) { // Node streams
+									if (this._implements(nodejsIOInterfaces.IReadable)) {
+										const ireadable = this.getInterface(nodejsIOInterfaces.IReadable);
+										ireadable.unpipe(stream);
+									} else {
+										const datas = [stream];
+										if (isInput) {
+											this.onReady.detach(this, this.__pipeOnData, datas);
+										} else {
+											this.onData.detach(this, this.__pipeOnData, datas);
+										};
+										this.__pipeNodeStreamOnError.detach(stream);
+										this.__pipeNodeStreamOnFinish.detach(stream);
+										this.__pipeNodeStreamOnClose.detach(stream);
+										this.__pipeNodeStreamOnDrain.detach(stream);
+									};
 								};
 
-								if (isListener && types._implements(stream, ioMixIns.Listener)) {
-									stream.onListen.detach(this, this.__pipeStreamOnListen);
-									stream.onStopListening.detach(this, this.__pipeStreamOnStopListening);
-								};
-							}, this);
-
-							this.__pipeNodeStreamOnError.clear();
-							this.__pipeNodeStreamOnFinish.clear();
-							this.__pipeNodeStreamOnClose.clear();
-							this.__pipeNodeStreamOnDrain.clear();
-						};
-
-						if (pos >= 0) {
-							this.__pipes.splice(pos, 1);
-						} else {
-							this.__pipes = [];
+								this.__pipes.splice(pos, 1);
+							};
 						};
 
 						return this;
