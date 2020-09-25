@@ -986,7 +986,7 @@ exports.add = function add(modules) {
 						const ev = new doodad.Event(data);
 
 						try {
-							if (this.isEntrant(this, 'onWrite')) {
+							if (types.isEntrant(this, 'onWrite')) {
 								this.onWrite(ev);
 							};
 						} catch(ex) {
