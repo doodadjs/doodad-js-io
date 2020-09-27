@@ -653,6 +653,8 @@ exports.add = function add(modules) {
 							this.listen();
 						};
 
+						this.onPipe(new doodad.Event(stream));
+
 						return stream;
 					}),
 
@@ -753,6 +755,8 @@ exports.add = function add(modules) {
 								this.__pipes.splice(pos, 1);
 							};
 						};
+
+						this.onUnpipe(new doodad.Event(stream));
 
 						return this;
 					}),

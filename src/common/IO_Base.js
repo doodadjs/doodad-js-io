@@ -449,6 +449,8 @@ exports.add = function add(modules) {
 					onError: doodad.ERROR_EVENT(), // function onError(ev)
 					onBOF: doodad.EVENT(false), // function(ev)
 					onEOF: doodad.EVENT(false), // function(ev)
+					onPipe: doodad.EVENT(false), // function(ev)
+					onUnpipe: doodad.EVENT(false), // function(ev)
 
 					create: doodad.OVERRIDE(function create(/*optional*/options) {
 						this._super();
